@@ -1,0 +1,6 @@
+.next/
+out/
+dist/
+build/
+src/generated/
+src/lib/prisma.ts

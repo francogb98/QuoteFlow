@@ -1,0 +1,178 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Empresa {
+  id                 String          @id @default(uuid())
+  nombre             String          @unique // The unique name of the company/gym
+  administradores    Administrador[] // Relation to Administrador
+  fechaCreacion      DateTime        @default(now())
+  fechaActualizacion DateTime        @updatedAt
+
+  // Nuevos campos para la gestión de planes y pagos
+  planTipo                TipoPlanEmpresa @default(BASICO) // Tipo de plan (Básico, Pro)
+  estadoPago              EstadoEmpresa   @default(ACTIVO) // Estado de la empresa (Activo, Inactivo por falta de pago, Suspendido manualmente)
+  frecuenciaPago          FrecuenciaPago  @default(MENSUAL) // Frecuencia de pago (Mensual, Anual)
+  fechaUltimoPago         DateTime? // Fecha del último pago realizado
+  fechaProximoVencimiento DateTime? // Fecha en la que vence el próximo pago
+  estaActiva              Boolean         @default(true) // Campo de conveniencia para saber si la empresa está activa
+}
+
+model Administrador {
+  id         String  @id @default(uuid())
+  nombre     String
+  documento  String  @unique // Documento remains globally unique for each individual administrator
+  email      String  @unique // NUEVO: Campo de email para el administrador
+  password   String
+  telefono   String
+  rol        Rol     @default(PROFESOR) // New field for the role within the company
+  estaActivo Boolean @default(true) // NUEVO: Campo para el estado activo/inactivo del administrador
+
+  // Relation to the new Empresa model
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId String
+
+  // Mercado Pago section
+  claveMercadoPago          String?
+  tokenMercadoPagoExpiresAt DateTime?
+  mercadoPagoRefreshToken   String?
+
+  usuarios              Usuario[]
+  configuracionTarifa   ConfiguracionTarifa?
+  configuracionTarifaId String?              @unique
+  fechaCreacion         DateTime             @default(now())
+  fechaActualizacion    DateTime             @updatedAt
+  logs                  AuditLog[]
+}
+
+model AuditLog {
+  id              String         @id @default(uuid())
+  action          String         @db.VarChar(64) // Ej: "UPDATE_MERCADOPAGO_TOKEN"
+  entityType      String         @db.VarChar(32) // Ej: "USER", "PAYMENT"
+  entityId        String // ID del recurso afectado
+  details         String?        @db.VarChar(1024) // Cambios específicos
+  ipAddress       String?        @db.VarChar(45) // IPv4 o IPv6
+  userAgent       String?        @db.VarChar(512) // Dispositivo/navegador
+  administrador   Administrador? @relation(fields: [administradorId], references: [id])
+  administradorId String?
+  createdAt       DateTime       @default(now())
+
+  @@index([action])
+  @@index([entityType, entityId])
+  @@index([administradorId])
+  @@index([createdAt])
+}
+
+model Usuario {
+  id              String        @id @default(uuid())
+  nombre          String
+  apellido        String
+  documento       String
+  telefono        String?
+  edad            Int?
+  estado          Estado        @default(PENDIENTE)
+  pagos           Pago[]
+  administrador   Administrador @relation(fields: [administradorId], references: [id])
+  administradorId String
+  estaActivo      Boolean       @default(true)
+  fechaCreacion   DateTime      @default(now())
+}
+
+model Pago {
+  id          String     @id @default(uuid())
+  monto       Float
+  fecha       DateTime   @default(now())
+  mes         Int // 1-12 representando el mes
+  año        Int // Año completo (ej. 2023)
+  comprobante String? // URL o ID de MP
+  usuario     Usuario    @relation(fields: [usuarioId], references: [id])
+  usuarioId   String
+  estaVencido Boolean    @default(false)
+  mora        Float?     @default(0)
+  estado      EstadoPago @default(PENDIENTE)
+  metodo      MetodoPago @default(EFECTIVO)
+  periodo     String // Formato "YYYY-MM" para fácil búsqueda
+}
+
+model ConfiguracionTarifa {
+  id              String        @id @default(uuid())
+  rangos          RangoTarifa[]
+  administrador   Administrador @relation(fields: [administradorId], references: [id])
+  administradorId String        @unique
+  fechaCreacion   DateTime      @default(now())
+  estaActiva      Boolean       @default(true)
+
+  @@index([administradorId]) // Índice para mejor performance
+}
+
+model RangoTarifa {
+  id                    String              @id @default(uuid())
+  diaInicio             Int
+  diaFin                Int
+  monto                 Float
+  configuracionTarifa   ConfiguracionTarifa @relation(fields: [configuracionTarifaId], references: [id])
+  configuracionTarifaId String
+
+  @@index([configuracionTarifaId]) // Índice para mejor performance
+}
+
+// Nuevo modelo para almacenar temporalmente los datos de registro
+model TempRegistration {
+  id             String          @id @default(uuid())
+  nombre         String
+  documento      String          @unique // Para evitar duplicados temporales
+  email          String          @unique // NUEVO: Campo de email para el registro temporal
+  nombreEmpresa  String
+  password       String // Contraseña ya hasheada
+  telefono       String
+  planTipo       TipoPlanEmpresa
+  frecuenciaPago FrecuenciaPago
+  createdAt      DateTime        @default(now())
+  expiresAt      DateTime // Para limpiar entradas antiguas (ej. 24 horas)
+}
+
+enum Estado {
+  PAGADO
+  PENDIENTE
+  INACTIVO
+}
+
+enum EstadoPago {
+  PAGADO
+  PENDIENTE
+  VENCIDO
+}
+
+enum MetodoPago {
+  EFECTIVO
+  MERCADOPAGO
+  TRANSFERENCIA
+  TARJETA
+}
+
+enum Rol {
+  ADMINISTRADOR
+  PROFESOR
+}
+
+// Nuevas enumeraciones para la gestión de la empresa
+enum TipoPlanEmpresa {
+  BASICO // Permite 1 administrador
+  PRO // Permite múltiples administradores
+}
+
+enum EstadoEmpresa {
+  ACTIVO
+  INACTIVO_POR_FALTA_DE_PAGO // La empresa está inactiva porque no pagó
+  SUSPENDIDO_MANUALMENTE // La empresa fue suspendida por un administrador del sistema (no por falta de pago)
+}
+
+enum FrecuenciaPago {
+  MENSUAL
+  ANUAL
+}

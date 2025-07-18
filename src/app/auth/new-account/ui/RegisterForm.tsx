@@ -1,0 +1,184 @@
+"use client";
+import Link from "next/link";
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { useForm } from "react-hook-form";
+import { useMutation } from "@tanstack/react-query";
+
+import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+import { Button } from "@/components/ui/button";
+
+import { prepareRegistrationForPayment } from "@/actions";
+import { TipoPlanEmpresa, FrecuenciaPago } from "@prisma/client";
+
+import { PersonalInfoForm } from "./PersonalInfoForm";
+import { PlanSelection } from "./PlanSelection";
+import { type PlanOption, plans } from "@/lib";
+
+interface RegisterFormData {
+  nombre: string;
+  documento: string;
+  email: string;
+  nombreEmpresa: string;
+  password: string;
+  confirm_password: string;
+  telefono: string;
+}
+
+export const RegisterForm = () => {
+  const router = useRouter();
+  const [selectedPlanId, setSelectedPlanId] =
+    useState<PlanOption["id"]>("pro_anual");
+  const [formError, setFormError] = useState<{
+    field?: string;
+    message: string;
+  } | null>(null);
+
+  const {
+    register,
+    handleSubmit,
+    watch,
+    setError,
+    clearErrors,
+    formState: { errors },
+  } = useForm<RegisterFormData>();
+
+  const prepareRegistration = useMutation({
+    mutationFn: prepareRegistrationForPayment,
+    onSuccess: (data) => {
+      if (data.success && data.tempRegistrationId) {
+        router.push(`/auth/register-payment/${data.tempRegistrationId}`);
+      } else if (data.error) {
+        setFormError(data.error);
+        if (data.error.field) {
+          setError(data.error.field as keyof RegisterFormData, {
+            type: "manual",
+            message: data.error.message,
+          });
+        }
+      }
+    },
+    onError: (error: any) => {
+      setFormError({
+        message: error.message || "Ocurrió un error inesperado",
+      });
+    },
+  });
+
+  const onSubmit = async (data: RegisterFormData) => {
+    setFormError(null);
+    clearErrors();
+
+    // Validación de confirmación de contraseña
+    if (data.password !== data.confirm_password) {
+      setError("confirm_password", {
+        type: "manual",
+        message: "Las contraseñas no coinciden",
+      });
+      return;
+    }
+
+    const selectedPlan = plans.find((p) => p.id === selectedPlanId);
+    if (!selectedPlan) {
+      setFormError({ message: "Plan no seleccionado o inválido" });
+      return;
+    }
+
+    let planTipoToSend: TipoPlanEmpresa;
+    let frecuenciaPagoToSend: FrecuenciaPago;
+
+    if (selectedPlanId.startsWith("basico")) {
+      planTipoToSend = TipoPlanEmpresa.BASICO;
+    } else {
+      planTipoToSend = TipoPlanEmpresa.PRO;
+    }
+
+    if (selectedPlanId.endsWith("mensual")) {
+      frecuenciaPagoToSend = FrecuenciaPago.MENSUAL;
+    } else {
+      frecuenciaPagoToSend = FrecuenciaPago.ANUAL;
+    }
+
+    const contentToPrepare = {
+      nombre: data.nombre,
+      documento: data.documento,
+      email: data.email,
+      nombreEmpresa: data.nombreEmpresa,
+      password: data.password,
+      telefono: data.telefono,
+      planTipo: planTipoToSend,
+      frecuenciaPago: frecuenciaPagoToSend,
+    };
+
+    await prepareRegistration.mutateAsync(contentToPrepare);
+  };
+
+  const handlePlanSelect = (planId: PlanOption["id"]) => {
+    setSelectedPlanId(planId);
+  };
+
+  return (
+    <div className="space-y-8">
+      {formError && !formError.field && (
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
+          <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+          <span className="text-sm">{formError.message}</span>
+        </div>
+      )}
+
+      <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
+        <PersonalInfoForm register={register} errors={errors} watch={watch} />
+
+        <PlanSelection
+          plans={plans}
+          selectedPlanId={selectedPlanId}
+          onSelectPlan={handlePlanSelect}
+        />
+
+        {formError && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
+            <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+            <span className="text-sm">{formError.message}</span>
+          </div>
+        )}
+
+        <Button
+          type="submit"
+          disabled={prepareRegistration.isPending}
+          className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white py-4 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-lg"
+        >
+          {prepareRegistration.isPending ? (
+            <>
+              <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+              Preparando registro...
+            </>
+          ) : (
+            <>
+              Continuar al Pago -{" "}
+              {plans.find((p: any) => p.id === selectedPlanId)?.name}
+            </>
+          )}
+        </Button>
+
+        <div className="relative my-6">
+          <div className="absolute inset-0 flex items-center">
+            <div className="w-full border-t border-purple-200"></div>
+          </div>
+          <div className="relative flex justify-center text-sm">
+            <span className="px-4 bg-white/80 text-gray-500 rounded-full">
+              O
+            </span>
+          </div>
+        </div>
+
+        <Button
+          variant="outline"
+          className="w-full border-purple-200 text-purple-600 hover:bg-purple-50 py-3 rounded-xl font-medium transition-all duration-200 hover:border-purple-300 bg-transparent"
+          asChild
+        >
+          <Link href="/auth/login">Ya tengo cuenta - Iniciar Sesión</Link>
+        </Button>
+      </form>
+    </div>
+  );
+};
