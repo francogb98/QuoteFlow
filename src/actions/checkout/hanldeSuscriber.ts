@@ -37,10 +37,7 @@ export const handleSuscriber = async ({
       frecuenciaPago === FrecuenciaPago.MENSUAL ? "months" : "years";
     const mpFrequency = 1; // Siempre 1 unidad del tipo de frecuencia
 
-    const baseUrl =
-      process.env.NEXT_PUBLIC_VERCEL_URL ||
-      process.env.NEXT_PUBLIC_BASE_URL ||
-      "http://localhost:3000";
+    const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
     console.log(
       `Iniciando suscripción de Mercado Pago para empresaId: ${empresaId}, planName: ${planName}, frecuenciaPago: ${frecuenciaPago}, planTipo: ${planTipo}, adminEmail: ${adminEmail}`
