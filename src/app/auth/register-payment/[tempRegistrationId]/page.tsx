@@ -3,8 +3,8 @@ import prisma from "@/lib/prisma";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, CreditCard } from "lucide-react";
-import { handleSuscriber } from "@/actions";
 import { plans, type PlanOption } from "@/lib";
+import { handleSuscriber } from "@/01-actions/payment/suscripcion.payment";
 
 interface PaymentPageProps {
   params: Promise<{

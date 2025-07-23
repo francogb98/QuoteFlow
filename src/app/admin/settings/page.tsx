@@ -1,5 +1,5 @@
 import { auth } from "@/*";
-import { DatosPersonales, TarifasGrid } from "./ui";
+import { DatosPersonales, TariffDashboard } from "./ui";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -25,7 +25,7 @@ export default async function NamePage() {
         nombre={user.nombre}
       />
 
-      <TarifasGrid />
+      <TariffDashboard />
     </div>
   );
 }

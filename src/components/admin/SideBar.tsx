@@ -1,7 +1,6 @@
 "use client";
 
 import type React from "react";
-import { logout } from "@/actions/auth/logout";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
@@ -17,6 +16,8 @@ import {
   X,
   CreditCard,
 } from "lucide-react";
+import { logout } from "@/01-actions/auth/logout";
+import { QuoteFlowLogo } from "@/lib/Logo";
 
 interface NavItem {
   href: string;
@@ -125,10 +126,10 @@ export const Sidebar = ({ user }: any) => {
               {!isCollapsed ? (
                 <div className="flex items-center space-x-3">
                   <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg">
-                    <Store className="w-6 h-6 text-white" />
+                    <QuoteFlowLogo size="sm" variant="icon" />
                   </div>
                   <div>
-                    <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
+                    <h2 className="text-xl font-bold bg-gradient-to-r from-green-600 to-purple-600 bg-clip-text text-transparent">
                       Admin Panel
                     </h2>
                     <p className="text-xs text-purple-500">Panel de Control</p>

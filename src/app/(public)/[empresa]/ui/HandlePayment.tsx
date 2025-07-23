@@ -1,7 +1,8 @@
 "use client";
-
 import type React from "react";
+import { useRouter } from "next/navigation";
 import { useState } from "react";
+
 import { IoCardSharp, IoCalendarSharp, IoCashSharp } from "react-icons/io5";
 import {
   FaArrowLeft,
@@ -12,10 +13,10 @@ import {
   FaTimes,
   FaInfoCircle,
 } from "react-icons/fa";
-import { handlePayment } from "@/actions/checkout/handlePayment";
-import type { Pago } from "@prisma/client";
-import { useRouter } from "next/navigation";
 
+import { handlePayment } from "@/01-actions/payment/handlePayment";
+
+import type { Pago } from "@prisma/client";
 interface Props {
   nombreUsuarioCompleto: string;
   documento: string;

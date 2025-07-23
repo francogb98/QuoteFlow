@@ -15,7 +15,7 @@ import {
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toast } from "sonner";
 import { $Enums } from "@prisma/client";
-import { updatePayment } from "@/actions/payments/updatePaymentStatus";
+import { updatePayment } from "@/01-actions/admin/users/updatePaymentStatus";
 
 const estadosPago = [
   {

@@ -1,13 +1,15 @@
 "use client";
-
-// Actualiza la importación para apuntar a la nueva ubicación de la acción
-import { login } from "@/actions/auth/login"; // Cambiado de 'authenticate' a 'login'
-import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
+
 import { useState } from "react";
 import { useForm } from "react-hook-form";
-import { Loader2, AlertCircle } from "lucide-react"; // Asegúrate de que AlertCircle esté importado
+
+import { Loader2, AlertCircle } from "lucide-react";
+
+import { login } from "@/01-actions/auth/login";
+
+import { Button } from "@/components/ui/button";
 
 interface LoginFormData {
   documento: string;

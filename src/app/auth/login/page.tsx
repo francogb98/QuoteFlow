@@ -1,5 +1,11 @@
+import { Metadata } from "next";
 import { LoginForm } from "./ui/LoginForm";
 import { LogIn } from "lucide-react"; // Importa el ícono LogIn de lucide-react
+
+export const metadata: Metadata = {
+  title: "Iniciar Sesión",
+  description: "Accede a tu cuenta para continuar",
+};
 
 export default function LoginPage() {
   return (

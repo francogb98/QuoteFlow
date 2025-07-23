@@ -1,6 +1,7 @@
 "use client";
 
 import { Button } from "@/components/ui/button";
+import { QuoteFlowLogo } from "@/lib/Logo";
 import { Store, LogIn, UserPlus } from "lucide-react";
 import Link from "next/link";
 import { FaStoreAlt } from "react-icons/fa";
@@ -12,18 +13,7 @@ export function Navbar() {
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2 group">
-            <div className="relative">
-              <div className="w-10 h-10 bg-gradient-to-br from-purple-500 to-violet-600 rounded-xl flex items-center justify-center shadow-lg group-hover:shadow-xl transition-all duration-300 group-hover:scale-105">
-                <Store className="w-6 h-6 text-white" />
-              </div>
-              <div className="absolute -top-1 -right-1 w-4 h-4 bg-gradient-to-br from-violet-400 to-purple-500 rounded-full opacity-80"></div>
-            </div>
-            <div className="hidden sm:block">
-              <h2 className="text-xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent">
-                PayConsult
-              </h2>
-              <p className="text-xs text-gray-500 -mt-1">Gestión de Pagos</p>
-            </div>
+            <QuoteFlowLogo size="md" variant="full" />
           </Link>
 
           {/* Navigation Buttons */}

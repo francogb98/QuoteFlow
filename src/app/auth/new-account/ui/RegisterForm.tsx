@@ -8,12 +8,14 @@ import { useMutation } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
-import { prepareRegistrationForPayment } from "@/actions";
 import { TipoPlanEmpresa, FrecuenciaPago } from "@prisma/client";
 
 import { PersonalInfoForm } from "./PersonalInfoForm";
 import { PlanSelection } from "./PlanSelection";
 import { type PlanOption, plans } from "@/lib";
+import { prepareRegistrationForPayment } from "@/01-actions/auth/registration/01-prepareRegistration";
+import { PromoCodeField } from "./PromoCodeField";
+import { createTrialAccount as createTrialAccountAction } from "@/01-actions/auth/registration/05-createTrialAccount";
 
 interface RegisterFormData {
   nombre: string;
@@ -28,11 +30,13 @@ interface RegisterFormData {
 export const RegisterForm = () => {
   const router = useRouter();
   const [selectedPlanId, setSelectedPlanId] =
-    useState<PlanOption["id"]>("pro_anual");
+    useState<PlanOption["id"]>("basico_mensual");
   const [formError, setFormError] = useState<{
     field?: string;
     message: string;
   } | null>(null);
+
+  const [validPromoCode, setValidPromoCode] = useState<string | null>(null);
 
   const {
     register,
@@ -42,6 +46,10 @@ export const RegisterForm = () => {
     clearErrors,
     formState: { errors },
   } = useForm<RegisterFormData>();
+
+  const createTrialAccount = useMutation({
+    mutationFn: createTrialAccountAction,
+  });
 
   const prepareRegistration = useMutation({
     mutationFn: prepareRegistrationForPayment,
@@ -117,6 +125,17 @@ export const RegisterForm = () => {
     setSelectedPlanId(planId);
   };
 
+  const handleValidPromoCode = (codigo: string) => {
+    setValidPromoCode(codigo);
+  };
+
+  const handleInvalidPromoCode = () => {
+    setValidPromoCode(null);
+  };
+
+  const isLoading =
+    prepareRegistration.isPending || createTrialAccount.isPending;
+
   return (
     <div className="space-y-8">
       {formError && !formError.field && (
@@ -129,11 +148,31 @@ export const RegisterForm = () => {
       <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
         <PersonalInfoForm register={register} errors={errors} watch={watch} />
 
-        <PlanSelection
-          plans={plans}
-          selectedPlanId={selectedPlanId}
-          onSelectPlan={handlePlanSelect}
+        <PromoCodeField
+          onValidCode={handleValidPromoCode}
+          onInvalidCode={handleInvalidPromoCode}
+          disabled={isLoading}
         />
+
+        {!validPromoCode && (
+          <PlanSelection
+            plans={plans}
+            selectedPlanId={selectedPlanId}
+            onSelectPlan={handlePlanSelect}
+          />
+        )}
+
+        {validPromoCode && (
+          <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+            <div className="flex items-center gap-2 text-green-700">
+              <CheckCircle className="w-5 h-5" />
+              <span className="font-medium">¡Código promocional aplicado!</span>
+            </div>
+            <p className="text-sm text-green-600 mt-1">
+              Tendrás acceso completo por 2 meses sin costo.
+            </p>
+          </div>
+        )}
 
         {formError && (
           <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
@@ -144,18 +183,23 @@ export const RegisterForm = () => {
 
         <Button
           type="submit"
-          disabled={prepareRegistration.isPending}
+          disabled={isLoading}
           className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white py-4 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-lg"
         >
-          {prepareRegistration.isPending ? (
+          {isLoading ? (
             <>
               <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-              Preparando registro...
+              {validPromoCode
+                ? "Creando cuenta de prueba..."
+                : "Preparando registro..."}
             </>
           ) : (
             <>
-              Continuar al Pago -{" "}
-              {plans.find((p: any) => p.id === selectedPlanId)?.name}
+              {validPromoCode
+                ? "Crear Cuenta de Prueba Gratis"
+                : `Continuar al Pago - ${
+                    plans.find((p: any) => p.id === selectedPlanId)?.name
+                  }`}
             </>
           )}
         </Button>

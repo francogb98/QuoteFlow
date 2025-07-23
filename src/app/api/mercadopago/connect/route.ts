@@ -1,11 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-
-import api from "../../../../actions/actions/api";
-
 import { auth } from "@/*";
-import { encrypt } from "@/lib";
+
+import api from "@/01-actions/payment/marketPlace.connect";
 import { validateMercadoPagoToken } from "@/lib";
+import { encrypt } from "@/lib";
 
 export async function GET(request: NextRequest) {
   try {
@@ -88,7 +87,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.redirect(
-      `${process.env.APP_URL!}/admin/market/success?${successParams.toString()}`
+      `${process.env
+        .FRONTEND_URL!}/admin/market/success?${successParams.toString()}`
     );
   } catch (error) {
     console.error("Error en conexión con Mercado Pago:", error);
@@ -120,7 +120,8 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.redirect(
-      `${process.env.APP_URL!}/dashboard/integrations?${errorParams.toString()}`
+      `${process.env
+        .FRONTEND_URL!}/dashboard/integrations?${errorParams.toString()}`
     );
   }
 }

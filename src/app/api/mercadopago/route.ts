@@ -8,7 +8,6 @@ import { updateUserPayment } from "@/actions/users/public";
 export async function POST(request: Request) {
   try {
     const body = await request.json();
-    console.log("Notificación recibida de MercadoPago:", body);
 
     const payment = await new Payment(config).get({ id: body.paymentId });
 
@@ -19,7 +18,6 @@ export async function POST(request: Request) {
 
     return NextResponse.json({ success: true, payment });
   } catch (error) {
-    console.error("Error al procesar notificación:", error);
     return NextResponse.json(
       { success: false, error: "Error processing notification" },
       { status: 500 }
@@ -28,12 +26,9 @@ export async function POST(request: Request) {
 }
 
 export async function GET(request: Request) {
-  console.log("entre aqui");
   try {
     const { searchParams } = new URL(request.url);
     const comprobante = searchParams.get("comprobante"); // <-- Usa query params
-
-    console.log(comprobante);
 
     if (!comprobante) {
       return NextResponse.json(
@@ -45,7 +40,6 @@ export async function GET(request: Request) {
     const payment = await new Payment(config).get({ id: comprobante });
     return NextResponse.json({ success: true, payment });
   } catch (error) {
-    console.error("Error:", error);
     return NextResponse.json(
       { error: "Error al obtener el pago" },
       { status: 500 }

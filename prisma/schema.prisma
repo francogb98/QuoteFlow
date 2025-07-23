@@ -21,6 +21,11 @@ model Empresa {
   fechaUltimoPago         DateTime? // Fecha del último pago realizado
   fechaProximoVencimiento DateTime? // Fecha en la que vence el próximo pago
   estaActiva              Boolean         @default(true) // Campo de conveniencia para saber si la empresa está activa
+
+  esCuentaPrueba      Boolean            @default(false) // Indica si es cuenta de prueba
+  codigoPromocional   CodigoPromocional? @relation("EmpresaCodigoPromocional", fields: [codigoPromocionalId], references: [id])
+  codigoPromocionalId String?
+  fechaFinPrueba      DateTime?
 }
 
 model Administrador {
@@ -48,6 +53,20 @@ model Administrador {
   fechaCreacion      DateTime   @default(now())
   fechaActualizacion DateTime   @updatedAt
   logs               AuditLog[]
+}
+
+model CodigoPromocional {
+  id              String    @id @default(uuid())
+  codigo          String    @unique // El código que ingresará el usuario (ej: "PRUEBA2024")
+  duracionMeses   Int       @default(2) // Duración en meses (por defecto 2)
+  estaActivo      Boolean   @default(true)
+  fechaCreacion   DateTime  @default(now())
+  fechaExpiracion DateTime? // Fecha de expiración del código (opcional)
+  // Relación con las empresas que usaron este código
+  empresasCreadas Empresa[] @relation("EmpresaCodigoPromocional")
+
+  @@index([codigo])
+  @@index([estaActivo])
 }
 
 model AuditLog {

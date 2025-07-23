@@ -1,8 +1,6 @@
 import { auth } from "@/auth.config";
-import Link from "next/link";
 import { redirect } from "next/navigation";
-import { IoAdd } from "react-icons/io5";
-import { Lista } from "./ui/Lista";
+import { UserDashboard } from "./ui/UserDashboard";
 import NotAllowed from "./ui/NotAllowed";
 import { ModalCreateUser } from "../new/ui/ModalCreateUser";
 
@@ -21,7 +19,7 @@ export default async function NamePage() {
         <ModalCreateUser administradorId={user.id} />
       )}
 
-      {session.user?.id && <Lista />}
+      {session.user?.id && <UserDashboard />}
     </div>
   );
 }

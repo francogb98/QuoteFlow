@@ -1,5 +1,11 @@
 import { Store } from "lucide-react";
 import { RegisterForm } from "./ui/RegisterForm";
+import { Metadata } from "next";
+
+export const metadata: Metadata = {
+  title: "Crea Tu Empresa",
+  description: "Crea tu cuenta y elige el plan perfecto para tu negocio",
+};
 
 export default function RegisterPage() {
   return (

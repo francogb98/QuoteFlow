@@ -1,6 +1,6 @@
-import api from "../../../../actions/actions/api";
 import { ExternalLink, CreditCard, CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import api from "@/01-actions/payment/marketPlace.connect";
 
 export default async function MercadoPagoConnectionPage() {
   const authorizationUrl = await api.user.authorize();

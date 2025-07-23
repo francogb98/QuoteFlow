@@ -6,7 +6,7 @@ import { toast } from "sonner";
 
 export function ShareCompanyLink({ companyName }: { companyName: string }) {
   const [copied, setCopied] = useState(false);
-  const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://midominio.com";
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
   const companySlug = companyName.replace(/\s+/g, "-");
   const fullLink = `${baseUrl}/${companySlug}`;
 

@@ -34,15 +34,12 @@ export default async function DNIPaymentsPage({ params }: Props) {
         {/* Header mejorado */}
         <div className="text-center mb-12">
           <div className="relative">
-            <h1 className="text-4xl md:text-6xl font-bold text-gray-900 mb-6 leading-tight">
-              Consulta de Usuario
-            </h1>
             <div className="flex items-center justify-center mb-6">
-              <div className="h-1 w-20 bg-gradient-to-r from-purple-400 to-violet-500 rounded-full"></div>
-              <span className="mx-4 text-2xl md:text-3xl font-bold bg-gradient-to-r from-purple-600 to-violet-600 bg-clip-text text-transparent capitalize">
+              <div className="h-1 w-20 bg-gradient-to-r from-green-400 to-violet-500 rounded-full"></div>
+              <span className="mx-4 text-2xl md:text-5xl font-bold bg-gradient-to-r from-green-600 to-violet-600 bg-clip-text text-transparent capitalize pb-2">
                 {empresa}
               </span>
-              <div className="h-1 w-20 bg-gradient-to-r from-violet-500 to-purple-400 rounded-full"></div>
+              <div className="h-1 w-20 bg-gradient-to-r from-violet-500 to-green-400 rounded-full"></div>
             </div>
           </div>
           <p className="hidden md:block text-xl text-gray-600 max-w-3xl mx-auto leading-relaxed">

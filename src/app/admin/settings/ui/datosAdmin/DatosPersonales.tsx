@@ -53,7 +53,7 @@ function DatosPersonales({ documento, empresa, nombre }: Inputs) {
 
   return (
     <section>
-      <h1 className="text-3xl font-bold capitalize mb-3">
+      <h1 className="capitalize mb-3 text-2xl font-bold bg-gradient-to-r from-green-600 to-purple-600 bg-clip-text text-transparent">
         Sección Datos Personales
       </h1>
 
