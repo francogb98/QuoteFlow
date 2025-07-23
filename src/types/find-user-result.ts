@@ -1,29 +1,29 @@
-// En types/find-user-result.ts
-import type {
-  Usuario,
-  ConfiguracionTarifa,
-  TipoPlanEmpresa,
-  EstadoEmpresa,
-  FrecuenciaPago,
-} from "@prisma/client";
+export interface PaymentAnalysis {
+  needsUpdate: boolean;
+  message: string;
+  oldMonto?: number;
+  newMonto?: number;
+  currentMonto?: number;
+  paymentId?: string;
+  isNewPayment?: boolean;
+}
 
 export interface FindUserResult {
   ok: boolean;
   message?: string;
   id?: string;
   administradorId?: string;
-  usuario?: Usuario & {
-    pagos: any[]; // o ajustá el tipo si definiste un modelo
-  };
-  configuracionTarifa?: ConfiguracionTarifa | null;
+  usuario?: any;
+  configuracionTarifa?: any;
   empresa?: {
     id: string;
     nombre: string;
-    planTipo: TipoPlanEmpresa;
-    estadoPago: EstadoEmpresa;
-    frecuenciaPago: FrecuenciaPago;
+    planTipo: string;
+    estadoPago: string;
+    frecuenciaPago: string;
     fechaUltimoPago: Date | null;
     fechaProximoVencimiento: Date | null;
     estaActiva: boolean;
   };
+  paymentAnalysis?: PaymentAnalysis;
 }

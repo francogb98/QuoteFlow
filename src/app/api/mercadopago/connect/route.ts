@@ -88,7 +88,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.redirect(
-      `${process.env.APP_URL!}/market/success?${successParams.toString()}`
+      `${process.env.APP_URL!}/admin/market/success?${successParams.toString()}`
     );
   } catch (error) {
     console.error("Error en conexión con Mercado Pago:", error);

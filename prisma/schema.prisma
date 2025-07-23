@@ -42,12 +42,12 @@ model Administrador {
   tokenMercadoPagoExpiresAt DateTime?
   mercadoPagoRefreshToken   String?
 
-  usuarios              Usuario[]
-  configuracionTarifa   ConfiguracionTarifa?
-  configuracionTarifaId String?              @unique
-  fechaCreacion         DateTime             @default(now())
-  fechaActualizacion    DateTime             @updatedAt
-  logs                  AuditLog[]
+  usuarios            Usuario[]
+  configuracionTarifa ConfiguracionTarifa?
+
+  fechaCreacion      DateTime   @default(now())
+  fechaActualizacion DateTime   @updatedAt
+  logs               AuditLog[]
 }
 
 model AuditLog {
@@ -75,12 +75,15 @@ model Usuario {
   documento       String
   telefono        String?
   edad            Int?
-  estado          Estado        @default(PENDIENTE)
+  estado          Estado        @default(ACTIVO)
   pagos           Pago[]
   administrador   Administrador @relation(fields: [administradorId], references: [id])
   administradorId String
   estaActivo      Boolean       @default(true)
   fechaCreacion   DateTime      @default(now())
+
+  @@index([documento]) // Si buscas mucho por documento
+  @@index([administradorId]) // Muy probable para listar usuarios de un admin
 }
 
 model Pago {
@@ -93,10 +96,13 @@ model Pago {
   usuario     Usuario    @relation(fields: [usuarioId], references: [id])
   usuarioId   String
   estaVencido Boolean    @default(false)
-  mora        Float?     @default(0)
   estado      EstadoPago @default(PENDIENTE)
   metodo      MetodoPago @default(EFECTIVO)
   periodo     String // Formato "YYYY-MM" para fácil búsqueda
+
+  @@index([usuarioId])
+  @@index([fecha]) // Para búsquedas por rango de fechas
+  @@index([periodo]) // Si buscas frecuentemente por periodo
 }
 
 model ConfiguracionTarifa {
@@ -107,7 +113,7 @@ model ConfiguracionTarifa {
   fechaCreacion   DateTime      @default(now())
   estaActiva      Boolean       @default(true)
 
-  @@index([administradorId]) // Índice para mejor performance
+  @@index([administradorId])
 }
 
 model RangoTarifa {
@@ -137,8 +143,7 @@ model TempRegistration {
 }
 
 enum Estado {
-  PAGADO
-  PENDIENTE
+  ACTIVO
   INACTIVO
 }
 

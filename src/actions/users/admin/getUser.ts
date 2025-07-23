@@ -27,6 +27,7 @@ export const getUser = async (id: string): Promise<UsuarioWithPagos> => {
         },
       },
     });
+    //@ts-ignore
     return user;
   } catch (error) {
     console.error("Error al buscar usuario:", error);

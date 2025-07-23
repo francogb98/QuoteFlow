@@ -37,12 +37,11 @@ export const handleSuscriber = async ({
       frecuenciaPago === FrecuenciaPago.MENSUAL ? "months" : "years";
     const mpFrequency = 1; // Siempre 1 unidad del tipo de frecuencia
 
-    // Asegúrate de tener NEXT_PUBLIC_BASE_URL configurado en tus variables de entorno.
-    // En Vercel, `NEXT_PUBLIC_VERCEL_URL` es una buena opción si estás en Vercel.
     const baseUrl =
       process.env.NEXT_PUBLIC_VERCEL_URL ||
       process.env.NEXT_PUBLIC_BASE_URL ||
       "http://localhost:3000";
+
     const successUrl = `${baseUrl}/auth/success?preapproval_created=true&empresaId=${empresaId}&planType=${planTipo}&frequency=${frecuenciaPago}`;
 
     const newSuscriber = await preApproval.create({

@@ -1,6 +1,7 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export const addUserToAdmin = async (data: {
   nombre: string;
@@ -49,7 +50,7 @@ export const addUserToAdmin = async (data: {
         telefono: data.telefono || null,
         edad: data.edad ? +data.edad : null,
         administradorId: data.administradorId,
-        estado: "PENDIENTE", // Estado por defecto según tu modelo
+        estado: "ACTIVO", // Estado por defecto según tu modelo
         estaActivo: true, // Activo por defecto
       },
     });
@@ -66,7 +67,6 @@ export const addUserToAdmin = async (data: {
           monto: adminExists.configuracionTarifa!.rangos[0].monto,
           usuarioId: newUser.id,
           estaVencido: false,
-          mora: null,
           estado: "PENDIENTE",
           metodo: "EFECTIVO",
           comprobante: null,
@@ -84,7 +84,6 @@ export const addUserToAdmin = async (data: {
           monto: adminExists.configuracionTarifa!.rangos[0].monto,
           usuarioId: newUser.id,
           estaVencido: false,
-          mora: null,
           estado: "PENDIENTE",
           metodo: "EFECTIVO",
           comprobante: null,
@@ -92,6 +91,8 @@ export const addUserToAdmin = async (data: {
         },
       });
     }
+
+    revalidatePath("/admin/users/list");
 
     return newUser;
   } catch (error) {

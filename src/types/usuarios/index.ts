@@ -1,14 +1,23 @@
-// types/usuario.ts
-import { Usuario, Pago } from "@prisma/client";
+import type {
+  Usuario,
+  Pago,
+  ConfiguracionTarifa,
+  RangoTarifa,
+} from "@prisma/client";
 
-export type UsuarioWithPagos = Usuario & {
-  pagos: Pago[];
+// Tipo para el pago serializado (con monto y mora como number, fecha como string)
+export type SerializedPago = Omit<Pago, "monto" | "fecha"> & {
+  monto: number;
+  fecha: string;
 };
 
-// O si necesitas más personalización:
-export type CustomUsuarioResponse = {
-  ok: boolean;
-  message?: string;
-  data?: UsuarioWithPagos;
-  error?: string;
+// Tipo para usuario con pagos serializados
+export type UsuarioWithPagos = Usuario & {
+  pagos: SerializedPago[];
+};
+
+// Tipo para los datos del administrador
+export type AdminData = {
+  usuarios: UsuarioWithPagos[];
+  configuracionTarifa: (ConfiguracionTarifa & { rangos: RangoTarifa[] }) | null;
 };

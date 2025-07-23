@@ -2,50 +2,59 @@
 
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { $Enums } from "@prisma/client"; // Importa el enum EstadoPago desde Prisma
 
-interface UpdatePaymentStatusResult {
-  ok: boolean;
-  message?: string;
-  updatedPayment?: any; // Considerar un tipo más específico si es necesario
-}
-
-export async function updatePaymentStatus(
-  paymentId: string,
-  newStatus: $Enums.EstadoPago
-): Promise<UpdatePaymentStatusResult> {
+export async function updatePayment(data: any) {
   try {
-    if (!Object.values($Enums.EstadoPago).includes(newStatus)) {
-      return { ok: false, message: "Estado de pago inválido." };
+    const { paymentId, monto, estado, metodo } = data;
+
+    // Validaciones
+    if (!paymentId) {
+      return { ok: false, message: "ID de pago requerido" };
     }
 
+    if (monto <= 0) {
+      return { ok: false, message: "El monto debe ser mayor a 0" };
+    }
+
+    const validStates = ["PAGADO", "PENDIENTE", "VENCIDO"];
+    if (!validStates.includes(estado)) {
+      return { ok: false, message: "Estado de pago inválido" };
+    }
+
+    const validMethods = [
+      "EFECTIVO",
+      "MERCADOPAGO",
+      "TRANSFERENCIA",
+      "TARJETA",
+    ];
+    if (!validMethods.includes(metodo)) {
+      return { ok: false, message: "Método de pago inválido" };
+    }
+
+    // Actualizar el pago
     const updatedPayment = await prisma.pago.update({
       where: { id: paymentId },
       data: {
-        estado: newStatus,
-        // Opcional: Si 'estaVencido' se gestiona manualmente y no es un campo calculado
-        // podrías actualizarlo aquí según el nuevo estado.
-        // Por ejemplo, si el estado es VENCIDO, estaVencido = true.
-        // Si el estado es PAGADO o PENDIENTE, estaVencido = false.
-
-        estaVencido: newStatus === $Enums.EstadoPago.VENCIDO,
+        monto: monto,
+        estado: estado,
+        metodo: metodo,
+        estaVencido: estado === "VENCIDO",
       },
     });
 
-    // Revalida la ruta para asegurar que los datos se refresquen en el cliente
-    // ajusta esta ruta según la estructura de tu aplicación si es diferente
+    // Revalidar la ruta
     revalidatePath(`/admin/users/${updatedPayment.usuarioId}`);
 
     return {
       ok: true,
-      message: "Estado del pago actualizado correctamente.",
+      message: "Pago actualizado correctamente",
       updatedPayment,
     };
   } catch (error) {
-    console.error("Error updating payment status:", error);
+    console.error("Error updating payment:", error);
     return {
       ok: false,
-      message: "Error al actualizar el estado del pago.",
+      message: "Error al actualizar el pago",
     };
   }
 }

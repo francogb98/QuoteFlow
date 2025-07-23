@@ -2,25 +2,12 @@
 
 import { auth } from "@/auth.config";
 import prisma from "@/lib/prisma";
-import type {
-  Usuario,
-  Pago,
-  ConfiguracionTarifa,
-  RangoTarifa,
-} from "@prisma/client";
-
-// Define un tipo de retorno más específico para la función
-type GetUsersListResult = {
-  usuarios: (Usuario & { pagos: Pago[] })[];
-  configuracionTarifa: (ConfiguracionTarifa & { rangos: RangoTarifa[] }) | null;
-  // Agrega cualquier otra propiedad que el administrador pueda tener y necesites
-} | null;
 
 export const getUsersList = async (
-  filterByMonth = true, // Nuevo parámetro para controlar el filtro
-  month?: number, // Mes opcional si filterByMonth es true
-  year?: number // Año opcional si filterByMonth es true
-): Promise<GetUsersListResult> => {
+  filterByMonth = false,
+  month: any,
+  year: any
+) => {
   try {
     const session = await auth();
     if (!session?.user) {
@@ -28,9 +15,10 @@ export const getUsersList = async (
     }
 
     const { id: adminId } = session.user;
+
     const currentDate = new Date();
-    const currentMonth = month || currentDate.getMonth() + 1; // Usa el mes proporcionado o el actual
-    const currentYear = year || currentDate.getFullYear(); // Usa el año proporcionado o el actual
+    const currentMonth = month || currentDate.getMonth() + 1;
+    const currentYear = year || currentDate.getFullYear();
 
     const includePayments = filterByMonth
       ? {
@@ -41,7 +29,7 @@ export const getUsersList = async (
             },
           },
         }
-      : { pagos: true }; // Si no se filtra por mes, incluye todos los pagos
+      : { pagos: true };
 
     const admin = await prisma.administrador.findUnique({
       where: {
@@ -49,7 +37,7 @@ export const getUsersList = async (
       },
       include: {
         usuarios: {
-          include: includePayments, // Usa la configuración de includePayments
+          include: includePayments,
         },
         configuracionTarifa: {
           include: {
@@ -60,25 +48,33 @@ export const getUsersList = async (
     });
 
     if (!admin) {
-      return null;
+      return {
+        usuarios: [],
+        configuracionTarifa: null,
+      };
     }
 
-    let usersToReturn = admin.usuarios;
+    // Serializar los usuarios y sus pagos (sin conversión de Decimal)
+    const serializedUsers = admin.usuarios.map((usuario) => ({
+      ...usuario,
+      pagos: usuario.pagos.map((pago) => ({
+        ...pago,
+        // monto y mora ya son números (Float/Int), solo convertimos la fecha
+        fecha: pago.fecha.toISOString(),
+      })),
+    }));
 
-    // Si filterByMonth es true, filtra los usuarios que tienen pagos en el mes/año actual
+    // Filtrar usuarios si es necesario
+    let usersToReturn = serializedUsers;
     if (filterByMonth) {
-      usersToReturn = admin.usuarios.filter(
+      usersToReturn = serializedUsers.filter(
         (usuario) => usuario.pagos && usuario.pagos.length > 0
       );
     }
 
-    // No es necesario cambiar la contraseña aquí si ya se maneja en auth.config.ts
-    // Si admin.password existe y necesitas ocultarlo, hazlo en el objeto final que retornas
-    // const { password, ...restAdmin } = admin; // Ejemplo de desestructuración para omitir password
-
     return {
-      ...admin, // Devuelve el resto de las propiedades del administrador
-      usuarios: usersToReturn, // Devuelve los usuarios filtrados o todos
+      usuarios: usersToReturn,
+      configuracionTarifa: admin.configuracionTarifa,
     };
   } catch (error) {
     console.error("Error al buscar usuarios:", error);

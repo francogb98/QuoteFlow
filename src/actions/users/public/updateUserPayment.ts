@@ -67,7 +67,6 @@ export const updateUserPayment = async (payment: any) => {
           metodo: "MERCADOPAGO",
           comprobante: `${payment.id}`, //paymentpayment.id,
           estaVencido: false,
-          mora: 0,
         },
       });
     } else {
@@ -82,7 +81,6 @@ export const updateUserPayment = async (payment: any) => {
           metodo: payment.payment_method || "MERCADOPAGO",
           comprobante: payment.receipt_url || null,
           estaVencido: false,
-          mora: 0,
           usuarioId: user.id,
           periodo: `${añoActual}-${String(mesNumero).padStart(2, "0")}`,
         },
@@ -92,7 +90,7 @@ export const updateUserPayment = async (payment: any) => {
     // 7. Actualizar estado general del usuario si es necesario
     await prisma.usuario.update({
       where: { id: user.id },
-      data: { estado: "PAGADO" },
+      data: { estado: "ACTIVO" },
     });
 
     return "Actualización de pago exitosa";

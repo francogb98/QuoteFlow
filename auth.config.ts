@@ -11,6 +11,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     newUser: "/auth/new-account",
     signOut: "/auth/login",
   },
+
   events: {
     createUser: async ({ user }) => {},
     signIn: async ({ user }) => {},

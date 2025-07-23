@@ -13,9 +13,9 @@ import { Button } from "@/components/ui/button";
 export function CrearTarifas() {
   const router = useRouter();
   const [rango, setRango] = useState({
-    diaInicio: "",
-    diaFin: "",
-    monto: "",
+    diaInicio: "1",
+    diaFin: "10",
+    monto: "5000",
   });
 
   const mutation = useMutation({
@@ -68,6 +68,12 @@ export function CrearTarifas() {
       toast.warning("Los días deben estar entre 1 y 31");
       return;
     }
+
+    if (diaFinNum < diaInicioNum) {
+      toast.warning("El rango de días debe ser correcto");
+      return;
+    }
+
     mutation.mutate({
       diaInicio: diaInicioNum,
       diaFin: diaFinNum,
@@ -79,21 +85,30 @@ export function CrearTarifas() {
   return (
     <div className="space-y-6">
       <form onSubmit={handleSubmit} className="space-y-6">
-        <div className="space-y-4">
-          {/* Header */}
-          <div className="grid grid-cols-12 gap-3 items-center text-sm font-medium text-gray-600 pb-2 border-b border-gray-200">
-            <div className="col-span-4">Período</div>
-            <div className="col-span-4">Rango de días</div>
-            <div className="col-span-4">Precio ($)</div>
+        {/* Header - Cambiado a vertical en mobile */}
+        <div className="hidden md:grid grid-cols-12 gap-3 items-center text-sm font-medium text-gray-600 pb-2 border-b border-gray-200">
+          <div className="col-span-4">Período</div>
+          <div className="col-span-4">Rango de días</div>
+          <div className="col-span-4">Precio ($)</div>
+        </div>
+
+        {/* Contenedor principal - Cambia a vertical en mobile */}
+        <div className="flex flex-col md:grid md:grid-cols-12 gap-4 p-3 bg-gray-50 rounded-lg">
+          {/* Etiqueta móvil para período */}
+          <div className="md:hidden text-sm font-medium text-gray-600">
+            Período
+          </div>
+          <div className="md:col-span-4 text-gray-700 font-medium flex items-center">
+            <span className="md:hidden mr-2">•</span>
+            Día {rango.diaInicio || "-"} a {rango.diaFin || "-"}
           </div>
 
-          {/* Único rango */}
-          <div className="grid grid-cols-12 gap-3 items-center p-3 bg-gray-50 rounded-lg">
-            <div className="col-span-4 text-gray-700 font-medium">
-              Día {rango.diaInicio || "-"} a {rango.diaFin || "-"}
-            </div>
-
-            <div className="col-span-4 flex gap-2 items-center">
+          {/* Etiqueta móvil para rango */}
+          <div className="md:hidden text-sm font-medium text-gray-600">
+            Rango de días
+          </div>
+          <div className="md:col-span-4 flex flex-col md:flex-row gap-2 items-start md:items-center">
+            <div className="flex items-center w-full gap-2">
               <input
                 type="number"
                 min="1"
@@ -101,8 +116,12 @@ export function CrearTarifas() {
                 value={rango.diaInicio}
                 onChange={(e) => handleChange("diaInicio", e.target.value)}
                 className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Inicio"
               />
-              <span className="text-gray-500">a</span>
+              <span className="text-gray-500 hidden md:inline">a</span>
+            </div>
+            <div className="flex items-center w-full gap-2">
+              <span className="text-gray-500 md:hidden">a</span>
               <input
                 type="number"
                 min="1"
@@ -110,19 +129,27 @@ export function CrearTarifas() {
                 value={rango.diaFin}
                 onChange={(e) => handleChange("diaFin", e.target.value)}
                 className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+                placeholder="Fin"
               />
             </div>
+          </div>
 
+          {/* Etiqueta móvil para precio */}
+          <div className="md:hidden text-sm font-medium text-gray-600">
+            Precio ($)
+          </div>
+          <div className="md:col-span-4">
             <input
               type="number"
               value={rango.monto === "0" ? "0" : rango.monto || ""}
               onChange={(e) => handleChange("monto", e.target.value)}
-              className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent col-span-4"
+              className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
+              placeholder="Monto"
             />
           </div>
         </div>
 
-        {/* Botón guardar */}
+        {/* Botón guardar (se mantiene igual) */}
         <div className="pt-4 border-t border-gray-200">
           <Button
             type="submit"

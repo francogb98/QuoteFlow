@@ -1,21 +1,22 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { useSession } from "next-auth/react";
-
+import { useState } from "react";
+import { Pencil } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
 
-import { Pencil } from "lucide-react";
-
 import { editAdmin } from "@/actions";
 
-function DatosPersonales() {
-  const { data: session, update } = useSession();
+interface Inputs {
+  nombre: string;
+  documento: string;
+  empresa: string;
+}
+
+function DatosPersonales({ documento, empresa, nombre }: Inputs) {
   const [isEditing, setIsEditing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
 
-  const user = session?.user;
   const {
     register,
     handleSubmit,
@@ -23,45 +24,22 @@ function DatosPersonales() {
     formState: { errors },
   } = useForm({
     defaultValues: {
-      nombre: "",
-      documento: "",
-      email: "",
-      empresa: "",
+      nombre: nombre,
+      documento: documento,
+      empresa: empresa,
     },
   });
-
-  useEffect(() => {
-    if (user) {
-      reset({
-        nombre: user.nombre,
-        documento: user.documento,
-        email: user.email,
-        empresa: user.empresa.nombre,
-      });
-    }
-  }, [user, reset]);
 
   const edit = useMutation({
     mutationFn: editAdmin,
     onSuccess: async (result) => {
-      // Rename data to result to avoid confusion with form data
-
       if (!result.ok) {
         setErrorMessage(result.error || "Ocurrió un error desconocido.");
         return;
       }
+
       setErrorMessage("");
       setIsEditing(false);
-
-      await update({
-        ...session,
-        user: {
-          ...session?.user,
-          nombre: result.data!.nombre,
-          documento: result.data!.documento,
-          email: result.data!.email,
-        },
-      });
     },
     onError: (error) => {
       setErrorMessage("Error al guardar los cambios: " + error.message);
@@ -69,7 +47,7 @@ function DatosPersonales() {
   });
 
   const onSubmit = (data: any) => {
-    setErrorMessage(""); // Clear previous errors before submitting
+    setErrorMessage("");
     edit.mutate(data);
   };
 
@@ -88,10 +66,9 @@ function DatosPersonales() {
             onClick={() => {
               setIsEditing(!isEditing);
               reset({
-                nombre: user?.nombre || "",
-                documento: user?.documento || "",
-                email: user?.email || "",
-                empresa: user?.empresa?.nombre || "",
+                nombre: nombre || "",
+                documento: documento || "",
+                empresa: empresa || "",
               });
               setErrorMessage("");
             }}
@@ -131,26 +108,6 @@ function DatosPersonales() {
                   <p className="text-red-500 text-sm">
                     {errors.nombre.message}
                   </p>
-                )}
-              </div>
-
-              <div>
-                <label htmlFor="email" className="text-sm text-gray-600">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  {...register("email", {
-                    required: "Email requerido",
-                    pattern: {
-                      value: /^\S+@\S+$/i,
-                      message: "Formato de email inválido",
-                    },
-                  })}
-                  className="w-full border rounded p-2"
-                />
-                {errors.email && (
-                  <p className="text-red-500 text-sm">{errors.email.message}</p>
                 )}
               </div>
 
@@ -202,10 +159,9 @@ function DatosPersonales() {
                     setErrorMessage(""); // Clear error on cancel
                     reset({
                       // Reset to current user values on cancel
-                      nombre: user?.nombre || "",
-                      documento: user?.documento || "",
-                      email: user?.email || "",
-                      empresa: user?.empresa?.nombre || "",
+                      nombre: nombre || "",
+                      documento: documento || "",
+                      empresa: empresa || "",
                     });
                   }}
                   className="bg-gray-300 px-4 py-2 rounded hover:bg-gray-400"
@@ -219,25 +175,20 @@ function DatosPersonales() {
               <div>
                 <p className="text-sm text-gray-600">Nombre</p>
                 <p className="font-semibold text-gray-900">
-                  {user?.nombre || "No especificado"}
+                  {nombre || "No especificado"}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-gray-600">Email</p>
-                <p className="font-semibold text-gray-900">
-                  {user?.email || "No especificado"}
-                </p>
-              </div>
+
               <div>
                 <p className="text-sm text-gray-600">Documento</p>
                 <p className="font-semibold text-gray-900">
-                  {user?.documento || "No especificado"}
+                  {documento || "No especificado"}
                 </p>
               </div>
               <div>
                 <p className="text-sm text-gray-600">Empresa</p>
                 <p className="font-semibold text-gray-900">
-                  {user?.empresa?.nombre || "No especificado"}
+                  {empresa || "No especificado"}
                 </p>
               </div>
             </div>

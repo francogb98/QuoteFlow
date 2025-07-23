@@ -1,161 +1,232 @@
 "use client";
 
 import { SearchBar, PaginationControls, TableGrid } from "@/components/admin";
-import type { Usuario } from "@prisma/client"; // Importa el tipo Usuario
-import type { $Enums } from "@prisma/client"; // Importa $Enums para el tipo Estado
-
 import {
   createColumnHelper,
   getCoreRowModel,
   getPaginationRowModel,
   getFilteredRowModel,
-  type SortingState,
   getSortedRowModel,
   useReactTable,
 } from "@tanstack/react-table";
 import Link from "next/link";
 import { useState } from "react";
-import { FaSort, FaSortUp, FaSortDown } from "react-icons/fa";
-import { IoCardOutline } from "react-icons/io5";
+import {
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
+  Phone,
+  Edit,
+  CheckCircle,
+  Clock,
+  XCircle,
+} from "lucide-react";
 
-interface Props {
-  usuarios: Usuario[];
-}
+const columnHelper = createColumnHelper();
 
-const columnHelper = createColumnHelper<Usuario>();
-
-const statusBadgeClasses: Record<$Enums.Estado, string> = {
-  PAGADO: "bg-green-100 text-green-800",
-  PENDIENTE: "bg-yellow-100 text-yellow-800",
-  INACTIVO: "bg-gray-100 text-gray-800",
+const statusConfig = {
+  PAGADO: {
+    bg: "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200",
+    text: "text-emerald-800",
+    icon: <CheckCircle className="w-3 h-3" />,
+    label: "Pagado",
+  },
+  PENDIENTE: {
+    bg: "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200",
+    text: "text-amber-800",
+    icon: <Clock className="w-3 h-3" />,
+    label: "Pendiente",
+  },
+  INACTIVO: {
+    bg: "bg-gradient-to-r from-gray-50 to-slate-50 border-gray-200",
+    text: "text-gray-800",
+    icon: <XCircle className="w-3 h-3" />,
+    label: "Inactivo",
+  },
+  VENCIDO: {
+    bg: "bg-gradient-to-r from-red-50 to-red-50 border-red-200",
+    text: "text-red-800",
+    icon: <XCircle className="w-3 h-3" />,
+    label: "Vencido",
+  },
 };
 
-const statusIcons: Record<$Enums.Estado, string> = {
-  PAGADO: "text-green-500",
-  PENDIENTE: "text-yellow-500",
+export const TablaUsuarios = ({ usuarios, filtradoPorMes }: any) => {
+  const [pagination, setPagination] = useState({
+    pageIndex: 0,
+    pageSize: 10,
+  });
+  const [globalFilter, setGlobalFilter] = useState("");
+  const [sorting, setSorting] = useState([]);
 
-  INACTIVO: "text-gray-500",
-};
+  // Función para obtener el estado del usuario basado en sus pagos
+  const getUserStatus = (usuario: any) => {
+    if (!usuario.pagos || usuario.pagos.length === 0) {
+      return "INACTIVO";
+    }
 
-const statusLabels: Record<$Enums.Estado, string> = {
-  PAGADO: "Pagado",
-  PENDIENTE: "Pendiente",
+    // Si estamos filtrando por mes, usar el estado del pago de ese mes
+    if (filtradoPorMes && usuario.pagos.length > 0) {
+      return usuario.pagos[0].estado;
+    }
 
-  INACTIVO: "Inactivo",
-};
+    // Si no filtramos por mes, determinar estado general
+    const pagosPendientes = usuario.pagos.filter(
+      (p: any) => p.estado === "PENDIENTE"
+    );
+    const pagosVencidos = usuario.pagos.filter(
+      (p: any) => p.estado === "VENCIDO"
+    );
 
-const columns = [
-  columnHelper.accessor((row) => `${row.apellido} ${row.nombre}`, {
-    id: "nombreCompleto",
+    if (pagosVencidos.length > 0) return "VENCIDO";
+    if (pagosPendientes.length > 0) return "PENDIENTE";
+    return "PAGADO";
+  };
+
+  // Columnas base que siempre se muestran
+  const baseColumns = [
+    //@ts-ignore
+    columnHelper.accessor((row) => `${row.apellido} ${row.nombre}`, {
+      id: "nombreCompleto",
+      header: ({ column }) => (
+        <button
+          onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
+          className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider hover:text-purple-600 transition-colors group"
+        >
+          Nombre
+          {column.getIsSorted() === "asc" ? (
+            <ArrowUp className="w-3 h-3 text-purple-500" />
+          ) : column.getIsSorted() === "desc" ? (
+            <ArrowDown className="w-3 h-3 text-purple-500" />
+          ) : (
+            <ArrowUpDown className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" />
+          )}
+        </button>
+      ),
+      cell: (info) => (
+        <div className="flex items-center">
+          <span className="font-medium text-gray-900">{info.getValue()}</span>
+        </div>
+      ),
+    }),
+
+    columnHelper.accessor("documento", {
+      header: () => (
+        <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          Documento
+        </span>
+      ),
+      cell: (info) => (
+        <span className="text-gray-700 font-mono bg-gray-50 px-2 py-1 rounded text-sm">
+          {info.getValue()}
+        </span>
+      ),
+    }),
+
+    columnHelper.accessor("telefono", {
+      header: () => (
+        <span className="hidden sm:inline text-xs font-semibold text-gray-600 uppercase tracking-wider">
+          Teléfono
+        </span>
+      ),
+      cell: (info) => (
+        <div className="hidden sm:flex items-center text-gray-600">
+          {info.getValue() ? (
+            <>
+              <Phone className="w-3 h-3 mr-1 text-gray-400" />
+              <span className="text-sm">{info.getValue()}</span>
+            </>
+          ) : (
+            <span className="text-gray-400 text-sm">-</span>
+          )}
+        </div>
+      ),
+      meta: {
+        className: "hidden md:table-cell",
+      },
+    }),
+  ];
+
+  // Columna de estado (solo se muestra cuando se filtra por mes)
+  const estadoColumn = columnHelper.accessor((row) => getUserStatus(row), {
+    id: "estado",
     header: ({ column }) => (
       <button
         onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
-      >
-        Nombre
-        {column.getIsSorted() === "asc" ? (
-          <FaSortUp className="text-sm" />
-        ) : column.getIsSorted() === "desc" ? (
-          <FaSortDown className="text-sm" />
-        ) : (
-          <FaSort className="text-sm opacity-50" />
-        )}
-      </button>
-    ),
-    cell: (info) => (
-      <span className="font-medium text-gray-900">{info.getValue()}</span>
-    ),
-  }),
-  columnHelper.accessor("documento", {
-    header: () => (
-      <span className=" text-xs font-semibold text-gray-500 uppercase tracking-wider">
-        Documento
-      </span>
-    ),
-    cell: (info) => (
-      <span className=" text-gray-600 font-mono">{info.getValue()}</span>
-    ),
-  }),
-  columnHelper.accessor("telefono", {
-    header: () => (
-      <span className="hidden sm:inline text-xs font-semibold text-gray-500 uppercase tracking-wider">
-        Teléfono
-      </span>
-    ),
-    cell: (info) => (
-      <span className="hidden sm:table-cell text-gray-600">
-        {info.getValue() || "-"}
-      </span>
-    ),
-    meta: {
-      className: "hidden md:table-cell", // Oculta toda la columna en móviles
-    },
-  }),
-  columnHelper.accessor("estado", {
-    header: ({ column }) => (
-      <button
-        onClick={() => column.toggleSorting(column.getIsSorted() === "asc")}
-        className="flex items-center gap-2 text-xs font-semibold text-gray-500 uppercase tracking-wider hover:text-gray-700 transition-colors"
+        className="flex items-center gap-2 text-xs font-semibold text-gray-600 uppercase tracking-wider hover:text-purple-600 transition-colors group"
       >
         Estado
         {column.getIsSorted() === "asc" ? (
-          <FaSortUp className="text-sm" />
+          <ArrowUp className="w-3 h-3 text-purple-500" />
         ) : column.getIsSorted() === "desc" ? (
-          <FaSortDown className="text-sm" />
+          <ArrowDown className="w-3 h-3 text-purple-500" />
         ) : (
-          <FaSort className="text-sm opacity-50" />
+          <ArrowUpDown className="w-3 h-3 opacity-50 group-hover:opacity-100 transition-opacity" />
         )}
       </button>
     ),
     cell: (info) => {
-      // info.getValue() ya es del tipo correcto (Usuario['estado']) gracias al accessor
       const estado = info.getValue();
-      return (
-        <div className="flex items-center gap-2">
-          <span
-            className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${statusBadgeClasses[estado]}`}
-          >
-            <IoCardOutline className={`mr-1 ${statusIcons[estado]}`} />
-            {statusLabels[estado]}
+      // @ts-ignore
+      const config = statusConfig[estado] || statusConfig.PENDIENTE;
+
+      if (!config) {
+        return (
+          <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border bg-gray-50 text-gray-600">
+            <Clock className="w-3 h-3" />
+            Sin estado
           </span>
-        </div>
+        );
+      }
+
+      return (
+        <span
+          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${config.bg} ${config.text}`}
+        >
+          {config.icon}
+          {config.label}
+        </span>
       );
     },
     sortingFn: (rowA, rowB, columnId) => {
-      // Aserción de tipo para asegurar que el valor es de tipo $Enums.Estado
-      const estadoA = statusLabels[rowA.getValue(columnId) as $Enums.Estado];
-      const estadoB = statusLabels[rowB.getValue(columnId) as $Enums.Estado];
+      const estadoA =
+        // @ts-ignore
+        statusConfig[rowA.getValue(columnId)]?.label || "Sin estado";
+      const estadoB =
+        // @ts-ignore
+        statusConfig[rowB.getValue(columnId)]?.label || "Sin estado";
       return estadoA.localeCompare(estadoB);
     },
-  }),
-  columnHelper.accessor("id", {
+  });
+
+  // Columna de acciones (siempre se muestra al final)
+  const actionColumn = columnHelper.accessor("id", {
     header: () => (
-      <span className="text-xs font-semibold text-gray-500 uppercase tracking-wider">
+      <span className="text-xs font-semibold text-gray-600 uppercase tracking-wider">
         Acciones
       </span>
     ),
     cell: (info) => (
       <Link
         href={`/admin/users/${info.getValue()}`}
-        className="inline-block mx-auto text-blue-600  underline hover:text-blue-800 transition-colors"
-        title="Ver detalles"
+        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-xs font-medium rounded-lg shadow-sm hover:shadow-md transform hover:scale-[1.02] transition-all duration-300"
+        title="Editar usuario"
       >
+        <Edit className="w-3 h-3" />
         Editar
       </Link>
     ),
-  }),
-];
-
-export const TablaUsuarios = ({ usuarios }: Props) => {
-  const [pagination, setPagination] = useState({
-    pageIndex: 0,
-    pageSize: 10,
   });
-  const [globalFilter, setGlobalFilter] = useState("");
-  const [sorting, setSorting] = useState<SortingState>([]);
+
+  const columns = [...baseColumns];
+  if (filtradoPorMes) {
+    columns.push(estadoColumn);
+  }
+  columns.push(actionColumn);
 
   const table = useReactTable({
-    data: usuarios,
+    data: usuarios || [],
+    // @ts-ignore
     columns,
     getCoreRowModel: getCoreRowModel(),
     getSortedRowModel: getSortedRowModel(),
@@ -168,23 +239,41 @@ export const TablaUsuarios = ({ usuarios }: Props) => {
     },
     onPaginationChange: setPagination,
     onGlobalFilterChange: setGlobalFilter,
+    // @ts-ignore
     onSortingChange: setSorting,
   });
 
   return (
-    <div className="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
-      <div className="p-4 border-b border-gray-200">
+    <div className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
+      {/* Header con búsqueda */}
+      <div className="bg-gradient-to-r from-purple-50 to-emerald-50 p-6 border-b border-purple-100">
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-          <SearchBar
-            value={globalFilter ?? ""}
-            onChange={setGlobalFilter}
-            placeholder="Buscar usuarios..."
-          />
-          <PaginationControls table={table} showGoToPage showPageSize />
+          <div>
+            <h3 className="text-lg font-semibold text-gray-900">Usuarios</h3>
+            <p className="text-sm text-gray-600">
+              {table.getFilteredRowModel().rows.length} de{" "}
+              {usuarios?.length || 0} usuarios
+              {filtradoPorMes && " con pagos en el mes seleccionado"}
+            </p>
+          </div>
+          <div className="flex items-center gap-4">
+            <SearchBar
+              value={globalFilter ?? ""}
+              onChange={setGlobalFilter}
+              placeholder="Buscar usuarios..."
+            />
+            <PaginationControls table={table} showGoToPage showPageSize />
+          </div>
         </div>
       </div>
-      <TableGrid table={table} />
-      <div className="p-4 border-t border-gray-200">
+
+      {/* Tabla */}
+      <div className="overflow-x-auto">
+        <TableGrid table={table} />
+      </div>
+
+      {/* Footer con paginación */}
+      <div className="bg-gray-50 p-4 border-t border-gray-200">
         <PaginationControls table={table} showGoToPage showPageSize />
       </div>
     </div>

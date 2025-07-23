@@ -2,6 +2,7 @@
 
 import { auth } from "@/auth"; // Asumiendo que esta es tu configuración de NextAuth.js
 import prisma from "@/lib/prisma";
+import { revalidatePath } from "next/cache";
 
 export async function editAdmin(data: any) {
   try {
@@ -148,6 +149,8 @@ export async function editAdmin(data: any) {
       },
     });
 
+    // Revalida la ruta para asegurar que los datos se refresquen en el cliente
+    revalidatePath(`/admin/settings`);
     return {
       ok: true,
       data: updatedAdmin,
