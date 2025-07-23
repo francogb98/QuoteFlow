@@ -42,7 +42,15 @@ export const handleSuscriber = async ({
       process.env.NEXT_PUBLIC_BASE_URL ||
       "http://localhost:3000";
 
+    console.log(
+      `Iniciando suscripción de Mercado Pago para empresaId: ${empresaId}, planName: ${planName}, frecuenciaPago: ${frecuenciaPago}, planTipo: ${planTipo}, adminEmail: ${adminEmail}`
+    );
+
+    console.log({ baseUrl });
+
     const successUrl = `${baseUrl}/auth/success?preapproval_created=true&empresaId=${empresaId}&planType=${planTipo}&frequency=${frecuenciaPago}`;
+
+    console.log({ successUrl });
 
     const newSuscriber = await preApproval.create({
       body: {
