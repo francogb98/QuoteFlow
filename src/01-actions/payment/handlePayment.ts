@@ -64,7 +64,6 @@ export const handlePayment = async (formData: FormData) => {
     console.dir(newSuscriber, { depth: null });
     return { redirectUrl: newSuscriber.init_point };
   } catch (error) {
-    console.log(error);
     throw error;
   }
 };

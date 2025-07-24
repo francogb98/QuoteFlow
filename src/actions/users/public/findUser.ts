@@ -172,7 +172,6 @@ export const findUser = async (
   documento: string,
   empresa: string
 ): Promise<FindUserResult> => {
-  console.log("findUser", documento, empresa);
   try {
     // Buscar empresa con sus datos nuevos
     const empresaExist = await prisma.empresa.findUnique({

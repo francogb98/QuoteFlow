@@ -34,11 +34,7 @@ export async function successSuscriber(data: Data) {
         const creationResult = await createCompanyAndAdmin(
           tempRegistrationIdFromWebhook
         );
-        if (creationResult.ok) {
-          console.log(
-            `Empresa y administrador creados por webhook para tempRegistrationId: ${tempRegistrationIdFromWebhook}`
-          );
-        }
+
         return { success: true };
       }
     }

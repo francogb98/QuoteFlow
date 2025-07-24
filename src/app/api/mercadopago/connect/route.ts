@@ -26,8 +26,6 @@ export async function GET(request: NextRequest) {
       throw new Error("No se pudo obtener el token de acceso");
     }
 
-    console.log(credentials);
-
     // 3. Validar el token
     const isValid = await validateMercadoPagoToken(credentials.access_token);
     if (!isValid) {

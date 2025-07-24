@@ -46,8 +46,6 @@ const metodosPago = [
 ];
 
 export const ModalEditPayment = ({ pago, isOpen, onClose, userId }: any) => {
-  console.log(pago);
-
   const [formData, setFormData] = useState({
     monto: pago?.monto || "0",
     estado: pago?.estado || $Enums.EstadoPago.PENDIENTE,

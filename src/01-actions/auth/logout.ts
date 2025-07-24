@@ -8,7 +8,6 @@ export const logout = async () => {
 
     return { ok: true };
   } catch (error) {
-    console.log(error);
     return { ok: false };
   }
 };

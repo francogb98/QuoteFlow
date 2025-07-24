@@ -37,7 +37,6 @@ export function SuccessContent() {
       }),
     };
 
-    console.log(data);
     setPaymentData(data);
     setIsLoading(false);
 

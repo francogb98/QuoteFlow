@@ -18,10 +18,6 @@ export const getUsersList = async (
     const currentMonth = month || currentDate.getMonth() + 1;
     const currentYear = year || currentDate.getFullYear();
 
-    console.log(
-      `filterByMonth: ${filterByMonth}, month: ${month}, year: ${year}`
-    );
-
     const admin = await prisma.administrador.findUnique({
       where: { id: adminId },
       include: {

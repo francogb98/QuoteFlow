@@ -56,7 +56,7 @@ export const RegisterForm = () => {
 
         // Redirigir después de mostrar el éxito
         setTimeout(() => {
-          router.push("/admin/home");
+          router.push("/");
         }, 2000);
       } else {
         setFormError({
@@ -200,14 +200,6 @@ export const RegisterForm = () => {
         </div>
       )}
 
-      {/* Alerta de error general */}
-      {formError && !formError.field && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start animate-in slide-in-from-top-2">
-          <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
-          <span className="text-sm">{formError.message}</span>
-        </div>
-      )}
-
       <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
         <PersonalInfoForm
           register={register}
@@ -242,6 +234,14 @@ export const RegisterForm = () => {
             <p className="text-sm text-green-600 mt-1">
               Tendrás acceso completo por 2 meses sin costo.
             </p>
+          </div>
+        )}
+
+        {/* Alerta de error general */}
+        {formError && !formError.field && (
+          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start animate-in slide-in-from-top-2">
+            <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+            <span className="text-sm">{formError.message}</span>
           </div>
         )}
 
