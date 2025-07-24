@@ -11,9 +11,11 @@ export default async function NamePage() {
 
   const { user } = session;
 
+  console.log(user);
+
   return (
     <div className="flex flex-col gap-5">
-      {!user.configuracionTarifa ? (
+      {!user.configuracionTarifa || !user.claveMercadoPago ? (
         <NotAllowed />
       ) : (
         <ModalCreateUser administradorId={user.id} />

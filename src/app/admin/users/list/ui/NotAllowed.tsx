@@ -40,6 +40,13 @@ function NotAllowed() {
             <Settings className="w-4 h-4" />
             <span>Configurar Tarifas</span>
           </Link>
+          <Link
+            href="/admin/market"
+            className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-gradient-to-r from-green-500 to-green-600 hover:from-green-600 hover:to-green-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-300"
+          >
+            <Settings className="w-4 h-4" />
+            <span>Configurar Pagos</span>
+          </Link>
         </div>
 
         {/* Información adicional */}
