@@ -1,9 +1,7 @@
 import { CheckCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
-import { successSuscriber } from "@/actions";
-
-//traer estos datos de los params ?preapproval_created=true&empresaId=65c3c5c3-701d-46d4-a586-df8ccaf198c1&planType=PRO&frequency=MENSUAL&preapproval_id=2dfd310526154e9bb720b220a3a5bb17
+import { successSuscriber } from "@/01-actions/auth/registration/02-successSuscriber";
 
 interface Props {
   searchParams: Promise<{
