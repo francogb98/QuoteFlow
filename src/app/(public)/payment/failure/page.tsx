@@ -1,28 +1,29 @@
-"use client";
-
-import { useSearchParams } from "next/navigation";
-import { useEffect, useState } from "react";
-import Link from "next/link";
 import { AlertCircle, RefreshCw, Home } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import Link from "next/link";
 
-export default function FailurePage() {
-  const searchParams = useSearchParams();
-  const [paymentData, setPaymentData] = useState<any>(null);
+interface Props {
+  params: Promise<{
+    payment_id: string;
+    status: string;
+    preference_id: string;
+  }>;
+}
 
-  useEffect(() => {
-    const paymentId = searchParams.get("payment_id");
-    const status = searchParams.get("status");
-    const preferenceId = searchParams.get("preference_id");
+export default async function FailurePage({ params }: Props) {
+  const {
+    payment_id: paymentId,
+    status,
+    preference_id: preferenceId,
+  } = await params;
 
-    setPaymentData({
-      paymentId,
-      status,
-      preferenceId,
-      date: new Date().toLocaleDateString("es-AR"),
-      time: new Date().toLocaleTimeString("es-AR"),
-    });
-  }, [searchParams]);
+  const paymentData = {
+    paymentId,
+    status,
+    preferenceId,
+    date: new Date().toLocaleDateString("es-AR"),
+    time: new Date().toLocaleTimeString("es-AR"),
+  };
 
   return (
     <div className="min-h-screen bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
