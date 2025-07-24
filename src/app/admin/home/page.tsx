@@ -61,6 +61,12 @@ export default async function DashboardPage() {
     (completedSteps.length / (configurationSteps.length - 1)) * 100
   );
 
+  const url = process.env.FRONTEND_URL!;
+
+  if (!url) {
+    throw new Error("Error en el servidor: URL no encontrada.");
+  }
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50 p-4 md:p-6">
       <div className="max-w-4xl mx-auto">
@@ -112,7 +118,7 @@ export default async function DashboardPage() {
         {/* Compartir enlace */}
         <div>
           {user.empresa.nombre && (
-            <ShareCompanyLink companyName={user.empresa.nombre} />
+            <ShareCompanyLink companyName={user.empresa.nombre} link={url} />
           )}
         </div>
 

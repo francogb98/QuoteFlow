@@ -182,6 +182,7 @@ enum MetodoPago {
 enum Rol {
   ADMINISTRADOR
   PROFESOR
+  SUPER_ADMIN
 }
 
 // Nuevas enumeraciones para la gestión de la empresa

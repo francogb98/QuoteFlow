@@ -4,9 +4,14 @@ import { Copy, Check, Share2, ExternalLink, Sparkles } from "lucide-react";
 import { useState } from "react";
 import { toast } from "sonner";
 
-export function ShareCompanyLink({ companyName }: { companyName: string }) {
+interface Props {
+  companyName: string;
+  link: string;
+}
+
+export function ShareCompanyLink({ companyName, link }: Props) {
   const [copied, setCopied] = useState(false);
-  const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+  const baseUrl = link || "http://localhost:3000";
   const companySlug = companyName.replace(/\s+/g, "-");
   const fullLink = `${baseUrl}/${companySlug}`;
 

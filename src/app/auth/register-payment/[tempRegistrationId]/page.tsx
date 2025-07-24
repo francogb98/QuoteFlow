@@ -1,18 +1,15 @@
-import { notFound, redirect } from "next/navigation";
+import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
-import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, CreditCard } from "lucide-react";
 import { plans, type PlanOption } from "@/lib";
-import { handleSuscriber } from "@/01-actions/payment/suscripcion.payment";
+import { PaymentForm } from "./ui/PaymentForm";
 
 interface PaymentPageProps {
   params: Promise<{
     tempRegistrationId: string;
   }>;
 }
-
-export const dynamic = "force-dynamic";
 
 export default async function RegisterPaymentPage({
   params,
@@ -33,6 +30,7 @@ export default async function RegisterPaymentPage({
 
   const selectedPlanId =
     `${tempRegistration.planTipo.toLowerCase()}_${tempRegistration.frecuenciaPago.toLowerCase()}` as PlanOption["id"];
+
   const selectedPlan = plans.find((p) => p.id === selectedPlanId);
 
   if (!selectedPlan) {
@@ -46,30 +44,6 @@ export default async function RegisterPaymentPage({
   const transactionAmount = Number.parseFloat(
     selectedPlan.price.replace(/\$|\./g, "").replace(",", ".")
   );
-
-  const initiatePayment = async () => {
-    "use server";
-    if (transactionAmount === undefined || isNaN(transactionAmount)) {
-      return { error: "Monto de transacción inválido." };
-    }
-
-    const suscriberResponse = await handleSuscriber({
-      empresaId: tempRegistration.id,
-      adminEmail: tempRegistration.email, // NUEVO: Pasar el email del registro temporal
-      transactionAmount: transactionAmount,
-      planName: selectedPlan.name,
-      frecuenciaPago: tempRegistration.frecuenciaPago,
-      planTipo: tempRegistration.planTipo,
-    });
-
-    if (suscriberResponse.redirectUrl) {
-      // Redirigir al usuario a Mercado Pago
-      redirect(suscriberResponse.redirectUrl);
-      return { redirectUrl: suscriberResponse.redirectUrl };
-    } else {
-      return { error: suscriberResponse.error || "Error al iniciar el pago." };
-    }
-  };
 
   return (
     <div className="w-full max-w-2xl mx-auto py-8">
@@ -85,6 +59,7 @@ export default async function RegisterPaymentPage({
             Revisa los detalles de tu plan antes de proceder al pago.
           </p>
         </CardHeader>
+
         <CardContent className="space-y-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 text-gray-700">
             <div>
@@ -101,7 +76,7 @@ export default async function RegisterPaymentPage({
             </div>
             <div>
               <p className="font-semibold">Email:</p>
-              <p>{tempRegistration.email}</p> {/* NUEVO: Mostrar el email */}
+              <p>{tempRegistration.email}</p>
             </div>
             <div>
               <p className="font-semibold">Teléfono:</p>
@@ -145,18 +120,18 @@ export default async function RegisterPaymentPage({
               Al hacer clic en "Pagar con Mercado Pago", serás redirigido a la
               plataforma de Mercado Pago para completar tu suscripción.
             </p>
-            {/* @ts-ignore */}
-            <form action={initiatePayment}>
-              <Button
-                type="submit"
-                className="w-full bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white py-4 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] text-lg"
-              >
-                Pagar con Mercado Pago
-              </Button>
-            </form>
+
+            <PaymentForm
+              tempRegistrationId={tempRegistrationId}
+              transactionAmount={transactionAmount}
+              selectedPlan={selectedPlan}
+              tempRegistration={tempRegistration}
+            />
           </div>
         </CardContent>
       </Card>
     </div>
   );
 }
+
+// Componente cliente para manejar el estado del pago

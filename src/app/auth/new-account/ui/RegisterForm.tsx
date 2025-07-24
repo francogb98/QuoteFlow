@@ -1,15 +1,13 @@
 "use client";
+
 import Link from "next/link";
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
-
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-
 import { TipoPlanEmpresa, FrecuenciaPago } from "@prisma/client";
-
 import { PersonalInfoForm } from "./PersonalInfoForm";
 import { PlanSelection } from "./PlanSelection";
 import { type PlanOption, plans } from "@/lib";
@@ -35,8 +33,9 @@ export const RegisterForm = () => {
     field?: string;
     message: string;
   } | null>(null);
-
   const [validPromoCode, setValidPromoCode] = useState<string | null>(null);
+  const [success, setSuccess] = useState(false);
+  const [successMessage, setSuccessMessage] = useState("");
 
   const {
     register,
@@ -49,13 +48,44 @@ export const RegisterForm = () => {
 
   const createTrialAccount = useMutation({
     mutationFn: createTrialAccountAction,
+    onSuccess: (data) => {
+      if (data.success) {
+        setSuccess(true);
+        setSuccessMessage("¡Cuenta de prueba creada exitosamente!");
+        setFormError(null);
+
+        // Redirigir después de mostrar el éxito
+        setTimeout(() => {
+          router.push("/admin/home");
+        }, 2000);
+      } else {
+        setFormError({
+          message: data.error || "Error al crear la cuenta de prueba",
+        });
+      }
+    },
+    onError: (error: any) => {
+      setFormError({
+        message:
+          error.message || "Error inesperado al crear la cuenta de prueba",
+      });
+    },
   });
 
   const prepareRegistration = useMutation({
     mutationFn: prepareRegistrationForPayment,
     onSuccess: (data) => {
       if (data.success && data.tempRegistrationId) {
-        router.push(`/auth/register-payment/${data.tempRegistrationId}`);
+        setSuccess(true);
+        setSuccessMessage(
+          "¡Registro preparado correctamente! Redirigiendo al pago..."
+        );
+        setFormError(null);
+
+        // Pequeña pausa antes de redirigir
+        setTimeout(() => {
+          router.push(`/auth/register-payment/${data.tempRegistrationId}`);
+        }, 1500);
       } else if (data.error) {
         setFormError(data.error);
         if (data.error.field) {
@@ -75,6 +105,7 @@ export const RegisterForm = () => {
 
   const onSubmit = async (data: RegisterFormData) => {
     setFormError(null);
+    setSuccess(false);
     clearErrors();
 
     // Validación de confirmación de contraseña
@@ -83,6 +114,22 @@ export const RegisterForm = () => {
         type: "manual",
         message: "Las contraseñas no coinciden",
       });
+      return;
+    }
+
+    // Si hay código promocional válido, crear cuenta de prueba
+    if (validPromoCode) {
+      const trialData = {
+        nombre: data.nombre,
+        documento: data.documento,
+        email: data.email,
+        nombreEmpresa: data.nombreEmpresa,
+        password: data.password,
+        telefono: data.telefono,
+        codigoPromocional: validPromoCode,
+      };
+      //@ts-ignore
+      await createTrialAccount.mutateAsync(trialData);
       return;
     }
 
@@ -138,20 +185,42 @@ export const RegisterForm = () => {
 
   return (
     <div className="space-y-8">
+      {/* Alerta de éxito */}
+      {success && (
+        <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-start animate-in slide-in-from-top-2">
+          <CheckCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+          <div>
+            <div className="font-medium text-sm">{successMessage}</div>
+            <div className="text-sm opacity-90 mt-1">
+              {validPromoCode
+                ? "Accediendo a tu cuenta..."
+                : "Preparando página de pago..."}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Alerta de error general */}
       {formError && !formError.field && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
+        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start animate-in slide-in-from-top-2">
           <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
           <span className="text-sm">{formError.message}</span>
         </div>
       )}
 
       <form className="space-y-5" onSubmit={handleSubmit(onSubmit)} noValidate>
-        <PersonalInfoForm register={register} errors={errors} watch={watch} />
+        <PersonalInfoForm
+          register={register}
+          errors={errors}
+          watch={watch}
+          //@ts-ignore
+          disabled={isLoading || success}
+        />
 
         <PromoCodeField
           onValidCode={handleValidPromoCode}
           onInvalidCode={handleInvalidPromoCode}
-          disabled={isLoading}
+          disabled={isLoading || success}
         />
 
         {!validPromoCode && (
@@ -159,11 +228,13 @@ export const RegisterForm = () => {
             plans={plans}
             selectedPlanId={selectedPlanId}
             onSelectPlan={handlePlanSelect}
+            //@ts-ignore
+            disabled={isLoading || success}
           />
         )}
 
         {validPromoCode && (
-          <div className="p-4 bg-green-50 border border-green-200 rounded-xl">
+          <div className="p-4 bg-green-50 border border-green-200 rounded-xl animate-in slide-in-from-top-2">
             <div className="flex items-center gap-2 text-green-700">
               <CheckCircle className="w-5 h-5" />
               <span className="font-medium">¡Código promocional aplicado!</span>
@@ -174,17 +245,14 @@ export const RegisterForm = () => {
           </div>
         )}
 
-        {formError && (
-          <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
-            <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
-            <span className="text-sm">{formError.message}</span>
-          </div>
-        )}
-
         <Button
           type="submit"
-          disabled={isLoading}
-          className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white py-4 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-lg"
+          disabled={isLoading || success}
+          className={`w-full py-4 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-lg ${
+            success
+              ? "bg-green-600 hover:bg-green-700"
+              : "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700"
+          } text-white`}
         >
           {isLoading ? (
             <>
@@ -192,6 +260,13 @@ export const RegisterForm = () => {
               {validPromoCode
                 ? "Creando cuenta de prueba..."
                 : "Preparando registro..."}
+            </>
+          ) : success ? (
+            <>
+              <CheckCircle className="w-5 h-5 mr-2" />
+              {validPromoCode
+                ? "¡Cuenta creada! Redirigiendo..."
+                : "¡Éxito! Redirigiendo al pago..."}
             </>
           ) : (
             <>
@@ -218,6 +293,7 @@ export const RegisterForm = () => {
         <Button
           variant="outline"
           className="w-full border-purple-200 text-purple-600 hover:bg-purple-50 py-3 rounded-xl font-medium transition-all duration-200 hover:border-purple-300 bg-transparent"
+          disabled={isLoading || success}
           asChild
         >
           <Link href="/auth/login">Ya tengo cuenta - Iniciar Sesión</Link>
