@@ -132,7 +132,7 @@ export async function createTrialAccount(
     console.error("Error creando cuenta de prueba:", error);
     return {
       success: false,
-      error: error.message || "Error al crear la cuenta de prueba",
+      error: "Error al crear la cuenta de prueba",
     };
   }
 }

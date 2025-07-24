@@ -17,7 +17,7 @@ export function Navbar() {
           </Link>
 
           {/* Navigation Buttons */}
-          <div className="flex items-center space-x-3">
+          <div className="flex items-center space-x-0 md:space-x-3">
             <Button
               variant="ghost"
               size="sm"
@@ -37,11 +37,10 @@ export function Navbar() {
             >
               <Link
                 href="/auth/new-account"
-                className="flex items-center space-x-2"
+                className="flex items-center space-x-1"
               >
                 <FaStoreAlt className="w-4 h-4" />
                 <span className="hidden sm:inline">Registrar Empresa</span>
-                <span className="sm:hidden">Registrar Empresa</span>
               </Link>
             </Button>
 
