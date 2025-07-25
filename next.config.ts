@@ -8,7 +8,6 @@ const nextConfig: NextConfig = {
         "d4r7slnh-3000.brs.devtunnels.ms", // Agrega tu URL de tunnel
       ],
     },
-    optimizeCss: true,
   },
 };
 
