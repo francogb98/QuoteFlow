@@ -110,7 +110,7 @@ export const QuoteFlowLogo: FC<QuoteFlowLogoProps> = ({
             className="fill-purple-600 font-bold text-lg"
             style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
           >
-            Q
+            CF
           </text>
         </svg>
       </div>
@@ -123,7 +123,7 @@ export const QuoteFlowLogo: FC<QuoteFlowLogoProps> = ({
         <span
           className={`${textSizes[size]} font-bold bg-gradient-to-r from-purple-600 via-violet-500 to-emerald-500 bg-clip-text text-transparent`}
         >
-          QuoteFlow
+          CuotaFacil
         </span>
       </div>
     );
@@ -200,7 +200,7 @@ export const QuoteFlowLogo: FC<QuoteFlowLogoProps> = ({
             className="fill-purple-600 font-bold text-lg"
             style={{ fontFamily: "system-ui, -apple-system, sans-serif" }}
           >
-            Q
+            CF
           </text>
         </svg>
       </div>
@@ -209,7 +209,7 @@ export const QuoteFlowLogo: FC<QuoteFlowLogoProps> = ({
       <span
         className={`${textSizes[size]} font-bold bg-gradient-to-r from-purple-600 via-violet-500 to-emerald-500 bg-clip-text text-transparent`}
       >
-        QuoteFlow
+        CuotaFacil
       </span>
     </div>
   );

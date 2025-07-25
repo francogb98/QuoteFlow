@@ -23,7 +23,7 @@ const encodedSVG = encodeURIComponent(logoIconSVG.trim().replace(/\s+/g, " "));
 const dataURL = `data:image/svg+xml,${encodedSVG}`;
 
 export const metadata: Metadata = {
-  title: "QuoteFlow",
+  title: "CuotaFacil",
   description: "Aplicacion de pagos Online",
   icons: {
     icon: dataURL, // Usamos el SVG como Data URL
