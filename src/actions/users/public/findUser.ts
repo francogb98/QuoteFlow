@@ -89,7 +89,15 @@ const analyzeAndUpdatePayments = async (
 
   const expectedMonto = tarifaResult.monto;
 
-  // Buscar pago del mes actual
+  // Ordenar pagos por fecha descendente para obtener el más reciente
+  const sortedPayments = [...usuario.pagos].sort((a, b) => {
+    if (a.año !== b.año) return b.año - a.año;
+    return b.mes - a.mes;
+  });
+
+  const lastPayment = sortedPayments[0];
+
+  // Verificar si ya existe un pago para el mes actual
   const currentPayment = usuario.pagos.find(
     (pago: any) => pago.mes === currentMonth && pago.año === currentYear
   );
@@ -129,7 +137,22 @@ const analyzeAndUpdatePayments = async (
       };
     }
   } else {
-    // Si no existe pago para el mes actual, crearlo
+    // Solo crear nuevo pago si el último pago es de un mes anterior al actual
+    if (lastPayment) {
+      const isLastPaymentBeforeCurrent =
+        lastPayment.año < currentYear ||
+        (lastPayment.año === currentYear && lastPayment.mes < currentMonth);
+
+      if (!isLastPaymentBeforeCurrent) {
+        return {
+          needsUpdate: false,
+          message: `No se creó pago porque ya existe uno posterior (${lastPayment.mes}/${lastPayment.año}) para el mes actual (${currentMonth}/${currentYear})`,
+          tarifaInfo: tarifaResult,
+        };
+      }
+    }
+
+    // Si no existe pago para el mes actual y el último pago es anterior, crearlo
     try {
       const fechaPago = new Date(currentYear, currentMonth - 1, 1);
       const periodo = `${currentMonth
