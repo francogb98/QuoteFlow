@@ -23,10 +23,50 @@ const encodedSVG = encodeURIComponent(logoIconSVG.trim().replace(/\s+/g, " "));
 const dataURL = `data:image/svg+xml,${encodedSVG}`;
 
 export const metadata: Metadata = {
-  title: "CuotaFacil",
-  description: "Aplicacion de pagos Online",
+  title: "CuotaFácil - Gestión de Pagos y Cuotas Online",
+  description:
+    "Plataforma líder en Argentina para gestionar pagos y cuotas de forma fácil y segura. Accede a tu cuenta y administra tus finanzas.",
+  keywords: "cuotas, pagos, finanzas, argentina, gestión financiera",
+  authors: [{ name: "CuotaFácil" }],
+  creator: "CuotaFácil",
+  publisher: "CuotaFácil",
+
+  // Configuración para motores de búsqueda
+  robots: {
+    index: true,
+    follow: true,
+  },
+
+  // Open Graph para compartir en redes sociales
+  openGraph: {
+    title: "CuotaFácil - Gestión de Pagos y Cuotas",
+    description: "Plataforma líder en Argentina para gestionar pagos y cuotas",
+    url: "https://cuotafacil.com.ar",
+    siteName: "CuotaFácil",
+    locale: "es_AR",
+    type: "website",
+    // Puedes agregar una imagen cuando la tengas
+    // images: [
+    //   {
+    //     url: "https://cuotafacil.com.ar/og-image.jpg",
+    //     width: 1200,
+    //     height: 630,
+    //     alt: "CuotaFácil",
+    //   },
+    // ],
+  },
+
+  // Mantén tu configuración de iconos actual
   icons: {
-    icon: dataURL, // Usamos el SVG como Data URL
+    icon: dataURL,
+  },
+
+  // Configuración regional
+  alternates: {
+    canonical: "https://cuotafacil.com.ar",
+    languages: {
+      "es-AR": "https://cuotafacil.com.ar",
+    },
   },
 };
 
