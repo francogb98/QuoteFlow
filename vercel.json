@@ -1,0 +1,23 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "crons": [
+    {
+      "path": "/api/cron/diario",
+      "schedule": "0 4 * * *",
+      "method": "GET",
+      "headers": {
+        "Authorization": "Bearer ${process.env.CRON_SECRET}",
+        "X-Cron-Source": "vercel"
+      }
+    },
+    {
+      "path": "/api/cron/mensual",
+      "schedule": "0 4 20 * *",
+      "method": "GET",
+      "headers": {
+        "Authorization": "Bearer ${process.env.CRON_SECRET}",
+        "X-Cron-Source": "vercel"
+      }
+    }
+  ]
+}

@@ -1,121 +1,149 @@
 "use server";
 
+import { auth } from "@/auth.config";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
-import { $Enums } from "@prisma/client";
+import { TipoConfiguracionTarifa, $Enums } from "@prisma/client";
 
 interface CreatePaymentData {
   usuarioId: string;
   monto: number;
   estado: $Enums.EstadoPago;
   metodo: string;
-  mes: number;
-  año: number;
+  mes?: number;
+  año?: number;
+  fechaVencimiento?: Date;
 }
 
-interface CreatePaymentResult {
-  ok: boolean;
-  message?: string;
-  createdPayment?: any;
-}
-
-const validMethods = [
-  "EFECTIVO",
-  "MERCADOPAGO",
-  "TRANSFERENCIA",
-  "TARJETA",
-] as const;
-
-export async function createPayment(
-  data: CreatePaymentData
-): Promise<CreatePaymentResult> {
+export async function createPayment(data: CreatePaymentData) {
   try {
-    const { usuarioId, monto, estado, metodo, mes, año } = data;
-
-    // Validaciones básicas
-    if (!usuarioId) {
-      return { ok: false, message: "ID de usuario requerido" };
+    const session = await auth();
+    if (!session?.user?.id) {
+      throw new Error("Usuario no autenticado");
     }
 
-    if (monto <= 0) {
-      return { ok: false, message: "El monto debe ser mayor a 0" };
-    }
+    const administradorId = session.user.id;
 
-    if (mes < 1 || mes > 12) {
-      return { ok: false, message: "El mes debe estar entre 1 y 12" };
-    }
-
-    if (año < 2020 || año > 2030) {
-      return { ok: false, message: "El año debe estar entre 2020 y 2030" };
-    }
-
-    const validStates = Object.values($Enums.EstadoPago);
-    if (!validStates.includes(estado)) {
-      return { ok: false, message: "Estado de pago inválido" };
-    }
-
-    if (!validMethods.includes(metodo as any)) {
-      return { ok: false, message: "Método de pago inválido" };
-    }
-
-    // Verificar que el usuario existe
-    const usuario = await prisma.usuario.findUnique({
-      where: { id: usuarioId },
-    });
-
-    if (!usuario) {
-      return { ok: false, message: "Usuario no encontrado" };
-    }
-
-    // Verificar que no existe un pago para el mismo mes y año
-    const existingPayment = await prisma.pago.findFirst({
+    // Verificar que el usuario pertenece al administrador
+    const user = await prisma.usuario.findFirst({
       where: {
-        usuarioId: usuarioId,
-        mes: mes,
-        año: año,
+        id: data.usuarioId,
+        administradorId,
       },
     });
+
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    // Obtener configuración de tarifas
+    const configuracionTarifa = await prisma.configuracionTarifa.findUnique({
+      where: { administradorId },
+      include: { rangos: true },
+    });
+
+    if (!configuracionTarifa) {
+      throw new Error("No hay configuración de tarifas");
+    }
+
+    const isDynamicTariff =
+      configuracionTarifa.tipoConfiguracion ===
+      TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
+
+    // Verificar si ya existe un pago para el período
+    let existingPayment;
+    if (isDynamicTariff && data.fechaVencimiento) {
+      // Para sistema dinámico, verificar por fecha de vencimiento
+      const startOfMonth = new Date(
+        data.fechaVencimiento.getFullYear(),
+        data.fechaVencimiento.getMonth(),
+        1
+      );
+      const endOfMonth = new Date(
+        data.fechaVencimiento.getFullYear(),
+        data.fechaVencimiento.getMonth() + 1,
+        0,
+        23,
+        59,
+        59
+      );
+
+      existingPayment = await prisma.pago.findFirst({
+        where: {
+          usuarioId: data.usuarioId,
+          fechaVencimiento: {
+            gte: startOfMonth,
+            lte: endOfMonth,
+          },
+        },
+      });
+    } else if (data.mes && data.año) {
+      // Para sistema fijo, verificar por mes/año
+      existingPayment = await prisma.pago.findFirst({
+        where: {
+          usuarioId: data.usuarioId,
+          mes: data.mes,
+          año: data.año,
+        },
+      });
+    }
 
     if (existingPayment) {
-      return {
-        ok: false,
-        message: `Ya existe un pago para ${mes}/${año}. No se pueden crear pagos duplicados para el mismo período.`,
-      };
+      throw new Error("Ya existe un pago para este período");
     }
 
-    // Crear la fecha del pago (primer día del mes)
-    const fechaPago = new Date(año, mes - 1, 1);
+    // Crear el pago según el tipo de sistema
+    const paymentData: any = {
+      usuarioId: data.usuarioId,
+      monto: data.monto,
+      estado: data.estado,
+      metodo: data.metodo,
+      fecha: new Date(),
+      estaVencido: data.estado === $Enums.EstadoPago.VENCIDO,
+    };
 
-    // Crear el pago
-    const createdPayment = await prisma.pago.create({
-      data: {
-        usuarioId: usuarioId,
-        monto: monto,
-        estado: estado,
-        // @ts-ignore
-        metodo: metodo,
-        mes: mes,
-        año: año,
-        fecha: fechaPago,
-        periodo: `${mes.toString().padStart(2, "0")}/${año}`, // Formato: "08/2025"
-        estaVencido: estado === $Enums.EstadoPago.VENCIDO,
-      },
+    if (isDynamicTariff) {
+      // Sistema dinámico: usar fecha de vencimiento específica
+      if (!data.fechaVencimiento) {
+        throw new Error("Fecha de vencimiento requerida para sistema dinámico");
+      }
+
+      paymentData.fechaVencimiento = data.fechaVencimiento;
+      paymentData.mes = data.fechaVencimiento.getMonth() + 1;
+      paymentData.año = data.fechaVencimiento.getFullYear();
+      paymentData.periodo = `${data.fechaVencimiento.getFullYear()}-${String(
+        data.fechaVencimiento.getMonth() + 1
+      ).padStart(2, "0")}`;
+    } else {
+      // Sistema fijo: usar mes/año tradicional
+      if (!data.mes || !data.año) {
+        throw new Error("Mes y año requeridos para sistema fijo");
+      }
+
+      paymentData.mes = data.mes;
+      paymentData.año = data.año;
+      paymentData.periodo = `${data.año}-${String(data.mes).padStart(2, "0")}`;
+      paymentData.fechaVencimiento = null;
+    }
+
+    const newPayment = await prisma.pago.create({
+      data: paymentData,
     });
 
-    // Revalidar las rutas relevantes
-    revalidatePath(`/admin/users/${usuarioId}`);
+    revalidatePath(`/admin/users/${data.usuarioId}`);
     revalidatePath("/admin/users/list");
 
     return {
       ok: true,
-      message: `Pago creado correctamente para ${mes}/${año}`,
-      createdPayment,
+      message: "Pago creado exitosamente",
+      pago: newPayment,
     };
   } catch (error) {
-    console.error("Error creating payment:", error);
+    console.error("Error al crear pago:", error);
     return {
       ok: false,
-      message: "Error interno del servidor al crear el pago",
+      message:
+        error instanceof Error ? error.message : "Error al crear el pago",
     };
   }
 }

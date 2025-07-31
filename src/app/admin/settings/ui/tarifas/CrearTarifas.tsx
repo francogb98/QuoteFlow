@@ -1,175 +1,607 @@
 "use client";
-
 import type React from "react";
-
-import { useState } from "react";
-import { useRouter } from "next/navigation";
-import { useMutation } from "@tanstack/react-query";
-import { toast } from "sonner";
-import { Save, Loader2 } from "lucide-react";
-import { crearTarifas } from "@/actions/users";
+import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 
-export function CrearTarifas() {
-  const router = useRouter();
-  const [rango, setRango] = useState({
-    diaInicio: "1",
-    diaFin: "10",
-    monto: "5000",
-  });
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 
-  const mutation = useMutation({
-    mutationFn: crearTarifas,
-    onSuccess: (data) => {
-      if (!data.ok) {
-        toast.error(data.message || "Error al crear configuración");
-        return;
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+import { PlusIcon, TrashIcon, Save, Loader2 } from "lucide-react";
+import { saveTariffConfiguration } from "@/actions/users/admin/configTarifas.action";
+
+import { AlertMessage } from "@/components/admin/tarifas/ui/alert-message";
+import { useNotifications } from "@/components/admin/tarifas/components/use-notifications";
+
+type TipoConfiguracionTarifa = "FIJA_MENSUAL" | "DINAMICA_POR_FECHA_INGRESO";
+
+interface RangoTarifaForm {
+  id?: string;
+  tempId: string;
+  diaInicio: number | "";
+  diaFin: number | "";
+  monto: number | "";
+}
+
+interface ConfiguracionTarifaFormProps {
+  existingConfig?: any;
+  onSuccess?: () => void;
+}
+
+interface FormAlert {
+  type: "success" | "error" | "warning" | "info";
+  title: string;
+  description?: string;
+}
+
+export function ConfiguracionTarifaForm({
+  existingConfig,
+  onSuccess,
+}: ConfiguracionTarifaFormProps) {
+  const [tipoConfiguracion, setTipoConfiguracion] =
+    useState<TipoConfiguracionTarifa>("FIJA_MENSUAL");
+  const [rangos, setRangos] = useState<RangoTarifaForm[]>([
+    { tempId: crypto.randomUUID(), diaInicio: "", diaFin: "", monto: "" },
+  ]);
+  const [montoBase, setMontoBase] = useState<number | "">("");
+  const [diasGracia, setDiasGracia] = useState<number | "">("");
+  const [montoRecargo, setMontoRecargo] = useState<number | "">("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [alert, setAlert] = useState<FormAlert | null>(null);
+  const [validationErrors, setValidationErrors] = useState<string[]>([]);
+
+  const { showSuccess, showError, showWarning } = useNotifications();
+
+  // Cargar configuración existente si existe
+  useEffect(() => {
+    if (existingConfig) {
+      setTipoConfiguracion(existingConfig.tipoConfiguracion);
+
+      if (
+        existingConfig.tipoConfiguracion === "FIJA_MENSUAL" &&
+        existingConfig.rangos
+      ) {
+        setRangos(
+          existingConfig.rangos.map((rango: any) => ({
+            id: rango.id,
+            tempId: crypto.randomUUID(),
+            diaInicio: rango.diaInicio,
+            diaFin: rango.diaFin,
+            monto: rango.monto,
+          }))
+        );
+      } else if (
+        existingConfig.tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO"
+      ) {
+        setMontoBase(existingConfig.montoBase || "");
+        setDiasGracia(existingConfig.diasGracia || "");
+        setMontoRecargo(existingConfig.montoRecargo || "");
       }
-      toast.success("Configuración de tarifas creada exitosamente");
-      router.refresh();
-    },
-    onError: (error) => {
-      toast.error("Error al crear configuración", {
-        description: error.message,
-      });
-    },
-  });
+    }
+  }, [existingConfig]);
 
-  const handleChange = (
-    field: "diaInicio" | "diaFin" | "monto",
-    value: string
-  ) => {
-    setRango((prev) => ({
-      ...prev,
-      [field]: value,
-    }));
+  // Limpiar alertas cuando cambia el tipo de configuración
+  useEffect(() => {
+    setAlert(null);
+    setValidationErrors([]);
+  }, [tipoConfiguracion]);
+
+  const validateForm = (): string[] => {
+    const errors: string[] = [];
+
+    if (tipoConfiguracion === "FIJA_MENSUAL") {
+      if (rangos.length === 0) {
+        errors.push("Debe agregar al menos un rango de tarifa");
+      }
+
+      // Validar cada rango
+      rangos.forEach((rango, index) => {
+        if (!rango.diaInicio || !rango.diaFin || !rango.monto) {
+          errors.push(`Rango ${index + 1}: Todos los campos son obligatorios`);
+        } else {
+          if (Number(rango.diaInicio) > Number(rango.diaFin)) {
+            errors.push(
+              `Rango ${
+                index + 1
+              }: El día de inicio no puede ser mayor al día de fin`
+            );
+          }
+          if (Number(rango.monto) <= 0) {
+            errors.push(`Rango ${index + 1}: El monto debe ser mayor a 0`);
+          }
+        }
+      });
+
+      // Validar solapamientos
+      for (let i = 0; i < rangos.length; i++) {
+        for (let j = i + 1; j < rangos.length; j++) {
+          const rangoA = rangos[i];
+          const rangoB = rangos[j];
+          if (
+            Number(rangoA.diaInicio) <= Number(rangoB.diaFin) &&
+            Number(rangoA.diaFin) >= Number(rangoB.diaInicio)
+          ) {
+            errors.push(`Los rangos ${i + 1} y ${j + 1} se superponen`);
+          }
+        }
+      }
+    } else {
+      if (!montoBase || !diasGracia || !montoRecargo) {
+        errors.push("Todos los campos de tarifa dinámica son obligatorios");
+      } else {
+        if (Number(montoBase) <= 0) {
+          errors.push("El monto base debe ser mayor a 0");
+        }
+        if (Number(diasGracia) < 0) {
+          errors.push("Los días de gracia no pueden ser negativos");
+        }
+        if (Number(montoRecargo) <= 0) {
+          errors.push("El monto con recargo debe ser mayor a 0");
+        }
+        if (Number(montoRecargo) <= Number(montoBase)) {
+          errors.push("El monto con recargo debe ser mayor al monto base");
+        }
+      }
+    }
+
+    return errors;
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleAddRango = () => {
+    setRangos([
+      ...rangos,
+      { tempId: crypto.randomUUID(), diaInicio: "", diaFin: "", monto: "" },
+    ]);
+    setAlert(null);
+  };
+
+  const handleRemoveRango = (tempId: string) => {
+    setRangos(rangos.filter((rango) => rango.tempId !== tempId));
+    setAlert(null);
+  };
+
+  const handleRangoChange = (
+    tempId: string,
+    field: keyof Omit<RangoTarifaForm, "id" | "tempId">,
+    value: string
+  ) => {
+    setRangos(
+      rangos.map((rango) =>
+        rango.tempId === tempId
+          ? { ...rango, [field]: value === "" ? "" : Number.parseFloat(value) }
+          : rango
+      )
+    );
+    // Limpiar errores cuando el usuario empiece a corregir
+    if (validationErrors.length > 0) {
+      setValidationErrors([]);
+      setAlert(null);
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setAlert(null);
+    setValidationErrors([]);
 
-    const { diaInicio, diaFin, monto } = rango;
-
-    if (!diaInicio || !diaFin || !monto) {
-      toast.warning("Completá todos los campos");
+    // Validar formulario
+    const errors = validateForm();
+    if (errors.length > 0) {
+      setValidationErrors(errors);
+      setAlert({
+        type: "error",
+        title: "Errores de validación",
+        description: "Por favor, corrige los errores antes de continuar",
+      });
+      showError("Formulario inválido", "Revisa los campos marcados en rojo");
       return;
     }
 
-    const diaInicioNum = +diaInicio;
-    const diaFinNum = +diaFin;
-    const montoNum = +monto;
+    setIsLoading(true);
 
-    if (montoNum <= 0) {
-      toast.warning("El monto debe ser mayor a cero");
-      return;
+    try {
+      let configData: any;
+
+      if (tipoConfiguracion === "FIJA_MENSUAL") {
+        configData = {
+          tipoConfiguracion,
+          rangos: rangos.map((rango) => ({
+            id: rango.id,
+            diaInicio: Number(rango.diaInicio),
+            diaFin: Number(rango.diaFin),
+            monto: Number(rango.monto),
+          })),
+        };
+      } else {
+        configData = {
+          tipoConfiguracion,
+          montoBase: Number(montoBase),
+          diasGracia: Number(diasGracia),
+          montoRecargo: Number(montoRecargo),
+        };
+      }
+
+      const result = await saveTariffConfiguration(configData);
+
+      if (result.ok) {
+        const isEditing = !!existingConfig;
+        const successMessage = isEditing
+          ? "Configuración actualizada"
+          : "Configuración creada";
+        const successDescription = isEditing
+          ? "Tu configuración de tarifas ha sido actualizada exitosamente"
+          : "Tu nueva configuración de tarifas ha sido creada exitosamente";
+
+        setAlert({
+          type: "success",
+          title: successMessage,
+          description: successDescription,
+        });
+
+        showSuccess(successMessage, successDescription);
+
+        // Esperar un poco antes de cambiar de pestaña para que el usuario vea el mensaje
+        setTimeout(() => {
+          onSuccess?.();
+        }, 1500);
+      } else {
+        const errorMessage =
+          result.message || "Error desconocido al guardar la configuración";
+        setAlert({
+          type: "error",
+          title: "Error al guardar",
+          description: errorMessage,
+        });
+        showError("Error al guardar", errorMessage);
+      }
+    } catch (error) {
+      const errorMessage = "Error inesperado. Por favor, intenta nuevamente.";
+      setAlert({
+        type: "error",
+        title: "Error inesperado",
+        description: errorMessage,
+      });
+      showError("Error inesperado", errorMessage);
+      console.error("Error:", error);
+    } finally {
+      setIsLoading(false);
     }
-
-    if (diaInicioNum < 1 || diaFinNum > 31) {
-      toast.warning("Los días deben estar entre 1 y 31");
-      return;
-    }
-
-    if (diaFinNum < diaInicioNum) {
-      toast.warning("El rango de días debe ser correcto");
-      return;
-    }
-
-    mutation.mutate({
-      diaInicio: diaInicioNum,
-      diaFin: diaFinNum,
-      monto: montoNum,
-      estaActiva: true,
-    });
   };
 
   return (
-    <div className="space-y-6">
-      <form onSubmit={handleSubmit} className="space-y-6">
-        {/* Header - Cambiado a vertical en mobile */}
-        <div className="hidden md:grid grid-cols-12 gap-3 items-center text-sm font-medium text-gray-600 pb-2 border-b border-gray-200">
-          <div className="col-span-4">Período</div>
-          <div className="col-span-4">Rango de días</div>
-          <div className="col-span-4">Precio ($)</div>
-        </div>
-
-        {/* Contenedor principal - Cambia a vertical en mobile */}
-        <div className="flex flex-col md:grid md:grid-cols-12 gap-4 p-3 bg-gray-50 rounded-lg">
-          {/* Etiqueta móvil para período */}
-          <div className="md:hidden text-sm font-medium text-gray-600">
-            Período
-          </div>
-          <div className="md:col-span-4 text-gray-700 font-medium flex items-center">
-            <span className="md:hidden mr-2">•</span>
-            Día {rango.diaInicio || "-"} a {rango.diaFin || "-"}
-          </div>
-
-          {/* Etiqueta móvil para rango */}
-          <div className="md:hidden text-sm font-medium text-gray-600">
-            Rango de días
-          </div>
-          <div className="md:col-span-4 flex flex-col md:flex-row gap-2 items-start md:items-center">
-            <div className="flex items-center w-full gap-2">
-              <input
-                type="number"
-                min="1"
-                max="31"
-                value={rango.diaInicio}
-                onChange={(e) => handleChange("diaInicio", e.target.value)}
-                className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Inicio"
-              />
-              <span className="text-gray-500 hidden md:inline">a</span>
-            </div>
-            <div className="flex items-center w-full gap-2">
-              <span className="text-gray-500 md:hidden">a</span>
-              <input
-                type="number"
-                min="1"
-                max="31"
-                value={rango.diaFin}
-                onChange={(e) => handleChange("diaFin", e.target.value)}
-                className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-                placeholder="Fin"
-              />
-            </div>
-          </div>
-
-          {/* Etiqueta móvil para precio */}
-          <div className="md:hidden text-sm font-medium text-gray-600">
-            Precio ($)
-          </div>
-          <div className="md:col-span-4">
-            <input
-              type="number"
-              value={rango.monto === "0" ? "0" : rango.monto || ""}
-              onChange={(e) => handleChange("monto", e.target.value)}
-              className="w-full px-3 py-2 border border-purple-200 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent"
-              placeholder="Monto"
+    <div className="w-full mx-auto">
+      <Card className="w-full">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Save className="w-5 h-5" />
+            {existingConfig ? "Editar" : "Crear"} Configuración de Tarifas
+          </CardTitle>
+          <CardDescription>
+            {existingConfig
+              ? "Modifica tu configuración actual de tarifas."
+              : "Define cómo se calcularán las cuotas para tus usuarios."}
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-6">
+          {/* Mostrar alerta general */}
+          {alert && (
+            <AlertMessage
+              type={alert.type}
+              title={alert.title}
+              description={alert.description}
+              className="mb-4"
             />
-          </div>
-        </div>
+          )}
 
-        {/* Botón guardar (se mantiene igual) */}
-        <div className="pt-4 border-t border-gray-200">
-          <Button
-            type="submit"
-            disabled={mutation.isPending}
-            className="w-full bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 text-white py-3 text-lg font-medium"
-          >
-            {mutation.isPending ? (
-              <>
-                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                Guardando...
-              </>
-            ) : (
-              <>
-                <Save className="w-5 h-5 mr-2" />
-                Guardar Configuración
-              </>
+          {/* Mostrar errores de validación */}
+
+          <form onSubmit={handleSubmit} className="space-y-6">
+            {/* Tipo de Configuración */}
+            <div className="space-y-3">
+              <Label
+                htmlFor="tipoConfiguracion"
+                className="text-base font-medium"
+              >
+                Tipo de Configuración
+              </Label>
+              <div className="relative">
+                <Select
+                  value={tipoConfiguracion}
+                  onValueChange={(value: TipoConfiguracionTarifa) =>
+                    setTipoConfiguracion(value)
+                  }
+                  disabled={isLoading}
+                >
+                  <SelectTrigger id="tipoConfiguracion" className="w-full">
+                    <SelectValue placeholder="Selecciona un tipo de configuración" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="FIJA_MENSUAL">
+                      Fija Mensual (por rango de días)
+                    </SelectItem>
+                    <SelectItem value="DINAMICA_POR_FECHA_INGRESO">
+                      Dinámica (por fecha de ingreso)
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+
+            {/* Configuración Fija Mensual */}
+            {tipoConfiguracion === "FIJA_MENSUAL" && (
+              <div className="space-y-6 border border-gray-200 p-6 rounded-lg bg-gray-50/50">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Rangos de Tarifa Fija Mensual
+                </h3>
+
+                <div className="space-y-4">
+                  {rangos.map((rango, index) => (
+                    <div
+                      key={rango.tempId}
+                      className="bg-white p-4 rounded-lg border border-gray-200 shadow-sm"
+                    >
+                      <div className="flex items-center justify-between mb-4">
+                        <h4 className="text-sm font-medium text-gray-700">
+                          Rango {index + 1}
+                        </h4>
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => handleRemoveRango(rango.tempId)}
+                          disabled={rangos.length === 1 || isLoading}
+                          className="text-red-600 hover:text-red-700 hover:bg-red-50"
+                        >
+                          <TrashIcon className="h-4 w-4" />
+                        </Button>
+                      </div>
+
+                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`diaInicio-${rango.tempId}`}
+                            className="text-sm font-medium"
+                          >
+                            Día Inicio
+                          </Label>
+                          <Input
+                            id={`diaInicio-${rango.tempId}`}
+                            type="number"
+                            placeholder="Ej: 1"
+                            value={rango.diaInicio}
+                            onChange={(e) =>
+                              handleRangoChange(
+                                rango.tempId,
+                                "diaInicio",
+                                e.target.value
+                              )
+                            }
+                            min="1"
+                            max="31"
+                            required
+                            disabled={isLoading}
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`diaFin-${rango.tempId}`}
+                            className="text-sm font-medium"
+                          >
+                            Día Fin
+                          </Label>
+                          <Input
+                            id={`diaFin-${rango.tempId}`}
+                            type="number"
+                            placeholder="Ej: 10"
+                            value={rango.diaFin}
+                            onChange={(e) =>
+                              handleRangoChange(
+                                rango.tempId,
+                                "diaFin",
+                                e.target.value
+                              )
+                            }
+                            min="1"
+                            max="31"
+                            required
+                            disabled={isLoading}
+                            className="w-full"
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label
+                            htmlFor={`monto-${rango.tempId}`}
+                            className="text-sm font-medium"
+                          >
+                            Monto ($)
+                          </Label>
+                          <Input
+                            id={`monto-${rango.tempId}`}
+                            type="number"
+                            step="0.01"
+                            placeholder="Ej: 15000"
+                            value={rango.monto}
+                            onChange={(e) =>
+                              handleRangoChange(
+                                rango.tempId,
+                                "monto",
+                                e.target.value
+                              )
+                            }
+                            required
+                            disabled={isLoading}
+                            className="w-full"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleAddRango}
+                  disabled={isLoading}
+                  className="w-full border-dashed border-2 hover:bg-gray-50 bg-transparent"
+                >
+                  <PlusIcon className="h-4 w-4 mr-2" />
+                  Agregar Nuevo Rango
+                </Button>
+              </div>
             )}
-          </Button>
-        </div>
-      </form>
+
+            {/* Configuración Dinámica */}
+            {tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO" && (
+              <div className="space-y-6 border border-gray-200 p-6 rounded-lg bg-gray-50/50">
+                <h3 className="text-lg font-semibold text-gray-900">
+                  Tarifa Dinámica por Fecha de Ingreso
+                </h3>
+
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                  <div className="space-y-3">
+                    <Label htmlFor="montoBase" className="text-sm font-medium">
+                      Monto Base ($)
+                    </Label>
+                    <Input
+                      id="montoBase"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ej: 15000"
+                      value={montoBase}
+                      onChange={(e) => {
+                        setMontoBase(
+                          e.target.value === ""
+                            ? ""
+                            : Number.parseFloat(e.target.value)
+                        );
+                        if (validationErrors.length > 0) {
+                          setValidationErrors([]);
+                          setAlert(null);
+                        }
+                      }}
+                      required
+                      disabled={isLoading}
+                      className="w-full"
+                    />
+                  </div>
+                  <div className="space-y-3">
+                    <Label htmlFor="diasGracia" className="text-sm font-medium">
+                      Días de Gracia
+                    </Label>
+                    <Input
+                      id="diasGracia"
+                      type="number"
+                      placeholder="Ej: 5"
+                      value={diasGracia}
+                      onChange={(e) => {
+                        setDiasGracia(
+                          e.target.value === ""
+                            ? ""
+                            : Number.parseInt(e.target.value)
+                        );
+                        if (validationErrors.length > 0) {
+                          setValidationErrors([]);
+                          setAlert(null);
+                        }
+                      }}
+                      min="0"
+                      required
+                      disabled={isLoading}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-gray-600">
+                      Días después del vencimiento antes de aplicar recargo.
+                    </p>
+                  </div>
+                  <div className="space-y-3">
+                    <Label
+                      htmlFor="montoRecargo"
+                      className="text-sm font-medium"
+                    >
+                      Monto con Recargo ($)
+                    </Label>
+                    <Input
+                      id="montoRecargo"
+                      type="number"
+                      step="0.01"
+                      placeholder="Ej: 18000"
+                      value={montoRecargo}
+                      onChange={(e) => {
+                        setMontoRecargo(
+                          e.target.value === ""
+                            ? ""
+                            : Number.parseFloat(e.target.value)
+                        );
+                        if (validationErrors.length > 0) {
+                          setValidationErrors([]);
+                          setAlert(null);
+                        }
+                      }}
+                      required
+                      disabled={isLoading}
+                      className="w-full"
+                    />
+                    <p className="text-xs text-gray-600">
+                      Monto total si se exceden los días de gracia.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {validationErrors.length > 0 && (
+              <div className="space-y-2">
+                {validationErrors.map((error, index) => (
+                  <AlertMessage
+                    key={index}
+                    type="error"
+                    title={error}
+                    className="text-sm"
+                  />
+                ))}
+              </div>
+            )}
+
+            {/* Botones de acción */}
+            <div className="flex justify-end gap-3 pt-6 border-t border-gray-200">
+              <Button
+                type="submit"
+                disabled={isLoading}
+                className="min-w-[140px]"
+              >
+                {isLoading ? (
+                  <>
+                    <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                    Guardando...
+                  </>
+                ) : (
+                  <>
+                    <Save className="w-4 h-4 mr-2" />
+                    {existingConfig ? "Actualizar" : "Crear"}
+                  </>
+                )}
+              </Button>
+            </div>
+          </form>
+        </CardContent>
+      </Card>
     </div>
   );
 }

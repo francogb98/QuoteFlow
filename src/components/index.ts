@@ -1,5 +1,3 @@
-export * from "./admin/SideBar";
-
 export * from "./auth/InputField";
 
 export * from "./NavBar";

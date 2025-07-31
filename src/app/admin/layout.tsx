@@ -1,8 +1,9 @@
-import { auth } from "@/*";
-import { Sidebar } from "@/components";
-import { redirect } from "next/navigation";
 import type React from "react";
+import { redirect } from "next/navigation";
 import { Toaster } from "sonner";
+
+import { auth } from "@/*";
+import { Sidebar } from "@/01-components/admin";
 
 export default async function AdminLayout({
   children,

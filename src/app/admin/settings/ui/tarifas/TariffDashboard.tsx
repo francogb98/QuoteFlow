@@ -1,97 +1,117 @@
-import { auth } from "@/*";
-
-import { CrearTarifas } from "./CrearTarifas";
-import { TariffTable } from "./TariffTable ";
 import {
   AlertTriangle,
   CreditCard,
   ExternalLink,
   InfoIcon,
 } from "lucide-react";
+import { TipoConfiguracionTarifa } from "@prisma/client";
+import { TariffTable } from "./TariffTable ";
 
-//https://www.mercadopago.com.ar/costs-section/merchant-svcs/processing/options
+interface TariffDashboardProps {
+  user: any; // Ajusta el tipo según tu estructura de usuario
+}
 
-export const TariffDashboard = async () => {
-  const session = await auth();
+export function TariffDashboard({ user }: TariffDashboardProps) {
+  const configuracionTarifa = user?.configuracionTarifa as
+    | {
+        tipoConfiguracion: TipoConfiguracionTarifa;
+        rangos?: Array<any>;
+        montoBase?: number;
+        diasGracia?: number;
+        montoRecargo?: number;
+      }
+    | undefined;
 
-  const hasTarifas =
-    //@ts-ignore
-    session?.user.configuracionTarifa?.rangos?.length > 0;
+  const hasConfiguracion = !!configuracionTarifa;
+  const isFijaMensual =
+    configuracionTarifa?.tipoConfiguracion ===
+    TipoConfiguracionTarifa.FIJA_MENSUAL;
+  const isDinamicaPorFechaIngreso =
+    configuracionTarifa?.tipoConfiguracion ===
+    TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
 
-  const tarifas = hasTarifas
-    ? //@ts-ignore
-      session.user.configuracionTarifa.rangos.sort(
+  const tarifasFijas = isFijaMensual
+    ? configuracionTarifa?.rangos?.sort(
         (a: any, b: any) => a.diaInicio - b.diaInicio
-      )
+      ) || []
     : [];
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="capitalize mb-3 text-2xl font-bold bg-gradient-to-r from-green-600 to-purple-600 bg-clip-text text-transparent">
-        Tus Tarifas
-      </h1>
-      <div className="bg-gradient-to-r from-blue-50 to-indigo-50 border border-blue-200 rounded-2xl p-4 sm:p-6">
-        <div className="flex items-start gap-4">
-          <div className="flex-shrink-0">
-            <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
-              <InfoIcon className="w-5 h-5 text-blue-600" />
-            </div>
-          </div>
+      {/* Información sobre comisiones */}
 
-          <div className="flex-1 min-w-0">
-            <div className="flex items-center gap-2 mb-2">
-              <CreditCard className="w-4 h-4 text-blue-600" />
-              <h3 className="text-lg font-semibold text-blue-900">
-                Información sobre comisiones
-              </h3>
-            </div>
+      {/* Configuración actual */}
+      {hasConfiguracion ? (
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-purple-100 p-6">
+          <h2 className="text-xl font-bold text-gray-800 mb-4">
+            Configuración Actual
+          </h2>
 
-            <p className="text-blue-800 text-sm sm:text-base mb-4 leading-relaxed">
-              <strong>Importante:</strong> MercadoPago cobra una comisión por
-              cada transacción procesada. Las tarifas que configures aquí son
-              adicionales a las comisiones de MercadoPago.
-            </p>
-
-            <div className="flex flex-col sm:flex-row gap-3">
-              <a
-                href="https://www.mercadopago.com.ar/costs-section/merchant-svcs/processing/options"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-lg text-sm font-medium transition-colors duration-200"
-              >
-                <ExternalLink className="w-4 h-4" />
-                Ver comisiones de MercadoPago
-              </a>
-
-              <div className="flex items-center gap-2 text-blue-700 text-sm">
-                <AlertTriangle className="w-4 h-4" />
-                <span>Consulta las tarifas oficiales antes de configurar</span>
+          {isFijaMensual && (
+            <>
+              <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-green-800 font-medium">
+                  Tipo de Tarifa: Fija Mensual (por rangos de días)
+                </p>
               </div>
-            </div>
-          </div>
-        </div>
-      </div>
+              {tarifasFijas.length > 0 ? (
+                <TariffTable tarifas={tarifasFijas} />
+              ) : (
+                <p className="text-gray-600">
+                  No hay rangos de tarifas configurados para este tipo.
+                </p>
+              )}
+            </>
+          )}
 
-      {hasTarifas && (
-        <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-purple-100 p-4">
-          <TariffTable tarifas={tarifas} />
+          {isDinamicaPorFechaIngreso && (
+            <>
+              <div className="mb-4 p-4 bg-green-50 rounded-lg border border-green-200">
+                <p className="text-green-800 font-medium">
+                  Tipo de Tarifa: Dinámica (por fecha de ingreso)
+                </p>
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Monto Base</p>
+                  <p className="text-2xl font-bold text-gray-800">
+                    ${configuracionTarifa?.montoBase?.toFixed(2) || "N/A"}
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">Días de Gracia</p>
+                  <p className="text-2xl font-bold text-gray-800">
+                    {configuracionTarifa?.diasGracia || "N/A"} días
+                  </p>
+                </div>
+                <div className="p-4 bg-gray-50 rounded-lg">
+                  <p className="text-sm text-gray-600 mb-1">
+                    Monto con Recargo
+                  </p>
+                  <p className="text-2xl font-bold text-gray-800">
+                    ${configuracionTarifa?.montoRecargo?.toFixed(2) || "N/A"}
+                  </p>
+                </div>
+              </div>
+            </>
+          )}
+        </div>
+      ) : (
+        <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-purple-100 p-6">
+          <div className="text-center py-8">
+            <div className="w-16 h-16 bg-gray-100 rounded-full flex items-center justify-center mx-auto mb-4">
+              <CreditCard className="w-8 h-8 text-gray-400" />
+            </div>
+            <h3 className="text-lg font-semibold text-gray-800 mb-2">
+              Sin configuración de tarifas
+            </h3>
+            <p className="text-gray-600">
+              No tienes ninguna configuración de tarifas activa. Crea una para
+              comenzar.
+            </p>
+          </div>
         </div>
       )}
-
-      {
-        // @ts-ignore
-        !hasTarifas && (
-          <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-purple-100 p-4">
-            <p className="text-gray-600">No tienes tarifas configuradas</p>
-          </div>
-        )
-      }
-      <div>
-        <h1 className="capitalize mb-3 text-2xl font-bold bg-gradient-to-r from-green-600 to-purple-600 bg-clip-text text-transparent">
-          Nueva Tarifa
-        </h1>
-        <CrearTarifas />
-      </div>
     </div>
   );
-};
+}

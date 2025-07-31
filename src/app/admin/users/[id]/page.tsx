@@ -1,7 +1,9 @@
 import { redirect } from "next/navigation";
-import { FormEditUser } from "./ui/FormEditUser";
 import type { Metadata } from "next";
+
 import { getUser } from "@/actions/users";
+
+import { FormEditUser } from "./ui/FormEditUser";
 
 interface Props {
   params: Promise<{
@@ -28,7 +30,13 @@ export default async function NamePage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">{id && <FormEditUser id={id} />}</div>
+      <div className="max-w-6xl mx-auto">
+        {id && (
+          <div className="space-y-6">
+            <FormEditUser id={id} />
+          </div>
+        )}
+      </div>
     </div>
   );
 }

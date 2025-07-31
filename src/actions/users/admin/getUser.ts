@@ -1,36 +1,50 @@
 "use server";
 
-import { auth } from "@/*";
+import { auth } from "@/auth.config";
 import prisma from "@/lib/prisma";
-import { UsuarioWithPagos } from "@/types/usuarios";
 
-export const getUser = async (id: string): Promise<UsuarioWithPagos> => {
+export async function getUser(userId: string) {
   try {
     const session = await auth();
-
-    if (!session?.user) {
-      throw new Error("No estás logueado");
+    if (!session?.user?.id) {
+      throw new Error("Usuario no autenticado");
     }
 
-    const { id: adminId } = session.user;
+    const administradorId = session.user.id;
 
-    const user = await prisma.usuario.findUniqueOrThrow({
+    // Obtener el usuario con sus pagos
+    const user = await prisma.usuario.findFirst({
       where: {
-        id: id,
-        administradorId: adminId,
+        id: userId,
+        administradorId,
       },
       include: {
         pagos: {
-          orderBy: {
-            fecha: "desc",
-          },
+          orderBy: [
+            { año: "desc" },
+            { mes: "desc" },
+            { fechaVencimiento: "desc" },
+          ],
         },
       },
     });
-    //@ts-ignore
-    return user;
+
+    if (!user) {
+      throw new Error("Usuario no encontrado");
+    }
+
+    // Obtener configuración de tarifas del administrador
+    const configuracionTarifa = await prisma.configuracionTarifa.findUnique({
+      where: { administradorId },
+      include: { rangos: true },
+    });
+
+    return {
+      ...user,
+      configuracionTarifa,
+    };
   } catch (error) {
-    console.error("Error al buscar usuario:", error);
-    throw error; // Es importante lanzar el error para que React Query lo maneje
+    console.error("Error al obtener usuario:", error);
+    throw new Error("Error al obtener la información del usuario");
   }
-};
+}

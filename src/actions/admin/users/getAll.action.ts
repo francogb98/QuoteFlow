@@ -2,95 +2,97 @@
 
 import { auth } from "@/auth.config";
 import prisma from "@/lib/prisma";
-import type { AdminData, UsuarioWithPagos } from "@/types/usuarios";
-import type { Decimal } from "@prisma/client/runtime/library";
+import { TipoConfiguracionTarifa } from "@prisma/client";
 
-export const getUsersList = async (
+export async function getUsersList(
   filterByMonth = false,
-  month?: number,
-  year?: number
-): Promise<AdminData> => {
+  selectedMonth?: number,
+  selectedYear?: number
+) {
   try {
     const session = await auth();
-    if (!session?.user) {
-      throw new Error("No estás logueado");
+    if (!session?.user?.id) {
+      throw new Error("Usuario no autenticado");
     }
 
-    const { id: adminId } = session.user;
+    const administradorId = session.user.id;
 
-    const currentDate = new Date();
-    const currentMonth = month || currentDate.getMonth() + 1;
-    const currentYear = year || currentDate.getFullYear();
-
-    const includePayments = filterByMonth
-      ? {
-          pagos: {
-            where: {
-              mes: currentMonth,
-              año: currentYear,
-            },
-          },
-        }
-      : { pagos: true };
-
-    const admin = await prisma.administrador.findUnique({
-      where: {
-        id: adminId,
-      },
-      include: {
-        usuarios: {
-          include: includePayments,
-        },
-        configuracionTarifa: {
-          include: {
-            rangos: true,
-          },
-        },
-      },
+    // Obtener configuración de tarifas para determinar el tipo de sistema
+    const configuracionTarifa = await prisma.configuracionTarifa.findUnique({
+      where: { administradorId },
     });
 
-    if (!admin) {
-      return {
-        usuarios: [],
-        configuracionTarifa: null,
-      };
-    }
-
-    // Función para convertir Decimal a number
-    const convertDecimalToNumber = (
-      value: Decimal | null | undefined
-    ): number => {
-      return value ? value.toNumber() : 0;
+    const whereClause: any = {
+      administradorId,
+      estaActivo: true,
     };
 
-    // Serializar los usuarios y sus pagos con tipos explícitos
-    // @ts-ignore
-    const serializedUsers: UsuarioWithPagos[] = admin.usuarios.map(
-      (usuario) => ({
-        ...usuario,
-        pagos: usuario.pagos.map((pago) => ({
-          ...pago,
-          // @ts-ignore
-          monto: convertDecimalToNumber(pago.monto),
-          fecha: pago.fecha.toISOString(),
-        })),
-      })
-    );
+    // Si se filtra por mes, ajustar la consulta según el tipo de sistema
+    if (filterByMonth && selectedMonth && selectedYear) {
+      if (
+        configuracionTarifa?.tipoConfiguracion ===
+        TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO
+      ) {
+        // Para sistema dinámico, filtrar por fechaVencimiento
+        const startDate = new Date(selectedYear, selectedMonth - 1, 1);
+        const endDate = new Date(selectedYear, selectedMonth, 0, 23, 59, 59);
 
-    // Filtrar usuarios si es necesario
-    let usersToReturn = serializedUsers;
-    if (filterByMonth) {
-      usersToReturn = serializedUsers.filter(
-        (usuario) => usuario.pagos && usuario.pagos.length > 0
-      );
+        whereClause.pagos = {
+          some: {
+            fechaVencimiento: {
+              gte: startDate,
+              lte: endDate,
+            },
+          },
+        };
+      } else {
+        // Para sistema fijo, filtrar por mes y año tradicional
+        whereClause.pagos = {
+          some: {
+            mes: selectedMonth,
+            año: selectedYear,
+          },
+        };
+      }
     }
+
+    const usuarios = await prisma.usuario.findMany({
+      where: whereClause,
+      include: {
+        pagos: filterByMonth
+          ? configuracionTarifa?.tipoConfiguracion ===
+            TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO
+            ? {
+                where: {
+                  fechaVencimiento: {
+                    gte: new Date(selectedYear!, selectedMonth! - 1, 1),
+                    lte: new Date(selectedYear!, selectedMonth!, 0, 23, 59, 59),
+                  },
+                },
+                orderBy: { fechaVencimiento: "desc" },
+              }
+            : {
+                where: {
+                  mes: selectedMonth,
+                  año: selectedYear,
+                },
+                orderBy: { fecha: "desc" },
+              }
+          : {
+              orderBy: { fecha: "desc" },
+              take: 5, // Limitar a los últimos 5 pagos si no se filtra
+            },
+      },
+      orderBy: [{ apellido: "asc" }, { nombre: "asc" }],
+    });
 
     return {
-      usuarios: usersToReturn,
-      configuracionTarifa: admin.configuracionTarifa,
+      usuarios,
+      tipoConfiguracion: configuracionTarifa?.tipoConfiguracion || null,
+      totalUsuarios: usuarios.length,
     };
   } catch (error) {
-    console.error("Error al buscar usuarios:", error);
-    throw error;
+    console.error("Error al obtener usuarios:", error);
+    throw new Error("Error al obtener la lista de usuarios");
   }
-};
+}

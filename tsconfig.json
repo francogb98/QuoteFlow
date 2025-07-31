@@ -36,7 +36,9 @@
     "**/*.tsx",
     ".next/types/**/*.ts",
     "next",
-    "src/seed.js"
+    "src/seed.js",
+    "src/app/admin/settings/ui/tarifas",
+    "src/scripts/setup-cron-jobs.js"
   ],
   "exclude": [
     "node_modules"
