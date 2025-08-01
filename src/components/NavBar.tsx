@@ -20,11 +20,21 @@ export function Navbar() {
   if (!mounted) {
     // Renderizar una versión simple durante SSR
     return (
-      <nav className="bg-white/80 backdrop-blur-md border-b border-purple-100 sticky top-0 z-50">
-        <div className="container mx-auto px-4">
-          <div className="flex items-center justify-between h-16">
-            Cargando Pagina
-          </div>
+      <nav className="bg-white/80 backdrop-blur-md border-b border-purple-100 sticky top-0 z-50 shadow-md">
+        <div className="container mx-auto flex justify-between items-center p-4">
+          <Link href="/" className="flex items-center space-x-2">
+            <Image
+              src="/IconoOriginal.ico"
+              alt="Logo"
+              width={100}
+              height={100}
+              priority
+              className="w-10 h-10 sm:w-12 sm:h-12"
+            />
+            <span className="text-xl sm:text-2xl font-bold bg-gradient-to-r from-purple-600 via-violet-600 to-emerald-500 bg-clip-text text-transparent">
+              CuotaFacil
+            </span>
+          </Link>
         </div>
       </nav>
     );
