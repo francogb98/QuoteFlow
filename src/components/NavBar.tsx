@@ -41,6 +41,7 @@ export function Navbar() {
   }
   const isLoginPage = pathname === "/auth/login";
   const isRegisterPage = pathname === "/auth/new-account";
+  const isRootPage = pathname === "/";
 
   return (
     <nav className="p-4 bg-white dark:bg-gray-800 shadow-md">
@@ -61,7 +62,7 @@ export function Navbar() {
         </Link>
         {/* Enlaces de navegación */}
         <ul className="flex space-x-2 sm:space-x-4 items-center">
-          {!isLoginPage && (
+          {(isRegisterPage || isRootPage) && (
             <li>
               <Link href="/auth/login" passHref>
                 <Button
@@ -74,7 +75,7 @@ export function Navbar() {
               </Link>
             </li>
           )}
-          {!isRegisterPage && (
+          {(isLoginPage || isRootPage) && (
             <li>
               <Link href="/auth/new-account" passHref>
                 <Button className="bg-emerald-600 text-white hover:bg-emerald-700 p-2 sm:px-4 sm:py-2">
