@@ -1,31 +1,21 @@
 import { Metadata } from "next";
 import "./globals.css";
 import Provider from "@/components/Providers";
+
 export const metadata: Metadata = {
-  // Aquí se agrega la propiedad metadataBase para resolver las URLs relativas
   metadataBase: new URL("https://www.cuotafacil.com.ar"),
-  title: "CuotaFacil | Simplifica el cobro de cuotas para tus alumnos",
-  description:
-    "La plataforma definitiva para gestionar cobros de cuotas. Automatiza pagos, aplica recargos y organiza la información de tus alumnos de forma sencilla. Ideal para escuelas, academias y negocios.",
-  keywords: [
-    "cuotas",
-    "alumnos",
-    "gestión de cobros",
-    "facturación",
-    "escuela",
-    "academia",
-    "pagos automáticos",
-    "CuotaFacil",
-  ],
+  title: "CuotaFacil",
+  icons: {
+    icon: "/IconoOriginal.ico", // Ruta relativa (se combina con metadataBase)
+  },
   openGraph: {
     title: "CuotaFacil | Gestión de cuotas para alumnos",
-    description:
-      "Automatiza y simplifica el cobro de cuotas a tus alumnos. Con CuotaFacil, la administración de pagos nunca fue tan fácil y eficiente.",
-    url: "https://www.cuotafacil.com.ar/Logo.png",
+    description: "Automatiza y simplifica el cobro de cuotas...",
+    url: "https://www.cuotafacil.com.ar", // ¡URL de la página, no de la imagen!
     siteName: "CuotaFacil",
     images: [
       {
-        url: new URL("/Logo.png", "https://www.cuotafacil.com.ar").toString(), // URL absoluta
+        url: "/Logo.png", // Ruta relativa (se resuelve como https://www.cuotafacil.com.ar/Logo.png)
         width: 1200,
         height: 630,
         alt: "Logo de CuotaFacil",
@@ -34,13 +24,9 @@ export const metadata: Metadata = {
     locale: "es_AR",
     type: "website",
   },
-  // La forma correcta de agregar el ícono es con la propiedad 'icons'
-  icons: {
-    icon: [
-      new URL("/IconoOriginal.ico", "https://www.cuotafacil.com.ar").toString(),
-      // Opcional: agregar fallbacks
-      { url: "/IconoOriginal.ico", type: "image/x-icon" },
-    ],
+  twitter: {
+    card: "summary_large_image",
+    images: ["https://www.cuotafacil.com.ar/Logo.png"], // URL absoluta redundante
   },
 };
 export default function RootLayout({
