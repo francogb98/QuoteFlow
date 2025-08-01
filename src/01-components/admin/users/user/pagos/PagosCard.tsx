@@ -58,7 +58,7 @@ export const PagosCard = ({
 
   const actualStatusConfig =
     isOverdue && pago.estado !== "PAGADO"
-      ? estadosPago.find((e) => e.value === "VENCIDO") || statusConfig
+      ? estadosPago.find((e) => e.value === "PENDIENTE") || statusConfig
       : statusConfig;
 
   return (

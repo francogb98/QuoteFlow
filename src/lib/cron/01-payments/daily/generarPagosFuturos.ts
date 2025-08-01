@@ -10,25 +10,18 @@ export async function generarPagosFuturos(
   const proximoMes = mesActual === 12 ? 1 : mesActual + 1;
   const proximoAño = mesActual === 12 ? añoActual + 1 : añoActual;
 
-  // Buscar usuarios que ya pagaron este mes y no tienen pago del mes siguiente
-  const usuariosParaGenerar = await prisma.usuario.findMany({
+  // Busca usuarios que están activos
+  const usuariosActivos = await prisma.usuario.findMany({
     where: {
       estado: "ACTIVO",
       estaActivo: true,
-      // Tienen al menos un pago PAGADO este mes
-      pagos: {
-        some: {
-          mes: mesActual,
-          año: añoActual,
-          estado: "PAGADO",
-        },
-      },
-      // NO tienen pago del mes siguiente
+      // NO tienen un pago del mes actual o del próximo
       NOT: {
         pagos: {
           some: {
-            mes: proximoMes,
-            año: proximoAño,
+            mes: mesActual,
+            año: añoActual,
+            estado: "PENDIENTE",
           },
         },
       },
@@ -43,34 +36,56 @@ export async function generarPagosFuturos(
       },
       pagos: {
         where: {
-          mes: mesActual,
-          año: añoActual,
           estado: "PAGADO",
         },
-        orderBy: { fecha: "desc" },
+        orderBy: {
+          fecha: "desc",
+        },
         take: 1,
       },
     },
   });
 
   logger.info(
-    `👥 Encontrados ${usuariosParaGenerar.length} usuarios que ya pagaron y necesitan próximo pago`
+    `👥 Encontrados ${usuariosActivos.length} usuarios que necesitan pagos futuros`
   );
 
-  for (const usuario of usuariosParaGenerar) {
+  for (const usuario of usuariosActivos) {
     const configuracion = usuario.administrador.configuracionTarifa;
-    if (!configuracion) continue;
-
     const ultimoPagoPagado = usuario.pagos[0];
-    if (!ultimoPagoPagado) continue;
+
+    // Se salta el usuario si no tiene una configuración de tarifa o un pago pagado
+    if (!configuracion || !ultimoPagoPagado) {
+      if (!configuracion) {
+        logger.warn(
+          `⚠️ Usuario ${usuario.nombre} no tiene configuración de tarifa. Saltando...`
+        );
+      }
+      if (!ultimoPagoPagado) {
+        logger.warn(
+          `⚠️ Usuario ${usuario.nombre} no tiene pagos pagados. Saltando...`
+        );
+      }
+      continue;
+    }
 
     try {
+      // Genera el pago para el mes siguiente al último pago pagado
+      const proximoPagoMes =
+        ultimoPagoPagado.mes === 12 ? 1 : ultimoPagoPagado.mes + 1;
+      const proximoPagoAño =
+        ultimoPagoPagado.mes === 12
+          ? ultimoPagoPagado.año + 1
+          : ultimoPagoPagado.año;
+      const fechaProximoPago = new Date(proximoPagoAño, proximoPagoMes - 1, 1);
+
       const nuevoPago = await generarProximoPago(
         usuario,
         configuracion,
         ultimoPagoPagado,
-        fechaActual
+        fechaProximoPago
       );
+
       if (nuevoPago) {
         pagosGenerados++;
         logger.debug(

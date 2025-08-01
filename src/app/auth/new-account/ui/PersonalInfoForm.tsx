@@ -40,6 +40,8 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
   const phoneRegex = /^[\d\s+\-()]{10,20}$/;
   // Validación para contraseña: mínimo 8 caracteres, 1 mayúscula, 1 número
   const passwordRegex = /^(?=.*[A-Z])(?=.*\d).{8,50}$/;
+  // Validación para nombre de empresa: sin espacios, tildes ni "ñ"
+  const nombreEmpresaRegex = /^[a-zA-Z0-9]+$/;
 
   return (
     <div className="bg-purple-50/50 rounded-2xl p-6 border border-purple-100">
@@ -160,10 +162,10 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
             id="nombreEmpresa"
             maxLength={30}
             {...register("nombreEmpresa", {
-              required: "El nombre es requerido",
+              required: "El nombre de la empresa es requerido",
               pattern: {
-                value: /^[\S]+$/, // Sin espacios
-                message: "No se permiten espacios en este campo",
+                value: nombreEmpresaRegex,
+                message: "Solo letras y números, sin espacios, tildes ni 'ñ'.",
               },
               minLength: {
                 value: 2,
@@ -171,7 +173,7 @@ export const PersonalInfoForm: React.FC<PersonalInfoFormProps> = ({
               },
             })}
             className={inputClasses}
-            placeholder="Ej: Mi Empresa S.A."
+            placeholder="Ej: MiEmpresaSA"
             disabled={disabled}
           />
           {errors.nombreEmpresa && (
