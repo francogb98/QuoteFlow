@@ -36,7 +36,11 @@ export const metadata: Metadata = {
   },
   // La forma correcta de agregar el ícono es con la propiedad 'icons'
   icons: {
-    icon: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/IconoOriginal.ico`, // La ruta es relativa a la carpeta `public`
+    icon: [
+      new URL("/IconoOriginal.ico", "https://www.cuotafacil.com.ar").toString(),
+      // Opcional: agregar fallbacks
+      { url: "/IconoOriginal.ico", type: "image/x-icon" },
+    ],
   },
 };
 export default function RootLayout({
