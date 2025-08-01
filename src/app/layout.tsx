@@ -21,11 +21,11 @@ export const metadata: Metadata = {
     title: "CuotaFacil | Gestión de cuotas para alumnos",
     description:
       "Automatiza y simplifica el cobro de cuotas a tus alumnos. Con CuotaFacil, la administración de pagos nunca fue tan fácil y eficiente.",
-    url: "https://www.cuotafacil.com.ar",
+    url: "https://www.cuotafacil.com.ar/Logo.png",
     siteName: "CuotaFacil",
     images: [
       {
-        url: "/Logo.png", // Asegúrate de que esta imagen esté en tu carpeta 'public'
+        url: new URL("/Logo.png", "https://www.cuotafacil.com.ar").toString(), // URL absoluta
         width: 1200,
         height: 630,
         alt: "Logo de CuotaFacil",
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   },
   // La forma correcta de agregar el ícono es con la propiedad 'icons'
   icons: {
-    icon: "/IconoOriginal.ico", // La ruta es relativa a la carpeta `public`
+    icon: `${process.env.NEXT_PUBLIC_BASE_PATH || ""}/IconoOriginal.ico`, // La ruta es relativa a la carpeta `public`
   },
 };
 export default function RootLayout({
