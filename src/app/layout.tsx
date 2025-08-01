@@ -6,7 +6,7 @@ export const metadata: Metadata = {
   metadataBase: new URL("https://www.cuotafacil.com.ar"),
   title: "CuotaFacil",
   icons: {
-    icon: "https://www.cuotafacil.com.ar/assets/IconoOriginal.ico",
+    icon: "https://www.cuotafacil.com.ar/IconoOriginal.ico",
   },
   openGraph: {
     title: "CuotaFacil | Gestión de cuotas para alumnos",
@@ -15,7 +15,7 @@ export const metadata: Metadata = {
     siteName: "CuotaFacil",
     images: [
       {
-        url: "https://www.cuotafacil.com.ar/assets/Logo.png", // Cambia a URL absoluta
+        url: "https://www.cuotafacil.com.ar/Logo.png", // Cambia a URL absoluta
         width: 1200,
         height: 630,
         alt: "Logo de CuotaFacil",
@@ -26,7 +26,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: "summary_large_image",
-    images: ["https://www.cuotafacil.com.ar/assets/Logo.png"],
+    images: ["https://www.cuotafacil.com.ar/Logo.png"],
   },
 };
 export default function RootLayout({
