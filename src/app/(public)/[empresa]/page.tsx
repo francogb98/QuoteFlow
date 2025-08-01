@@ -1,7 +1,7 @@
 import { findEmpresa } from "@/actions/users/public/findEmpresa";
 import { FormSearchUser } from "./ui/FormSearchUser";
 import { notFound } from "next/navigation";
-import type { Metadata } from "next"; // Importa Metadata
+import type { Metadata } from "next";
 
 interface Props {
   params: Promise<{
@@ -11,12 +11,33 @@ interface Props {
 
 // Genera la metadata para la página de la empresa
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const resolvedParams = await params;
-  const { empresa } = resolvedParams;
+  const { empresa } = await params;
+
+  const admin = await findEmpresa(empresa);
+
+  if (!admin) {
+    return {};
+  }
+
+  // Genera las URLs completas de los íconos si lo necesitas
 
   return {
     title: `Consulta de Pagos | ${empresa}`,
     description: `Consulta el estado de tus pagos y obligaciones pendientes para ${empresa}.`,
+    metadataBase: new URL("https://www.cuotafacil.com.ar"),
+    openGraph: {
+      title: `Consulta de Pagos | ${empresa}`,
+      description: `Consulta el estado de tus pagos y obligaciones pendientes para ${empresa}.`,
+      url: `https://www.cuotafacil.com.ar/d/${empresa}`, // URL de la página específica
+      siteName: "CuotaFacil",
+      locale: "es_AR",
+      type: "website",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: `Consulta de Pagos | ${empresa}`,
+      description: `Consulta el estado de tus pagos y obligaciones pendientes para ${empresa}.`,
+    },
   };
 }
 
@@ -31,7 +52,6 @@ export default async function DNIPaymentsPage({ params }: Props) {
   return (
     <div className="min-h-[calc(100vh-4rem)] bg-gradient-to-br from-purple-50 via-violet-50 to-indigo-100">
       <div className="container mx-auto sm:px-4 py-8">
-        {/* Header mejorado */}
         <div className="text-center mb-12">
           <div className="relative">
             <div className="flex items-center justify-center mb-6">
@@ -48,7 +68,6 @@ export default async function DNIPaymentsPage({ params }: Props) {
           </p>
         </div>
         <FormSearchUser empresa={empresa} />
-        {/* Los mensajes de error de búsqueda ahora se manejan dentro de FormSearchUser */}
       </div>
     </div>
   );
