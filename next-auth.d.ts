@@ -26,6 +26,7 @@ declare module "next-auth" {
       claveMercadoPago: string | null;
       empresa: PrismaEmpresa; // Ahora 'empresa' es el objeto completo de PrismaEmpresa
       // Permite que configuracionTarifa sea el tipo de objeto o null
+      empresaId: string | null;
       configuracionTarifa:
         | (ConfiguracionTarifa & { rangos: RangoTarifa[] })
         | null;

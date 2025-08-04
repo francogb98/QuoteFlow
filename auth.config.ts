@@ -41,6 +41,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             claveMercadoPago: admin.claveMercadoPago || null,
             empresa: admin.empresa, // Ahora 'empresa' será el objeto completo
             // Ahora TypeScript sabe que configuracionTarifa puede ser null
+            empresaId: admin.empresa?.id || null,
             configuracionTarifa: admin.configuracionTarifa,
           };
         }

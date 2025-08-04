@@ -9,7 +9,8 @@ interface CreateCompanyAndAdminResult {
 }
 
 export async function createCompanyAndAdmin(
-  tempRegistrationId: string
+  tempRegistrationId: string,
+  preapprovalId: string // Aceptamos el preapprovalId como un argumento separado
 ): Promise<CreateCompanyAndAdminResult> {
   try {
     const tempRegistration = await prisma.tempRegistration.findUnique({
@@ -23,12 +24,11 @@ export async function createCompanyAndAdmin(
       };
     }
 
-    // Verificar si la empresa o el administrador ya fueron creados (por si acaso)
+    // Verificar si la empresa o el administrador ya fueron creados
     const existingEmpresa = await prisma.empresa.findUnique({
       where: { nombre: tempRegistration.nombreEmpresa },
     });
 
-    //si la empresa existe devolvemos que ya fue registrada y borramos el tempRegistration
     if (existingEmpresa) {
       await prisma.tempRegistration.delete({
         where: { id: tempRegistrationId },
@@ -44,7 +44,6 @@ export async function createCompanyAndAdmin(
       where: { documento: tempRegistration.documento },
     });
 
-    //verificamos si el admin ya fue registrado
     if (existingAdmin) {
       await prisma.tempRegistration.delete({
         where: { id: tempRegistrationId },
@@ -56,8 +55,7 @@ export async function createCompanyAndAdmin(
       };
     }
 
-    // Calcular fechas de vencimiento y último pago
-    const fechaUltimoPago: Date = new Date(); // Se crea después del pago
+    const fechaUltimoPago: Date = new Date();
     const fechaProximoVencimiento: Date = new Date();
 
     if (tempRegistration.frecuenciaPago === FrecuenciaPago.MENSUAL) {
@@ -74,16 +72,19 @@ export async function createCompanyAndAdmin(
         nombre: tempRegistration.nombreEmpresa,
         planTipo: tempRegistration.planTipo,
         frecuenciaPago: tempRegistration.frecuenciaPago,
-        estadoPago: "ACTIVO", // Ya se pagó, por lo tanto ACTIVO
+        estadoPago: "ACTIVO",
         fechaProximoVencimiento: fechaProximoVencimiento,
         fechaUltimoPago: fechaUltimoPago,
         estaActiva: true,
+        // --- CAMBIO CLAVE ---
+        // Guardamos el ID de la pre-aprobación en el nuevo campo de la empresa
+        mercadoPagoPreApprovalId: preapprovalId,
         administradores: {
           create: {
             nombre: tempRegistration.nombre,
             email: tempRegistration.email,
             documento: tempRegistration.documento,
-            password: tempRegistration.password, // Contraseña ya hasheada
+            password: tempRegistration.password,
             telefono: tempRegistration.telefono,
             rol: Rol.ADMINISTRADOR,
           },
@@ -91,7 +92,6 @@ export async function createCompanyAndAdmin(
       },
     });
 
-    // Eliminar la entrada temporal después de la creación exitosa
     await prisma.tempRegistration.delete({ where: { id: tempRegistrationId } });
 
     return {

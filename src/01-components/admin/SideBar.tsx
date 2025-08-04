@@ -15,6 +15,9 @@ import {
   Menu,
   X,
   CreditCard,
+  Logs,
+  Tag,
+  DollarSign,
 } from "lucide-react";
 import { logout } from "@/01-actions/auth/logout";
 import { QuoteFlowLogo } from "@/lib/Logo";
@@ -23,10 +26,9 @@ interface NavItem {
   href: string;
   icon: React.ReactNode;
   label: string;
-  subItems?: NavItem[];
 }
 
-const navItems: NavItem[] = [
+const allNavItems: NavItem[] = [
   { href: "/admin/home", icon: <Home size={20} />, label: "Home" },
   { href: "/admin/users", icon: <Users size={20} />, label: "Usuarios" },
   {
@@ -39,23 +41,27 @@ const navItems: NavItem[] = [
     icon: <CreditCard size={20} />,
     label: "Conexión Mercado Pago",
   },
-  // {
-  //   href: "/admin/test",
-  //   icon: <CreditCard size={20} />,
-  //   label: "Test Cron",
-  // },
-
-  // {
-  //   href: "/admin/message",
-  //   icon: <CreditCard size={20} />,
-  //   label: "Mandar mensaje",
-  // },
+  {
+    href: "/admin/suscripcion",
+    icon: <DollarSign size={20} />,
+    label: "Suscripcion",
+  },
+  {
+    href: "/admin/logs",
+    icon: <Logs size={20} />,
+    label: "Logs",
+  },
+  {
+    href: "/admin/codigos",
+    icon: <Tag size={20} />,
+    label: "Codigos",
+  },
 ];
 
 export const Sidebar = ({ user }: any) => {
   const [isOpen, setIsOpen] = useState(false);
   const [isCollapsed, setIsCollapsed] = useState(false);
-  const [isAccountExpanded, setIsAccountExpanded] = useState(false); // Estado para expandir/colapsar "Cuenta"
+  const [isAccountExpanded, setIsAccountExpanded] = useState(false);
 
   const pathname = usePathname();
 
@@ -77,6 +83,23 @@ export const Sidebar = ({ user }: any) => {
   const toggleCollapse = () => {
     setIsCollapsed(!isCollapsed);
   };
+
+  // --- Lógica para filtrar items de navegación según el rol del usuario ---
+  const navItems = allNavItems.filter((item) => {
+    // Si el ítem es "Logs", solo se muestra si el rol del usuario es "superadmin"
+    if (item.label === "Logs") {
+      return user?.rol === "SUPER_ADMIN";
+    }
+    if (item.label === "Codigos") {
+      return user?.rol === "SUPER_ADMIN";
+    }
+    if (item.label === "Suscripcion") {
+      return user?.rol === "SUPER_ADMIN";
+    }
+    // Todos los demás ítems se muestran por defecto
+    return true;
+  });
+  // -----------------------------------------------------------------------
 
   return (
     <>
@@ -120,9 +143,9 @@ export const Sidebar = ({ user }: any) => {
         {/* Botón para colapsar/expandir (solo desktop) */}
         <button
           className="absolute -right-3 top-6 hidden md:flex items-center justify-center
-                     bg-white/90 backdrop-blur-sm rounded-full border border-purple-200 w-7 h-7
-                     shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110
-                     hover:bg-gradient-to-r hover:from-purple-500 hover:to-violet-600 hover:text-white hover:border-transparent"
+                          bg-white/90 backdrop-blur-sm rounded-full border border-purple-200 w-7 h-7
+                          shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-110
+                          hover:bg-gradient-to-r hover:from-purple-500 hover:to-violet-600 hover:text-white hover:border-transparent"
           onClick={toggleCollapse}
           aria-label={isCollapsed ? "Expandir menú" : "Colapsar menú"}
         >
@@ -174,14 +197,14 @@ export const Sidebar = ({ user }: any) => {
                       <>
                         <button
                           className={`
-                            flex items-center p-3 rounded-xl transition-all duration-300 w-full
-                            ${
-                              isAccountExpanded || isActive
-                                ? "bg-gradient-to-r from-purple-500 to-violet-600 text-white shadow-lg transform scale-105"
-                                : "text-purple-600 hover:bg-purple-50 hover:text-purple-700 hover:shadow-md hover:scale-102"
-                            }
-                            ${isCollapsed ? "justify-center" : ""}
-                          `}
+                          flex items-center p-3 rounded-xl transition-all duration-300 w-full
+                          ${
+                            isAccountExpanded || isActive
+                              ? "bg-gradient-to-r from-purple-500 to-violet-600 text-white shadow-lg transform scale-105"
+                              : "text-purple-600 hover:bg-purple-50 hover:text-purple-700 hover:shadow-md hover:scale-102"
+                          }
+                          ${isCollapsed ? "justify-center" : ""}
+                        `}
                           onClick={() =>
                             setIsAccountExpanded(!isAccountExpanded)
                           }

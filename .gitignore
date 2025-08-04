@@ -13,6 +13,10 @@
 # testing
 /coverage
 
+# Postgres
+
+/postgres
+
 # next.js
 /.next/
 /out/

@@ -33,7 +33,7 @@ export const ModalCreateUser = ({
   return (
     <>
       {/* Botón para abrir el modal */}
-      <div className="flex flex-col items-center gap-4">
+      <div className="hidden sm:flex flex-col items-center gap-4">
         <button
           onClick={() => setIsOpen(true)}
           disabled={!canCreateUsers}
@@ -89,6 +89,25 @@ export const ModalCreateUser = ({
             </div>
           </div>
         )}
+      </div>
+
+      <div className="fixed sm:hidden z-5 right-4 bottom-4">
+        <button
+          onClick={() => setIsOpen(true)}
+          disabled={!canCreateUsers}
+          className={`
+        w-14 h-14 rounded-full shadow-lg transition-all duration-300
+        flex items-center justify-center
+        ${
+          canCreateUsers
+            ? "bg-gradient-to-br from-emerald-500 to-purple-600 hover:from-emerald-600 hover:to-purple-700 text-white transform hover:scale-110 active:scale-95"
+            : "bg-gray-300 text-gray-500 cursor-not-allowed"
+        }
+      `}
+          title="Agregar Usuario"
+        >
+          <Plus className="w-6 h-6" />
+        </button>
       </div>
 
       {/* Modal */}

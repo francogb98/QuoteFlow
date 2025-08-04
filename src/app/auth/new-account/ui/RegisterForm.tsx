@@ -6,10 +6,14 @@ import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
+
 import { Button } from "@/components/ui/button";
+
 import { TipoPlanEmpresa, FrecuenciaPago } from "@prisma/client";
-import { PersonalInfoForm } from "./PersonalInfoForm";
+
 import { PlanSelection } from "./PlanSelection";
+import { PersonalInfoForm } from "./PersonalInfoForm";
+
 import { type PlanOption, plans } from "@/lib";
 import { prepareRegistrationForPayment } from "@/01-actions/auth/registration/01-prepareRegistration";
 import { PromoCodeField } from "./PromoCodeField";

@@ -8,21 +8,22 @@ datasource db {
 }
 
 model Empresa {
-  id                      String             @id @default(uuid())
-  nombre                  String             @unique
-  administradores         Administrador[]
-  fechaCreacion           DateTime           @default(now())
-  fechaActualizacion      DateTime           @updatedAt
-  planTipo                TipoPlanEmpresa    @default(BASICO)
-  estadoPago              EstadoEmpresa      @default(ACTIVO)
-  frecuenciaPago          FrecuenciaPago     @default(MENSUAL)
-  fechaUltimoPago         DateTime?
-  fechaProximoVencimiento DateTime?
-  estaActiva              Boolean            @default(true)
-  esCuentaPrueba          Boolean            @default(false)
-  codigoPromocional       CodigoPromocional? @relation("EmpresaCodigoPromocional", fields: [codigoPromocionalId], references: [id])
-  codigoPromocionalId     String?
-  fechaFinPrueba          DateTime?
+  id                       String             @id @default(uuid())
+  nombre                   String             @unique
+  administradores          Administrador[]
+  fechaCreacion            DateTime           @default(now())
+  fechaActualizacion       DateTime           @updatedAt
+  planTipo                 TipoPlanEmpresa    @default(BASICO)
+  mercadoPagoPreApprovalId String?
+  estadoPago               EstadoEmpresa      @default(ACTIVO)
+  frecuenciaPago           FrecuenciaPago     @default(MENSUAL)
+  fechaUltimoPago          DateTime?
+  fechaProximoVencimiento  DateTime?
+  estaActiva               Boolean            @default(true)
+  esCuentaPrueba           Boolean            @default(false)
+  codigoPromocional        CodigoPromocional? @relation("EmpresaCodigoPromocional", fields: [codigoPromocionalId], references: [id])
+  codigoPromocionalId      String?
+  fechaFinPrueba           DateTime?
 }
 
 model Administrador {
