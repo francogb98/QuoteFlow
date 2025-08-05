@@ -161,7 +161,9 @@ export const TablaUsuarios = ({
       ),
       cell: (info) => (
         <div className="flex items-center">
-          <span className="font-medium text-gray-900">{info.getValue()}</span>
+          <span className="font-medium text-gray-900 capitalize">
+            {info.getValue()}
+          </span>
         </div>
       ),
     }),
