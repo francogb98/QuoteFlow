@@ -16,7 +16,7 @@ export default async function NamePage() {
   const user = session.user;
 
   return (
-    <div className="flex flex-col gap-5 px-10">
+    <div className="flex flex-col gap-5">
       <ModeloCobro usuario={user} />
     </div>
   );

@@ -43,7 +43,7 @@ export default async function NamePage({ params }: Props) {
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50 p-4 md:p-6">
-      <div className="px-10">
+      <div className="md:px-10">
         {id && (
           <div className="space-y-6">
             <FormEditUser id={id} tarifasDisponibles={tarifasDisponibles} />

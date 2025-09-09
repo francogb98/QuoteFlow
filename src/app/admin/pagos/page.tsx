@@ -2,7 +2,7 @@ import { PagosGrid } from "@/01-components/admin/pagos/PagosGrid";
 
 export default function PagosPage() {
   return (
-    <div className="px-9">
+    <div>
       <PagosGrid />
     </div>
   );

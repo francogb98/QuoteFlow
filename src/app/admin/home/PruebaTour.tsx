@@ -23,10 +23,12 @@ import Link from "next/link";
 import { ShareCompanyLink } from "./ui/SharedCompanyLink";
 import { InteractiveTour } from "@/01-components/admin/tour/interactive-tour";
 import { useTour } from "@/01-components/admin/tour/use-tour";
+import { Rol } from "@prisma/client";
 
 interface PruebaTourProps {
   user?: {
     nombre?: string;
+    rol: Rol;
     empresa?: {
       nombre?: string;
     };
@@ -68,69 +70,73 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
 
         {/* Feature Cards */}
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
-          <Link href="/admin/modelo-cobro">
-            <Card
-              data-tour="modelo-cobro"
-              className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
-                  <CreditCard className="w-5 h-5 text-emerald-600" />
-                  Modelo de Cobro
-                </CardTitle>
-                <CardDescription className="text-[8px] sm:text-xs">
-                  Selecciona tu modelo de cobro preferido.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-[8px] sm:text-sm text-muted-foreground">
-                  Puedes elegir entre Mercado Pago o Comprobante.
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/admin/tarifas">
-            <Card
-              data-tour="tarifas"
-              className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
-                  <BarChart3 className="w-5 h-5 text-emerald-600" />
-                  Tarifas
-                </CardTitle>
-                <CardDescription className="text-[8px] sm:text-xs">
-                  Gestiona tus tarifas de manera eficiente.
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-[8px] sm:text-sm text-muted-foreground">
-                  Crea distintos tipos de tarifas adaptadas a tu negocio.
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
-          <Link href="/admin/account">
-            <Card
-              data-tour="equipo"
-              className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
-                  <Users className="w-5 h-5 text-emerald-600" />
-                  Gestión de Equipo
-                </CardTitle>
-                <CardDescription className="text-[8px] sm:text-xs">
-                  Administra tu equipo de trabajo y permisos
-                </CardDescription>
-              </CardHeader>
-              <CardContent>
-                <p className="text-[8px] sm:text-sm text-muted-foreground">
-                  Roles, permisos, usuarios y más.
-                </p>
-              </CardContent>
-            </Card>
-          </Link>
+          {user?.rol !== "PROFESOR" && (
+            <>
+              <Link href="/admin/modelo-cobro">
+                <Card
+                  data-tour="modelo-cobro"
+                  className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                      <CreditCard className="w-5 h-5 text-emerald-600" />
+                      Modelo de Cobro
+                    </CardTitle>
+                    <CardDescription className="text-[8px] sm:text-xs">
+                      Selecciona tu modelo de cobro preferido.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-[8px] sm:text-sm text-muted-foreground">
+                      Puedes elegir entre Mercado Pago o Comprobante.
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link href="/admin/tarifas">
+                <Card
+                  data-tour="tarifas"
+                  className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                      <BarChart3 className="w-5 h-5 text-emerald-600" />
+                      Tarifas
+                    </CardTitle>
+                    <CardDescription className="text-[8px] sm:text-xs">
+                      Gestiona tus tarifas de manera eficiente.
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-[8px] sm:text-sm text-muted-foreground">
+                      Crea distintos tipos de tarifas adaptadas a tu negocio.
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+              <Link href="/admin/account">
+                <Card
+                  data-tour="equipo"
+                  className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                      <Users className="w-5 h-5 text-emerald-600" />
+                      Gestión de Equipo
+                    </CardTitle>
+                    <CardDescription className="text-[8px] sm:text-xs">
+                      Administra tu equipo de trabajo y permisos
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-[8px] sm:text-sm text-muted-foreground">
+                      Roles, permisos, usuarios y más.
+                    </p>
+                  </CardContent>
+                </Card>
+              </Link>
+            </>
+          )}
           <Link href="/admin/pagos">
             <Card
               data-tour="pagos"
@@ -176,22 +182,24 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
               </CardContent>
             </Card>
           </Link>
-          <Link href="/admin/test">
-            <Card
-              data-tour="test"
-              className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
-                  <Settings className="w-5 h-5 text-emerald-600" />
-                  Test
-                </CardTitle>
-                <CardDescription className="text-[8px] sm:text-xs">
-                  Funcion para ejecutar Test de la aplicacion
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
+          {user?.rol === "SUPER_ADMIN" && (
+            <Link href="/admin/test">
+              <Card
+                data-tour="test"
+                className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+              >
+                <CardHeader>
+                  <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                    <Settings className="w-5 h-5 text-emerald-600" />
+                    Test
+                  </CardTitle>
+                  <CardDescription className="text-[8px] sm:text-xs">
+                    Funcion para ejecutar Test de la aplicacion
+                  </CardDescription>
+                </CardHeader>
+              </Card>
+            </Link>
+          )}
           <Link href="/admin/settings">
             <Card
               data-tour="settings"

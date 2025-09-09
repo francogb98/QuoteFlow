@@ -42,7 +42,9 @@ export function UserHeader({ data, isDynamicTariff }: UserHeaderProps) {
                   ) : (
                     <XCircle className="w-4 h-4" />
                   )}
-                  {data?.estado === "ACTIVO" ? "Activo" : "Inactivo"}
+                  <span className="hidden sm:inline">
+                    {data?.estado === "ACTIVO" ? "Activo" : "Inactivo"}
+                  </span>
                 </div>
               </div>
               {data?.configuracionTarifa && (

@@ -22,6 +22,7 @@ export default async function NamePage() {
         empresa={user.empresa.nombre}
         nombre={user.nombre}
         email={user.email}
+        role={user.rol}
       />
     </div>
   );

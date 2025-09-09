@@ -31,7 +31,7 @@ export default async function AdminLayout({
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50">
       <Suspense fallback={<div>Loading...</div>}>
         <Header user={session.user} />
-        <main className="container mx-auto px-4 py-2">{children}</main>
+        <main className="container mx-auto px-2 sm:px-10 py-2">{children}</main>
       </Suspense>
       <Toaster position="top-right" richColors />
     </div>

@@ -45,7 +45,7 @@ export default async function UsersListPage({ searchParams }: Props) {
     "DINAMICA_POR_FECHA_INGRESO";
 
   return (
-    <div className="flex flex-col gap-5  sm:px-12 pb-8">
+    <div className="flex flex-col gap-5 pb-8">
       {!hasRequiredConfig ? (
         <NotAllowed
           missingTariff={missingTariff}

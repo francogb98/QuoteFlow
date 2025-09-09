@@ -11,11 +11,14 @@ interface Inputs {
   documento: string;
   empresa: string;
   email: string;
+  role: string; // <-- Add the role prop
 }
 
-function DatosPersonales({ documento, empresa, nombre, email }: Inputs) {
+function DatosPersonales({ documento, empresa, nombre, email, role }: Inputs) {
   const [isEditing, setIsEditing] = useState(false);
   const [errorMessage, setErrorMessage] = useState("");
+
+  const isProfesor = role === "PROFESOR"; // <-- Check the role
 
   const {
     register,
@@ -41,7 +44,6 @@ function DatosPersonales({ documento, empresa, nombre, email }: Inputs) {
       setErrorMessage("");
       setIsEditing(false);
 
-      // Opcional: Actualizar los valores mostrados con los datos devueltos
       if (result.data) {
         reset({
           nombre: result.data.nombre,
@@ -84,7 +86,6 @@ function DatosPersonales({ documento, empresa, nombre, email }: Inputs) {
       </div>
 
       <div className="bg-white rounded-2xl shadow-lg border border-emerald-100 overflow-hidden">
-        {/* Header with edit button */}
         <div className="bg-gradient-to-r from-emerald-50 to-purple-50 px-6 py-4 border-b border-emerald-100 flex items-center justify-between">
           <h2 className="text-lg font-semibold text-gray-800">
             Información Personal
@@ -231,8 +232,13 @@ function DatosPersonales({ documento, empresa, nombre, email }: Inputs) {
                   <input
                     id="empresa"
                     {...register("empresa")}
-                    className="w-full border border-gray-300 rounded-lg px-4 py-3 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent transition-colors"
+                    className={`w-full border rounded-lg px-4 py-3 transition-colors ${
+                      isProfesor
+                        ? "bg-gray-100 text-gray-500 cursor-not-allowed border-gray-200"
+                        : "border-gray-300 focus:outline-none focus:ring-2 focus:ring-emerald-500 focus:border-transparent"
+                    }`}
                     placeholder="Nombre de la empresa"
+                    disabled={isProfesor} // <-- Disable the input based on the role
                   />
                 </div>
               </div>
@@ -259,7 +265,6 @@ function DatosPersonales({ documento, empresa, nombre, email }: Inputs) {
               </div>
             </form>
           ) : (
-            /* Redesigned display mode with better visual hierarchy and icons */
             <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
               <div className="space-y-1">
                 <div className="flex items-center gap-2 text-sm font-medium text-gray-600 mb-2">
