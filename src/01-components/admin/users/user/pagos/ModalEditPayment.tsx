@@ -68,6 +68,9 @@ export const ModalEditPayment = ({ pago, isOpen, onClose, userId }: any) => {
       //@ts-ignore
       toast.success(data.message || "Pago actualizado correctamente");
       queryClient.invalidateQueries({ queryKey: ["user", userId] });
+      queryClient.invalidateQueries({
+        queryKey: ["usuarios"],
+      });
       onClose();
     },
     onError: (error) => {
@@ -183,8 +186,8 @@ export const ModalEditPayment = ({ pago, isOpen, onClose, userId }: any) => {
                     statusConfig.color === "emerald"
                       ? "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-800"
                       : statusConfig.color === "amber"
-                      ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 text-amber-800"
-                      : "bg-gradient-to-r from-red-50 to-red-50 border-red-200 text-red-800"
+                        ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 text-amber-800"
+                        : "bg-gradient-to-r from-red-50 to-red-50 border-red-200 text-red-800"
                   }`}
                 >
                   {estadosPago.map((estado) => (

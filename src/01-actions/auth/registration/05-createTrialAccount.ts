@@ -5,79 +5,71 @@ import { hash } from "bcryptjs";
 import { TipoPlanEmpresa, FrecuenciaPago } from "@prisma/client";
 import { addMonths } from "date-fns";
 import prisma from "@/lib/prisma";
+import { z } from "zod";
+import { ActionResponse, handleActionError } from "@/lib/utils/action-errors";
 
-interface CreateTrialAccountInput {
-  nombre: string;
-  documento: string;
-  email: string;
-  nombreEmpresa: string;
-  password: string;
-  telefono: string;
-  codigoPromocional: string;
-}
+// Define Zod schema for CreateTrialAccountInput
+const CreateTrialAccountSchema = z.object({
+  nombre: z.string().min(1, "El nombre es obligatorio").max(25),
+  documento: z.string().min(1, "El documento es obligatorio").max(10),
+  email: z.string().email("Correo inválido"),
+  nombreEmpresa: z.string().min(1, "El nombre de la empresa es obligatorio").max(50),
+  password: z.string().min(6, "La contraseña debe tener al menos 6 caracteres").max(25, "La contraseña debe tener como máximo 25 caracteres"),
+  telefono: z.string().min(1, "El teléfono es obligatorio").max(15),
+  codigoPromocional: z.string().min(1, "El código promocional es obligatorio"),
+});
 
-interface CreateTrialAccountResult {
-  success: boolean;
-  message?: string;
-  error?: string;
-  empresaId?: string;
-}
+interface CreateTrialAccountInput extends z.infer<typeof CreateTrialAccountSchema> {}
+
+// Removed CreateTrialAccountResult interface
 
 export async function createTrialAccount(
   input: CreateTrialAccountInput
-): Promise<CreateTrialAccountResult> {
+): Promise<ActionResponse<{ empresaId: string }>> {
   try {
+    // Validate input using Zod
+    const validatedInput = CreateTrialAccountSchema.parse(input);
+
     // 1. Verificar que el código promocional existe y es válido
     const promoCode = await prisma.codigoPromocional.findUnique({
-      where: { codigo: input.codigoPromocional, estaActivo: true },
+      where: { codigo: validatedInput.codigoPromocional, estaActivo: true },
     });
 
     if (!promoCode) {
-      return {
-        success: false,
-        error: "Código promocional no válido o no activo",
-      };
+      throw new Error("Código promocional no válido o no activo");
     }
 
     // 2. Verificar que el código no haya expirado (si tiene fecha de expiración)
     if (promoCode.fechaExpiracion && promoCode.fechaExpiracion < new Date()) {
-      return {
-        success: false,
-        error: "El código promocional ha expirado",
-      };
+      throw new Error("El código promocional ha expirado");
     }
 
     // 3. Verificar que el email y documento no estén en uso
     const existingAdmin = await prisma.administrador.findFirst({
       where: {
-        OR: [{ email: input.email }, { documento: input.documento }],
+        OR: [{ email: validatedInput.email }, { documento: validatedInput.documento }],
       },
     });
 
     if (existingAdmin) {
-      return {
-        success: false,
-        error:
-          existingAdmin.email === input.email
-            ? "El email ya está registrado"
-            : "El documento ya está registrado",
-      };
+      throw new Error(
+        existingAdmin.email === validatedInput.email
+          ? "El email ya está registrado"
+          : "El documento ya está registrado"
+      );
     }
 
     // 4. Verificar que el nombre de empresa no esté en uso
     const existingCompany = await prisma.empresa.findUnique({
-      where: { nombre: input.nombreEmpresa },
+      where: { nombre: validatedInput.nombreEmpresa },
     });
 
     if (existingCompany) {
-      return {
-        success: false,
-        error: "El nombre de empresa ya está en uso",
-      };
+      throw new Error("El nombre de empresa ya está en uso");
     }
 
     // 5. Hashear la contraseña
-    const hashedPassword = await hash(input.password, 12);
+    const hashedPassword = await hash(validatedInput.password, 12);
 
     // 6. Calcular fecha de fin de prueba
     const fechaFinPrueba = addMonths(new Date(), promoCode.duracionMeses);
@@ -87,7 +79,7 @@ export async function createTrialAccount(
       // Crear la empresa
       const empresa = await tx.empresa.create({
         data: {
-          nombre: input.nombreEmpresa,
+          nombre: validatedInput.nombreEmpresa,
           planTipo: TipoPlanEmpresa.PRO, // Dar acceso PRO durante la prueba
           estadoPago: "ACTIVO",
           frecuenciaPago: FrecuenciaPago.MENSUAL,
@@ -102,11 +94,11 @@ export async function createTrialAccount(
       // Crear el administrador
       const administrador = await tx.administrador.create({
         data: {
-          nombre: input.nombre,
-          documento: input.documento,
-          email: input.email,
+          nombre: validatedInput.nombre,
+          documento: validatedInput.documento,
+          email: validatedInput.email,
           password: hashedPassword,
-          telefono: input.telefono,
+          telefono: validatedInput.telefono,
           rol: "ADMINISTRADOR",
           empresa: {
             connect: { id: empresa.id },
@@ -125,14 +117,10 @@ export async function createTrialAccount(
 
     return {
       success: true,
+      data: { empresaId: result.empresa.id },
       message: "Cuenta de prueba creada exitosamente",
-      empresaId: result.empresa.id,
     };
-  } catch (error: any) {
-    console.error("Error creando cuenta de prueba:", error);
-    return {
-      success: false,
-      error: "Error al crear la cuenta de prueba",
-    };
+  } catch (error) {
+    return handleActionError(error, "Error al crear la cuenta de prueba");
   }
 }

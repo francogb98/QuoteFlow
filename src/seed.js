@@ -17,6 +17,7 @@ async function main() {
         año,
         periodo: `${año}-${String(mes).padStart(2, "0")}`,
         usuarioId: "3f6d22d8-978a-46c5-b58b-d665ad8a7f1b",
+        
         estaVencido: estado === "VENCIDO",
         mora: estado === "VENCIDO" ? 300 : null,
         estado: "PAGADO",

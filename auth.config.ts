@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import bcryptjs from "bcryptjs";
-import { getAdmin } from "@/actions/users/admin/getAdmin"; // Asegúrate de que getAdmin maneje el retorno de null
+import { getAdmin } from "@/actions/users/admin/getAdmin";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   pages: {
@@ -11,10 +11,18 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     newUser: "/auth/new-account",
     signOut: "/auth/login",
   },
-
   events: {
     createUser: async ({ user }) => {},
-    signIn: async ({ user }) => {},
+    signIn: async ({ user }) => {
+      // Verificar si necesita configuración inicial
+      if (user?.id) {
+        const admin = await getAdmin(user.id);
+        if (admin) {
+          // Podrías agregar lógica adicional aquí si es necesario
+          console.log("Usuario necesita completar configuración inicial");
+        }
+      }
+    },
     signOut: async ({}) => {},
   },
   callbacks: {
@@ -31,31 +39,36 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       if (session.user?.id) {
         const admin = await getAdmin(session.user.id);
         if (admin) {
+          // Verificar si la configuración está completa
+          const configuracionCompleta = !!admin.configuracionTarifa;
+
           session.user = {
             ...session.user,
             ...admin,
             id: admin.id,
             name: admin.nombre,
             rol: admin.rol,
-            email: admin.email, // NUEVO: Añadir email a la sesión
+            email: admin.email,
             claveMercadoPago: admin.claveMercadoPago || null,
-            empresa: admin.empresa, // Ahora 'empresa' será el objeto completo
-            // Ahora TypeScript sabe que configuracionTarifa puede ser null
-            empresaId: admin.empresa?.id || null,
+            empresa: admin.empresa,
+            empresaId: admin.empresaId,
             configuracionTarifa: admin.configuracionTarifa,
+            // NUEVO: Campos para configuración inicial
+            configuracionCompleta,
+            // NUEVO: Configuración de comprobantes si existe
+            modeloDeCobro: admin.modeloDeCobro || null,
           };
         }
       }
-
       return session;
     },
     async jwt({ token, user }) {
       if (user) {
         token.data = {
           id: user.id,
-          name: (user as any).nombre, // Ajusta según tu modelo
-          email: (user as any).email, // NUEVO: Ajusta para el campo email
-          // Otras propiedades básicas que necesites
+          name: (user as any).nombre,
+          email: (user as any).email,
+          documento: (user as any).documento,
         };
       }
       return token;
@@ -86,11 +99,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
         const { documento, password } = parsedCredentials.data;
 
-        // Buscar al administrador por documento
+        // Buscar al administrador por documento con todas las relaciones necesarias
         const user = await prisma.administrador.findUnique({
           where: { documento: String(documento) },
           include: {
-            empresa: true, // Incluir la relación de empresa
+            empresa: true,
             usuarios: true,
             configuracionTarifa: {
               include: {
@@ -114,10 +127,29 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           console.error("Contraseña incorrecta para el usuario:", documento);
           return null;
         }
+
         // Regresar el usuario sin la contraseña pero con las relaciones
         const { password: _, ...rest } = user;
-        return rest;
+        return {
+          ...rest,
+          mercadoPagoActivo: false, // Default value since mercadoPagoActivo is not in the user object
+        };
       },
     }),
   ],
 });
+
+// NUEVO: Función helper para obtener el usuario actual
+export async function getCurrentUser() {
+  const session = await auth();
+  return session?.user || null;
+}
+
+// NUEVO: Función helper para verificar si el usuario está autenticado
+export async function requireAuth() {
+  const session = await auth();
+  if (!session?.user) {
+    throw new Error("Usuario no autenticado");
+  }
+  return session.user;
+}

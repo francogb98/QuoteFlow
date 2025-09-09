@@ -19,8 +19,8 @@ export async function generarPagosFuturos(
       NOT: {
         pagos: {
           some: {
-            mes: mesActual,
-            año: añoActual,
+            mes: { in: [mesActual, proximoMes] },
+            año: { in: [añoActual, proximoAño] },
             estado: "PENDIENTE",
           },
         },

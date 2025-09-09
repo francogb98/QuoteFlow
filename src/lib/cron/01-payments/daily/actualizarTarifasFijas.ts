@@ -24,7 +24,7 @@ export async function actualizarTarifasFijas(
       rangos: {
         orderBy: { diaInicio: "asc" },
       },
-      administrador: true,
+      administradores: true, // 🔹 Ahora es un array
     },
   });
 
@@ -44,36 +44,36 @@ export async function actualizarTarifasFijas(
       configuracion.rangos,
       fechaActual
     );
-
     if (!rangoActual) continue;
 
-    // Actualizar pagos pendientes de este mes para este administrador
-    const resultadoUpdate = await prisma.pago.updateMany({
-      where: {
-        estado: "PENDIENTE",
-        mes: mesActual,
-        año: añoActual,
-        usuario: {
-          administradorId: configuracion.administradorId,
-          estado: "ACTIVO",
-          estaActivo: true,
+    // Iterar sobre todos los administradores vinculados
+    for (const admin of configuracion.administradores) {
+      // Actualizar pagos pendientes de este mes para los usuarios de este admin
+      const resultadoUpdate = await prisma.pago.updateMany({
+        where: {
+          estado: "PENDIENTE",
+          mes: mesActual,
+          año: añoActual,
+          usuario: {
+            administradorId: admin.id,
+            estado: "ACTIVO",
+            estaActivo: true,
+          },
+          monto: { not: rangoActual.monto }, // Solo los que necesitan actualización
         },
-        monto: {
-          not: rangoActual.monto, // Solo los que necesitan actualización
+        data: {
+          monto: rangoActual.monto,
+          comprobante: `RANGO_${rangoActual.diaInicio}-${rangoActual.diaFin}_$${rangoActual.monto}`,
         },
-      },
-      data: {
-        monto: rangoActual.monto,
-        comprobante: `RANGO_${rangoActual.diaInicio}-${rangoActual.diaFin}_$${rangoActual.monto}`,
-      },
-    });
+      });
 
-    tarifasActualizadas += resultadoUpdate.count;
+      tarifasActualizadas += resultadoUpdate.count;
 
-    if (resultadoUpdate.count > 0) {
-      logger.info(
-        `💰 Actualizados ${resultadoUpdate.count} pagos a $${rangoActual.monto} para administrador ${configuracion.administrador.nombre}`
-      );
+      if (resultadoUpdate.count > 0) {
+        logger.info(
+          `💰 Actualizados ${resultadoUpdate.count} pagos a $${rangoActual.monto} para administrador ${admin.nombre}`
+        );
+      }
     }
   }
 

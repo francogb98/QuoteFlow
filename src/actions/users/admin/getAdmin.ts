@@ -1,20 +1,37 @@
 "use server";
+
 import prisma from "@/lib/prisma";
 
-export const getAdmin = async (userId: string) => {
-  if (!userId) {
-    return null;
-  }
+export async function getAdmin(id: string) {
   try {
     const admin = await prisma.administrador.findUnique({
-      where: {
-        id: userId,
-      },
+      where: { id },
       include: {
-        empresa: true, // NUEVO: Incluir la relación de empresa
+        empresa: true,
+        usuarios: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            documento: true,
+            estado: true,
+            estaActivo: true,
+          },
+        },
         configuracionTarifa: {
           include: {
             rangos: true,
+            dinamicas: true,
+          },
+        },
+        // NUEVO: Incluir notificaciones recientes
+        notificacionesRecibidas: {
+          where: {
+            leida: false,
+          },
+          take: 5,
+          orderBy: {
+            fechaCreacion: "desc",
           },
         },
       },
@@ -24,12 +41,12 @@ export const getAdmin = async (userId: string) => {
       return null;
     }
 
-    // Ocultar la contraseña antes de devolver el objeto
-    const { password: _, ...adminWithoutPassword } = admin;
+    // No retornar la contraseña
+    const { password, ...adminSinPassword } = admin;
 
-    return adminWithoutPassword;
+    return adminSinPassword;
   } catch (error) {
-    console.error("Error al buscar administrador:", error);
-    throw error; // Es importante lanzar el error para que React Query lo maneje
+    console.error("Error al obtener administrador:", error);
+    return null;
   }
-};
+}

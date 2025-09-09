@@ -18,9 +18,7 @@ interface CreatePaymentData {
 export async function createPayment(data: CreatePaymentData) {
   try {
     const session = await auth();
-    if (!session?.user?.id) {
-      throw new Error("Usuario no autenticado");
-    }
+    if (!session?.user?.id) throw new Error("Usuario no autenticado");
 
     const administradorId = session.user.id;
 
@@ -31,20 +29,22 @@ export async function createPayment(data: CreatePaymentData) {
         administradorId,
       },
     });
+    if (!user) throw new Error("Usuario no encontrado");
 
-    if (!user) {
-      throw new Error("Usuario no encontrado");
-    }
-
-    // Obtener configuración de tarifas
-    const configuracionTarifa = await prisma.configuracionTarifa.findUnique({
-      where: { administradorId },
-      include: { rangos: true },
+    // Buscar configuración de tarifas del administrador
+    const configuracionTarifa = await prisma.configuracionTarifa.findFirst({
+      where: {
+        administradores: { some: { id: administradorId } },
+        estaActiva: true,
+      },
+      include: {
+        rangos: true,
+        dinamicas: true,
+        administradores: true,
+      },
     });
-
-    if (!configuracionTarifa) {
+    if (!configuracionTarifa)
       throw new Error("No hay configuración de tarifas");
-    }
 
     const isDynamicTariff =
       configuracionTarifa.tipoConfiguracion ===
@@ -53,7 +53,6 @@ export async function createPayment(data: CreatePaymentData) {
     // Verificar si ya existe un pago para el período
     let existingPayment;
     if (isDynamicTariff && data.fechaVencimiento) {
-      // Para sistema dinámico, verificar por fecha de vencimiento
       const startOfMonth = new Date(
         data.fechaVencimiento.getFullYear(),
         data.fechaVencimiento.getMonth(),
@@ -78,7 +77,6 @@ export async function createPayment(data: CreatePaymentData) {
         },
       });
     } else if (data.mes && data.año) {
-      // Para sistema fijo, verificar por mes/año
       existingPayment = await prisma.pago.findFirst({
         where: {
           usuarioId: data.usuarioId,
@@ -87,12 +85,9 @@ export async function createPayment(data: CreatePaymentData) {
         },
       });
     }
+    if (existingPayment) throw new Error("Ya existe un pago para este período");
 
-    if (existingPayment) {
-      throw new Error("Ya existe un pago para este período");
-    }
-
-    // Crear el pago según el tipo de sistema
+    // Crear el pago
     const paymentData: any = {
       usuarioId: data.usuarioId,
       monto: data.monto,
@@ -103,22 +98,16 @@ export async function createPayment(data: CreatePaymentData) {
     };
 
     if (isDynamicTariff) {
-      // Sistema dinámico: usar fecha de vencimiento específica
-      if (!data.fechaVencimiento) {
+      if (!data.fechaVencimiento)
         throw new Error("Fecha de vencimiento requerida para sistema dinámico");
-      }
 
       paymentData.fechaVencimiento = data.fechaVencimiento;
       paymentData.mes = data.fechaVencimiento.getMonth() + 1;
       paymentData.año = data.fechaVencimiento.getFullYear();
-      paymentData.periodo = `${data.fechaVencimiento.getFullYear()}-${String(
-        data.fechaVencimiento.getMonth() + 1
-      ).padStart(2, "0")}`;
+      paymentData.periodo = `${data.fechaVencimiento.getFullYear()}-${String(data.fechaVencimiento.getMonth() + 1).padStart(2, "0")}`;
     } else {
-      // Sistema fijo: usar mes/año tradicional
-      if (!data.mes || !data.año) {
+      if (!data.mes || !data.año)
         throw new Error("Mes y año requeridos para sistema fijo");
-      }
 
       paymentData.mes = data.mes;
       paymentData.año = data.año;
@@ -126,18 +115,12 @@ export async function createPayment(data: CreatePaymentData) {
       paymentData.fechaVencimiento = null;
     }
 
-    const newPayment = await prisma.pago.create({
-      data: paymentData,
-    });
+    const newPayment = await prisma.pago.create({ data: paymentData });
 
     revalidatePath(`/admin/users/${data.usuarioId}`);
     revalidatePath("/admin/users/list");
 
-    return {
-      ok: true,
-      message: "Pago creado exitosamente",
-      pago: newPayment,
-    };
+    return { ok: true, message: "Pago creado exitosamente", pago: newPayment };
   } catch (error) {
     console.error("Error al crear pago:", error);
     return {

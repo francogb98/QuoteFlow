@@ -38,7 +38,8 @@
     "next",
     "src/seed.js",
     "src/app/admin/settings/ui/tarifas",
-    "src/scripts/setup-cron-jobs.js"
+    "src/scripts/setup-cron-jobs.js",
+    "seed/seed.js"
   ],
   "exclude": [
     "node_modules"

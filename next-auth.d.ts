@@ -3,7 +3,10 @@ import type {
   ConfiguracionTarifa,
   RangoTarifa,
   Empresa as PrismaEmpresa,
-} from "@prisma/client"; // Importa Empresa de Prisma
+  ConfiguracionComprobantes,
+  ModeloCobro,
+  Rol,
+} from "@prisma/client";
 
 // Extiende los tipos predeterminados de NextAuth
 declare module "next-auth" {
@@ -12,7 +15,19 @@ declare module "next-auth" {
     id: string;
     nombre: string;
     documento: string;
-    email: string; // NUEVO: Añadir email a la interfaz User
+    email: string;
+    rol: Rol;
+    telefono: string;
+    estaActivo: boolean;
+    empresaId: string;
+    modeloDeCobro: ModeloCobro | null;
+    mercadoPagoActivo: boolean;
+    // Relaciones
+    empresa?: PrismaEmpresa;
+    configuracionTarifa?:
+      | (ConfiguracionTarifa & { rangos: RangoTarifa[] })
+      | null;
+    configuracionComprobantes?: ConfiguracionComprobantes | null;
   }
 
   // Extiende la interfaz Session para incluir tus propiedades personalizadas en session.user
@@ -21,16 +36,26 @@ declare module "next-auth" {
       id: string;
       name: string;
       documento: string;
-      email: string; // NUEVO: Añadir email a la interfaz Session.user
-      rol: string;
+      email: string;
+      rol: Rol;
+      telefono: string;
+      estaActivo: boolean;
       claveMercadoPago: string | null;
-      empresa: PrismaEmpresa; // Ahora 'empresa' es el objeto completo de PrismaEmpresa
-      // Permite que configuracionTarifa sea el tipo de objeto o null
+      mercadoPagoActivo: boolean;
+
+      // Información de la empresa
+      empresa: PrismaEmpresa;
       empresaId: string | null;
+      modeloCobro: ModeloCobro | null;
+
+      // Configuraciones
       configuracionTarifa:
         | (ConfiguracionTarifa & { rangos: RangoTarifa[] })
         | null;
-      // Agrega cualquier otra propiedad que añadas a session.user
+      configuracionComprobantes: ConfiguracionComprobantes | null;
+
+      // NUEVO: Estado de configuración
+      configuracionCompleta: boolean;
     } & DefaultSession["user"];
   }
 
@@ -39,7 +64,8 @@ declare module "next-auth" {
     data?: {
       id: string;
       name: string;
-      email: string; // NUEVO: Añadir email al token JWT
+      email: string;
+      documento: string;
     };
   }
 }

@@ -26,6 +26,9 @@ export async function getUser(userId: string) {
             { fechaVencimiento: "desc" },
           ],
         },
+        dinamicaTarifa: true,
+        rangoTarifa: true,
+        notificaciones: true,
       },
     });
 
@@ -34,8 +37,8 @@ export async function getUser(userId: string) {
     }
 
     // Obtener configuración de tarifas del administrador
-    const configuracionTarifa = await prisma.configuracionTarifa.findUnique({
-      where: { administradorId },
+    const configuracionTarifa = await prisma.configuracionTarifa.findFirst({
+      where: { administradores: { some: { id: administradorId } } },
       include: { rangos: true },
     });
 

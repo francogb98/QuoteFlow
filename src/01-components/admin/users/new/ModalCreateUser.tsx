@@ -1,26 +1,19 @@
 "use client";
 
 import { useState } from "react";
-import { Plus, X, Settings } from "lucide-react";
+import { Plus, X } from "lucide-react";
 import { FormCreateUser } from "./FormCreateUser";
-import Link from "next/link";
-import { AlertMessage } from "@/components/admin/tarifas/ui/alert-message";
 
 interface ModalCreateUserProps {
   administradorId: string;
-  tariffInfo: {
-    hasConfiguration: boolean;
-    isValid: boolean;
-    errors: string[];
-    configuracion?: any;
-    tipo?: string;
-    message?: string;
-  };
+  tarifasDisponibles: Array<any>;
+  isDynamicTariff: boolean;
 }
 
 export const ModalCreateUser = ({
   administradorId,
-  tariffInfo,
+  tarifasDisponibles,
+  isDynamicTariff,
 }: ModalCreateUserProps) => {
   const [isOpen, setIsOpen] = useState(false);
 
@@ -28,81 +21,26 @@ export const ModalCreateUser = ({
     setIsOpen(false);
   };
 
-  const canCreateUsers = tariffInfo.hasConfiguration && tariffInfo.isValid;
-
   return (
     <>
       {/* Botón para abrir el modal */}
-      <div className="hidden sm:flex flex-col items-center gap-4">
+      <div className="hidden sm:flex flex-col gap-4">
         <button
           onClick={() => setIsOpen(true)}
-          disabled={!canCreateUsers}
-          className={`font-medium px-6 py-3 rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 mx-auto ${
-            canCreateUsers
-              ? "bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white"
-              : "bg-gray-300 text-gray-500 cursor-not-allowed"
-          }`}
+          className={`font-medium ms-auto px-6 py-3 rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 ${"bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"}`}
         >
           <Plus className="w-5 h-5" />
           <span>Agregar Usuario</span>
         </button>
-
-        {/* Mostrar advertencias si no se puede crear usuarios */}
-        {!canCreateUsers && (
-          <div className="w-full max-w-2xl">
-            {!tariffInfo.hasConfiguration ? (
-              <AlertMessage
-                type="warning"
-                title="Configuración de tarifas requerida"
-                description="Debes configurar las tarifas antes de poder agregar usuarios."
-                className="mb-4"
-              />
-            ) : !tariffInfo.isValid ? (
-              <div className="space-y-3">
-                <AlertMessage
-                  type="error"
-                  title="Configuración de tarifas inválida"
-                  description="Tu configuración de tarifas tiene errores que deben ser corregidos."
-                  className="mb-2"
-                />
-                {tariffInfo.errors.map((error, index) => (
-                  <AlertMessage
-                    key={index}
-                    type="error"
-                    title={error}
-                    className="text-sm"
-                  />
-                ))}
-              </div>
-            ) : null}
-
-            <div className="text-center mt-4">
-              <Link
-                href="/configuraciones"
-                className="inline-flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
-              >
-                <Settings className="w-4 h-4" />
-                {!tariffInfo.hasConfiguration
-                  ? "Configurar Tarifas"
-                  : "Corregir Configuración"}
-              </Link>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="fixed sm:hidden z-5 right-4 bottom-4">
         <button
           onClick={() => setIsOpen(true)}
-          disabled={!canCreateUsers}
           className={`
         w-14 h-14 rounded-full shadow-lg transition-all duration-300
         flex items-center justify-center
-        ${
-          canCreateUsers
-            ? "bg-gradient-to-br from-emerald-500 to-purple-600 hover:from-emerald-600 hover:to-purple-700 text-white transform hover:scale-110 active:scale-95"
-            : "bg-gray-300 text-gray-500 cursor-not-allowed"
-        }
+        ${"bg-gradient-to-br from-emerald-500 to-purple-600 hover:from-emerald-600 hover:to-purple-700 text-white transform hover:scale-110 active:scale-95"}
       `}
           title="Agregar Usuario"
         >
@@ -111,7 +49,7 @@ export const ModalCreateUser = ({
       </div>
 
       {/* Modal */}
-      {isOpen && canCreateUsers && (
+      {isOpen && (
         <div className="fixed inset-0 z-50 overflow-y-auto animate-in fade-in duration-300">
           {/* Backdrop */}
           <div
@@ -133,8 +71,9 @@ export const ModalCreateUser = ({
               <div className="p-6">
                 <FormCreateUser
                   administradorId={administradorId}
-                  configuracionTarifa={tariffInfo.configuracion}
                   onSuccess={handleClose}
+                  tarifasDisponibles={tarifasDisponibles}
+                  isDynamicTariff={isDynamicTariff}
                 />
               </div>
             </div>

@@ -1,9 +1,5 @@
 export * from "./SideBar";
 
-export * from "./users/list/TablaUsuarios";
-export * from "./users/list/UserDashboard";
-export * from "./users/list/UserFilters";
-
 export * from "./users/new/FormCreateUser";
 export * from "./users/new/ModalCreateUser";
 

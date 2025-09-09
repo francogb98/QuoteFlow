@@ -79,7 +79,7 @@ export const RegisterForm = () => {
   const prepareRegistration = useMutation({
     mutationFn: prepareRegistrationForPayment,
     onSuccess: (data) => {
-      if (data.success && data.tempRegistrationId) {
+      if (data.success && "tempRegistrationId" in data) {
         setSuccess(true);
         setSuccessMessage(
           "¡Registro preparado correctamente! Redirigiendo al pago..."
@@ -91,11 +91,11 @@ export const RegisterForm = () => {
           router.push(`/auth/register-payment/${data.tempRegistrationId}`);
         }, 1500);
       } else if (data.error) {
-        setFormError(data.error);
-        if (data.error.field) {
-          setError(data.error.field as keyof RegisterFormData, {
+        setFormError({ message: data.error });
+        if (data.error) {
+          setError(data.error as keyof RegisterFormData, {
             type: "manual",
-            message: data.error.message,
+            message: data.error,
           });
         }
       }

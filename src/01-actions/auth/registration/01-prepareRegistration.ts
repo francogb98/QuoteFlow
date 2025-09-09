@@ -4,6 +4,8 @@ import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import type { TipoPlanEmpresa, FrecuenciaPago } from "@prisma/client";
 import { PrepareRegistrationSchema } from "@/lib/schemas-zod";
+import { ActionResponse, handleActionError } from "@/lib/utils/action-errors";
+import { z } from "zod";
 
 interface PrepareRegistrationData {
   nombre: string;
@@ -16,19 +18,19 @@ interface PrepareRegistrationData {
   frecuenciaPago: FrecuenciaPago;
 }
 
-interface PrepareRegistrationResult {
-  success: boolean;
-  message?: string;
-  error?: {
-    field?: string;
-    message: string;
-  };
-  tempRegistrationId?: string;
-}
+// Removed PrepareRegistrationResult interface
 
 export async function prepareRegistrationForPayment(
-  data: PrepareRegistrationData
-): Promise<PrepareRegistrationResult> {
+  data: z.infer<typeof PrepareRegistrationSchema>
+): Promise<ActionResponse<string>> { // Updated return type to ActionResponse
+  // Zod validation is performed first
+  const validationResult = PrepareRegistrationSchema.safeParse(data);
+
+  if (!validationResult.success) {
+    const firstError = validationResult.error.issues[0];
+    throw new Error(`${firstError.path.join(".")} ${firstError.message}`);
+  }
+
   const {
     nombre,
     documento,
@@ -38,21 +40,7 @@ export async function prepareRegistrationForPayment(
     planTipo,
     frecuenciaPago,
     email,
-  } = data;
-
-  // Validación de campos requeridos
-  const validationResult = PrepareRegistrationSchema.safeParse(data);
-
-  if (!validationResult.success) {
-    const firstError = validationResult.error.issues[0];
-    return {
-      success: false,
-      error: {
-        field: firstError.path.join("."),
-        message: firstError.message,
-      },
-    };
-  }
+  } = validationResult.data; // Use validated data
 
   try {
     // Validación de documento único
@@ -60,39 +48,21 @@ export async function prepareRegistrationForPayment(
       where: { documento },
     });
     if (existingAdmin) {
-      return {
-        success: false,
-        error: {
-          field: "documento",
-          message: "Ya existe un administrador con este documento",
-        },
-      };
+      throw new Error("Ya existe un administrador con este documento");
     }
 
     const existingTempRegistration = await prisma.tempRegistration.findUnique({
       where: { documento },
     });
     if (existingTempRegistration) {
-      return {
-        success: false,
-        error: {
-          field: "documento",
-          message: "Ya existe un registro pendiente para este documento",
-        },
-      };
+      throw new Error("Ya existe un registro pendiente para este documento");
     }
     // Validación de email único
     const existingAdminEmail = await prisma.administrador.findUnique({
       where: { email },
     });
     if (existingAdminEmail) {
-      return {
-        success: false,
-        error: {
-          field: "email",
-          message: "Este email ya está registrado",
-        },
-      };
+      throw new Error("Este email ya está registrado");
     }
 
     // Validación de nombre de empresa único
@@ -100,25 +70,11 @@ export async function prepareRegistrationForPayment(
       where: { nombre: nombreEmpresa },
     });
     if (existingEmpresa) {
-      return {
-        success: false,
-        error: {
-          field: "nombreEmpresa",
-          message: "Ya existe una empresa con este nombre",
-        },
-      };
+      throw new Error("Ya existe una empresa con este nombre");
     }
 
-    // Validación de contraseña
-    if (password.length < 8) {
-      return {
-        success: false,
-        error: {
-          field: "password",
-          message: "La contraseña debe tener al menos 8 caracteres",
-        },
-      };
-    }
+    // Password validation is now handled by Zod schema, remove explicit check here if schema handles it.
+    // If additional password complexity checks are needed beyond Zod's min/max length, add them here.
 
     const hashedPassword = await bcrypt.hash(password, 10);
 
@@ -139,16 +95,10 @@ export async function prepareRegistrationForPayment(
 
     return {
       success: true,
-      tempRegistrationId: tempRegistration.id,
+      data: tempRegistration.id, // Return tempRegistrationId in data
       message: "Registro preparado exitosamente",
     };
-  } catch (error: any) {
-    console.error("Error en prepareRegistrationForPayment:", error);
-    return {
-      success: false,
-      error: {
-        message: "Ocurrió un error inesperado. Por favor intenta nuevamente",
-      },
-    };
+  } catch (error) {
+    return handleActionError(error, "Ocurrió un error inesperado durante el registro.");
   }
 }

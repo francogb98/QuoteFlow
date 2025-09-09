@@ -8,9 +8,10 @@ datasource db {
 }
 
 model Empresa {
-  id                       String             @id @default(uuid())
-  nombre                   String             @unique
-  administradores          Administrador[]
+  id              String          @id @default(uuid())
+  nombre          String          @unique
+  administradores Administrador[]
+
   fechaCreacion            DateTime           @default(now())
   fechaActualizacion       DateTime           @updatedAt
   planTipo                 TipoPlanEmpresa    @default(BASICO)
@@ -27,24 +28,82 @@ model Empresa {
 }
 
 model Administrador {
-  id                        String               @id @default(uuid())
-  nombre                    String
-  documento                 String               @unique
-  email                     String               @unique
-  password                  String
-  telefono                  String
-  rol                       Rol                  @default(PROFESOR)
-  estaActivo                Boolean              @default(true)
-  empresa                   Empresa              @relation(fields: [empresaId], references: [id])
-  empresaId                 String
+  id        String @id @default(uuid())
+  nombre    String
+  documento String @unique
+  email     String @unique
+  password  String
+  telefono  String
+
+  rol                Rol      @default(PROFESOR)
+  estaActivo         Boolean  @default(true)
+  fechaCreacion      DateTime @default(now())
+  fechaActualizacion DateTime @updatedAt
+
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+  empresaId String
+
   claveMercadoPago          String?
   tokenMercadoPagoExpiresAt DateTime?
   mercadoPagoRefreshToken   String?
-  usuarios                  Usuario[]
-  configuracionTarifa       ConfiguracionTarifa?
-  fechaCreacion             DateTime             @default(now())
-  fechaActualizacion        DateTime             @updatedAt
-  logs                      AuditLog[]
+
+  usuarios Usuario[]
+
+  configuracionTarifa   ConfiguracionTarifa? @relation(fields: [configuracionTarifaId], references: [id])
+  configuracionTarifaId String?
+
+  logs AuditLog[]
+
+  modeloDeCobro ModeloDeCobro @default(COMPROBANTE)
+
+  // NUEVO: Relaciones para notificaciones
+  notificacionesEnviadas  Notificacion[] @relation("NotificacionRemitente")
+  notificacionesRecibidas Notificacion[] @relation("NotificacionDestinatario")
+
+  // NUEVO: Configuración de notificaciones
+  recibirNotificacionesPago        Boolean @default(true)
+  recibirNotificacionesComprobante Boolean @default(true)
+  emailNotificaciones              Boolean @default(true)
+
+  // ⭐️ NUEVOS CAMPOS para la configuración de permisos
+  permitirModificarTarifa Boolean @default(true)
+  permitirModificarCobro  Boolean @default(true)
+}
+
+model Notificacion {
+  id      String           @id @default(uuid())
+  tipo    TipoNotificacion
+  titulo  String
+  mensaje String           @db.Text
+
+  // Destinatarios (puede ser para administrador o usuario final)
+  administrador   Administrador? @relation("NotificacionDestinatario", fields: [administradorId], references: [id])
+  administradorId String?
+  usuario         Usuario?       @relation("NotificacionUsuario", fields: [usuarioId], references: [id])
+  usuarioId       String?
+
+  // Remitente (sistema o administrador)
+  remitente   Administrador? @relation("NotificacionRemitente", fields: [remitenteId], references: [id])
+  remitenteId String?
+
+  // Estado y metadatos
+  leida         Boolean   @default(false)
+  fechaCreacion DateTime  @default(now())
+  fechaLeida    DateTime?
+
+  // Datos relacionados (para poder navegar al elemento relacionado)
+  entidadTipo String? // "PAGO", "COMPROBANTE", "USUARIO"
+  entidadId   String? // ID de la entidad relacionada
+
+  // Configuración de entrega
+  enviadaPorEmail Boolean   @default(false)
+  fechaEnvioEmail DateTime?
+
+  @@index([administradorId])
+  @@index([usuarioId])
+  @@index([tipo])
+  @@index([leida])
+  @@index([fechaCreacion])
 }
 
 model CodigoPromocional {
@@ -85,6 +144,7 @@ model Usuario {
   apellido             String
   documento            String
   telefono             String?
+  email                String?
   edad                 Int?
   estado               Estado        @default(ACTIVO)
   pagos                Pago[]
@@ -94,8 +154,22 @@ model Usuario {
   fechaCreacion        DateTime      @default(now())
   fechaInicioMembresia DateTime? // NEW: To store the start date for dynamic billing
 
-  @@index([documento]) // Si buscas mucho por documento
-  @@index([administradorId]) // Muy probable para listar usuarios de un admin
+  // 🔹 Relación con un rango específico (si aplica FIJA_MENSUAL)
+  rangoTarifa   RangoTarifa? @relation(fields: [rangoTarifaId], references: [id])
+  rangoTarifaId String?
+
+  // 🔹 Relación con una configuración dinámica específica (si aplica DINAMICA_POR_FECHA_INGRESO)
+  dinamicaTarifa   ConfiguracionDinamicaTarifa? @relation(fields: [dinamicaTarifaId], references: [id])
+  dinamicaTarifaId String?
+
+  // 🔹 Guardás el nombre asignado (opcional, para congelar la config en ese momento)
+  nombreTarifaAsignada String?
+  notificaciones       Notificacion[] @relation("NotificacionUsuario")
+
+  @@index([documento])
+  @@index([administradorId])
+  @@index([rangoTarifaId])
+  @@index([dinamicaTarifaId])
 }
 
 model Pago {
@@ -112,6 +186,7 @@ model Pago {
   metodo           MetodoPago @default(EFECTIVO)
   periodo          String // Formato "YYYY-MM" para fácil búsqueda
   fechaVencimiento DateTime? // NEW: The specific due date for this payment
+  motivo           String?
 
   @@index([usuarioId])
   @@index([fecha]) // Para búsquedas por rango de fechas
@@ -121,29 +196,48 @@ model Pago {
 
 model ConfiguracionTarifa {
   id                String                  @id @default(uuid())
-  tipoConfiguracion TipoConfiguracionTarifa @default(FIJA_MENSUAL) // NEW: Type of pricing configuration
-  rangos            RangoTarifa[] // Used for FIJA_MENSUAL
-  montoBase         Float? // NEW: Base amount for DINAMICA_POR_FECHA_INGRESO
-  diasGracia        Int? // NEW: Grace period in days for DINAMICA_POR_FECHA_INGRESO
-  montoRecargo      Float? // NEW: Late payment amount for DINAMICA_POR_FECHA_INGRESO
+  tipoConfiguracion TipoConfiguracionTarifa @default(FIJA_MENSUAL)
 
-  administrador   Administrador @relation(fields: [administradorId], references: [id])
-  administradorId String        @unique
-  fechaCreacion   DateTime      @default(now())
-  estaActiva      Boolean       @default(true)
+  // Relación con rangos (si FIJA_MENSUAL)
+  rangos RangoTarifa[]
 
-  @@index([administradorId])
+  // Relación con dinámicas (si DINAMICA_POR_FECHA_INGRESO)
+  dinamicas ConfiguracionDinamicaTarifa[]
+
+  administradores Administrador[]
+
+  fechaCreacion DateTime @default(now())
+  estaActiva    Boolean  @default(true)
 }
 
 model RangoTarifa {
   id                    String              @id @default(uuid())
+  nombre                String
   diaInicio             Int
   diaFin                Int
   monto                 Float
   configuracionTarifa   ConfiguracionTarifa @relation(fields: [configuracionTarifaId], references: [id])
   configuracionTarifaId String
 
-  @@index([configuracionTarifaId]) // Índice para mejor performance
+  // 🔹 Relación inversa: usuarios que tienen este rango
+  usuarios Usuario[]
+
+  @@index([configuracionTarifaId])
+}
+
+model ConfiguracionDinamicaTarifa {
+  id                    String              @id @default(uuid())
+  nombre                String
+  montoBase             Float
+  diasGracia            Int
+  montoRecargo          Float
+  configuracionTarifa   ConfiguracionTarifa @relation(fields: [configuracionTarifaId], references: [id])
+  configuracionTarifaId String
+
+  // 🔹 Relación inversa: usuarios que tienen esta config dinámica
+  usuarios Usuario[]
+
+  @@index([configuracionTarifaId])
 }
 
 // Nuevo modelo para almacenar temporalmente los datos de registro
@@ -170,6 +264,7 @@ enum EstadoPago {
   PAGADO
   PENDIENTE
   VENCIDO
+  RECHAZADO
 }
 
 enum MetodoPago {
@@ -206,4 +301,20 @@ enum FrecuenciaPago {
 enum TipoConfiguracionTarifa {
   FIJA_MENSUAL
   DINAMICA_POR_FECHA_INGRESO
+}
+
+enum TipoNotificacion {
+  PAGO_VENCIDO // Pago vencido
+  PAGO_PROXIMO_VENCER // Pago próximo a vencer
+  COMPROBANTE_SUBIDO // Nuevo comprobante subido
+  COMPROBANTE_APROBADO // Comprobante aprobado
+  COMPROBANTE_RECHAZADO // Comprobante rechazado
+  PAGO_CONFIRMADO // Pago confirmado
+  RECORDATORIO_PAGO // Recordatorio de pago
+  SISTEMA // Notificaciones del sistema
+}
+
+enum ModeloDeCobro {
+  COMPROBANTE
+  MERCADOPAGO
 }

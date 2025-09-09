@@ -75,8 +75,8 @@ const PlanCard = ({
         {isCurrent
           ? "Plan Actual"
           : isPending
-          ? "Procesando..."
-          : "Seleccionar Plan"}
+            ? "Procesando..."
+            : "Seleccionar Plan"}
       </button>
     </div>
   );
@@ -125,7 +125,6 @@ export const SubscriptionPage = () => {
     );
   }
 
-  console.log(subscriptionData);
   const { empresa } = subscriptionData!;
 
   // Lógica para determinar el plan actual y si es de prueba

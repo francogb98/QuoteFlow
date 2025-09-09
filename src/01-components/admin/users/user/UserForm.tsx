@@ -9,6 +9,8 @@ import {
   UserCheck,
   Save,
   Loader2,
+  Mail,
+  DollarSign,
 } from "lucide-react";
 import { StatusChangeAlert } from "./StatusChangeAlert";
 
@@ -18,6 +20,8 @@ interface UserFormProps {
   handleChange: (e: any) => void;
   handleSubmit: (e: any) => void;
   isLoading: boolean;
+  tarifasDisponibles: any;
+  tarifaActual: any;
 }
 
 export function UserForm({
@@ -26,6 +30,8 @@ export function UserForm({
   handleChange,
   handleSubmit,
   isLoading,
+  tarifasDisponibles,
+  tarifaActual,
 }: UserFormProps) {
   return (
     <div className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
@@ -105,6 +111,43 @@ export function UserForm({
             />
           </div>
 
+          {/* Teléfono */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Phone className="w-4 h-4 inline mr-1" />
+              Teléfono
+            </label>
+            <input
+              type="text"
+              name="telefono"
+              value={formData?.telefono || ""}
+              onChange={handleChange}
+              className="w-full h-11 px-4 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 placeholder:text-gray-400 bg-purple-50/50"
+              placeholder="Ej: +54 11 1234-5678"
+            />
+          </div>
+
+          {/* Correo Electrónico */}
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <Mail className="w-4 h-4 inline mr-1" />
+              Correo Electrónico{" "}
+              <span className="text-gray-400">(opcional)</span>
+            </label>
+            <input
+              type="email"
+              name="email"
+              value={formData?.email || ""}
+              onChange={handleChange}
+              className="w-full h-11 px-4 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 placeholder:text-gray-400 bg-purple-50/50"
+              placeholder="Ej: usuario@correo.com"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Este correo se usará para enviar notificaciones de pago y
+              recordatorios.
+            </p>
+          </div>
+
           {/* Estado del Usuario */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -125,20 +168,30 @@ export function UserForm({
             </p>
           </div>
 
-          {/* Teléfono */}
+          {/* Tarifa */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">
-              <Phone className="w-4 h-4 inline mr-1" />
-              Teléfono
+              <DollarSign className="w-4 h-4 inline mr-1" />
+              Tarifa
             </label>
-            <input
-              type="text"
-              name="telefono"
-              value={formData?.telefono || ""}
+            <select
+              name="tarifa"
+              value={formData?.tarifa || tarifaActual || ""}
               onChange={handleChange}
-              className="w-full h-11 px-4 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 placeholder:text-gray-400 bg-purple-50/50"
-              placeholder="Ej: +54 11 1234-5678"
-            />
+              className="w-full h-11 px-4 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 bg-purple-50/50"
+            >
+              <option value="">Seleccionar tarifa</option>
+              {tarifasDisponibles.map((tarifa: any) => (
+                <option key={tarifa.id} value={tarifa.id}>
+                  {tarifa.nombre}
+                </option>
+              ))}
+            </select>
+            {formData?.tarifa && formData.tarifa !== tarifaActual && (
+              <p className="mt-1 text-xs text-blue-600">
+                ⚠️ Tarifa será actualizada al guardar los cambios
+              </p>
+            )}
           </div>
         </div>
 
@@ -161,7 +214,7 @@ export function UserForm({
             ) : (
               <>
                 <Save className="w-4 h-4" />
-                Guardar Cambioss
+                Guardar Cambios
               </>
             )}
           </button>

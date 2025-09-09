@@ -1,133 +1,120 @@
 "use client";
-
-import { findUser } from "@/actions/users/public";
-import { useMutation } from "@tanstack/react-query";
-import { type SubmitHandler, useForm } from "react-hook-form";
-import { Search, Loader2, AlertCircle, CheckCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
 import { useState } from "react";
+import type React from "react";
+
+import { useRouter } from "next/navigation";
+import { Search, User, AlertCircle } from "lucide-react";
 
 interface Props {
   empresa: string;
 }
 
-interface Inputs {
-  documento: string;
-}
-
-export function FormSearchUser({ empresa }: Props) {
-  const [success, setSuccess] = useState(false);
+export const FormSearchUser = ({ empresa }: Props) => {
+  const [documento, setDocumento] = useState("");
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState("");
   const router = useRouter();
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-  } = useForm<Inputs>();
 
-  const mutation = useMutation({
-    mutationFn: (data: Inputs) => findUser(data.documento, empresa),
-    onSuccess: (data) => {
-      if (!data.ok) {
-        // Si no es exitoso, lanzamos un error para que el onError lo capture
-        throw new Error(data.message);
-      }
-      setSuccess(true);
-      router.push(`/${empresa}/${data.usuario!.documento}`);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-      setTimeout(() => {
-        setSuccess(false);
-      }, 1000);
-    },
-    onError: (error: Error) => {
-      // Muestra el error en el formulario
-      console.error("Error al buscar usuario:", error.message);
-      // Puedes añadir un estado local para mostrar el error en el UI si lo deseas
-      // Por ejemplo: setErrorState(error.message);
-    },
-  });
+    if (!documento.trim()) {
+      setError("Por favor ingresa tu número de DNI");
+      return;
+    }
 
-  const userSearch: SubmitHandler<Inputs> = async (data) => {
-    mutation.mutate(data);
+    // Basic DNI validation (only numbers, 7-8 digits)
+    const dniRegex = /^\d{7,8}$/;
+    if (!dniRegex.test(documento.trim())) {
+      setError("El DNI debe contener solo números (7-8 dígitos)");
+      return;
+    }
+
+    setIsLoading(true);
+    setError("");
+
+    try {
+      // Navigate to the user's payment page
+      router.push(`/${empresa}/${documento.trim()}`);
+    } catch (error) {
+      setError("Error al buscar usuario. Por favor intenta nuevamente.");
+      setIsLoading(false);
+    }
   };
 
   return (
-    <div className="max-w-md mx-auto mb-8 px-4 sm:px-0">
-      <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 sm:p-8">
-        <form onSubmit={handleSubmit(userSearch)} className="space-y-6">
-          <div className="text-center mb-6">
-            <h2 className="text-2xl font-bold text-gray-900 mb-2">
-              Buscar DNI
-            </h2>
-            <p className="text-gray-500 text-sm">
-              Ingresa tu documento para consultar tu estado
-            </p>
+    <div className="max-w-md mx-auto">
+      <div className="bg-white/80 backdrop-blur-md rounded-2xl shadow-xl border border-purple-100 p-8">
+        <div className="text-center mb-6">
+          <div className="w-16 h-16 bg-gradient-to-r from-purple-500 to-violet-500 rounded-full flex items-center justify-center mx-auto mb-4">
+            <User className="w-8 h-8 text-white" />
           </div>
-          <div className="relative">
-            <input
-              {...register("documento", {
-                required: "El DNI es requerido",
-                pattern: {
-                  value: /^\d{8,10}$/,
-                  message: "Ingrese un DNI válido (8-10 dígitos)",
-                },
-              })}
-              type="text"
-              className="w-full h-11 px-4 pr-10 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 placeholder:text-gray-400 bg-purple-50/50"
-              placeholder="Ej: 12345678"
-              disabled={mutation.isPending}
-              maxLength={10}
-            />
-            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
-              {mutation.isPending ? (
-                <Loader2 className="animate-spin text-purple-500 w-4 h-4" />
-              ) : (
-                <Search className="text-purple-400 w-4 h-4" />
-              )}
+          <h2 className="text-2xl font-bold text-gray-900 mb-2">
+            Buscar Usuario
+          </h2>
+          <p className="text-gray-600">
+            Ingresa tu DNI para consultar tus pagos
+          </p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="space-y-4">
+          <div>
+            <label
+              htmlFor="documento"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Número de DNI
+            </label>
+            <div className="relative">
+              <input
+                type="text"
+                id="documento"
+                value={documento}
+                onChange={(e) => {
+                  setDocumento(e.target.value);
+                  setError("");
+                }}
+                placeholder="Ej: 12345678"
+                className="w-full px-4 py-3 pl-12 border border-gray-300 rounded-lg focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200"
+                disabled={isLoading}
+              />
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-gray-400 w-4 h-4" />
             </div>
-            {errors.documento && (
-              <p className="mt-2 text-sm text-red-600 flex items-center">
-                <AlertCircle className="w-4 h-4 mr-1" />
-                {errors.documento.message}
-              </p>
-            )}
           </div>
+
+          {error && (
+            <div className="flex items-center space-x-2 text-red-600 bg-red-50 border border-red-200 rounded-lg p-3">
+              <AlertCircle className="w-4 h-4 flex-shrink-0" />
+              <span className="text-sm">{error}</span>
+            </div>
+          )}
+
           <button
             type="submit"
-            className="w-full h-11 bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 disabled:from-gray-400 disabled:to-gray-500 text-white font-bold rounded-lg transition-all duration-300 shadow-md hover:shadow-lg transform hover:scale-[1.01] disabled:transform-none text-base disabled:cursor-not-allowed flex items-center justify-center"
-            disabled={mutation.isPending}
+            disabled={isLoading}
+            className="w-full bg-gradient-to-r from-purple-600 to-violet-600 hover:from-purple-700 hover:to-violet-700 text-white font-medium py-3 px-4 rounded-lg transition-all duration-200 shadow-md hover:shadow-lg transform hover:scale-105 disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none"
           >
-            {mutation.isPending ? (
-              <>
-                <Loader2 className="animate-spin mr-2 w-4 h-4" />
+            {isLoading ? (
+              <div className="flex items-center justify-center">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
                 Buscando...
-              </>
+              </div>
             ) : (
-              <>
-                <Search className="mr-2 w-4 h-4" />
-                Buscar Usuario
-              </>
+              <div className="flex items-center justify-center">
+                <Search className="w-4 h-4 mr-2" />
+                Buscar mis pagos
+              </div>
             )}
           </button>
         </form>
-        {mutation.isError && (
-          <div className="mt-6 p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
-            <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium">Error en la búsqueda</p>
-              <p className="text-sm">{mutation.error?.message}</p>
-            </div>
-          </div>
-        )}
-        {success && (
-          <div className="mt-6 p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-start">
-            <CheckCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="text-sm font-medium">¡Usuario encontrado!</p>
-              <p className="text-sm">Redirigiendo...</p>
-            </div>
-          </div>
-        )}
+
+        <div className="mt-6 text-center">
+          <p className="text-xs text-gray-500">
+            ¿No encuentras tu información? Contacta al administrador de{" "}
+            {empresa}
+          </p>
+        </div>
       </div>
     </div>
   );
-}
+};

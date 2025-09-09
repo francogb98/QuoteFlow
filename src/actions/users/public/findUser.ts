@@ -33,35 +33,47 @@ export const findUser = async (
       };
     }
 
-    const admin = empresaExist.administradores[0];
+    let usuario = null;
+    let adminEncontrado = null;
 
-    // Buscar usuario con sus pagos
-    const usuario = await prisma.usuario.findFirst({
-      where: {
-        documento,
-        administradorId: admin.id,
-      },
-      include: {
-        pagos: {
-          orderBy: { fecha: "desc" },
+    // Buscar el usuario en todos los administradores de la empresa
+    for (const admin of empresaExist.administradores) {
+      const usuarioEncontrado = await prisma.usuario.findFirst({
+        where: {
+          documento,
+          administradorId: admin.id,
         },
-      },
-    });
+        include: {
+          pagos: {
+            orderBy: { fecha: "desc" },
+          },
+        },
+      });
 
-    if (!usuario) {
+      if (usuarioEncontrado) {
+        usuario = usuarioEncontrado;
+        adminEncontrado = admin;
+        break; // Salir del bucle cuando se encuentra el usuario
+      }
+    }
+
+    if (!usuario || !adminEncontrado) {
       return {
         ok: false,
-        message: "No se encontró el usuario.",
+        message:
+          "No se encontró el usuario en ningún administrador de la empresa.",
       };
     }
 
     // ✅ SOLO RETORNAR DATOS - Sin actualizaciones
+
     return {
       ok: true,
       id: usuario.id,
-      administradorId: admin.id,
+      administradorId: adminEncontrado.id,
+      modoDePago: adminEncontrado.modeloDeCobro,
       usuario: usuario,
-      configuracionTarifa: admin.configuracionTarifa,
+      configuracionTarifa: adminEncontrado.configuracionTarifa,
       empresa: {
         id: empresaExist.id,
         nombre: empresaExist.nombre,

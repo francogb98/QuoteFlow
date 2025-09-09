@@ -14,6 +14,9 @@ import {
 } from "lucide-react";
 import { addUserToAdmin } from "@/actions/admin/users";
 
+import { Label } from "@/components/ui/label";
+import { Input } from "@/components/ui/input";
+
 interface UserFormData {
   nombre: string;
   apellido: string;
@@ -21,20 +24,27 @@ interface UserFormData {
   documento: string;
   telefono: string;
   primerPagoMesSiguiente: boolean;
-  fechaInicioMembresia?: string; // Nueva fecha para sistema dinámico
-  usarFechaPersonalizada: boolean; // Para controlar si usar fecha personalizada
+  fechaInicioMembresia?: string;
+  usarFechaPersonalizada: boolean;
+  correo?: string;
+  rangoTarifaId?: string;
+  dinamicaTarifaId?: string;
 }
 
 interface FormCreateProps {
   administradorId: string;
-  configuracionTarifa?: any; // Pasar la configuración de tarifas
+  configuracionTarifa?: any;
   onSuccess?: () => void;
+  tarifasDisponibles: Array<any>;
+  isDynamicTariff: boolean;
 }
 
 export const FormCreateUser = ({
   administradorId,
   configuracionTarifa,
+  tarifasDisponibles,
   onSuccess,
+  isDynamicTariff,
 }: FormCreateProps) => {
   const [showSuccess, setShowSuccess] = useState(false);
   const queryClient = useQueryClient();
@@ -54,8 +64,6 @@ export const FormCreateUser = ({
   });
 
   const usarFechaPersonalizada = watch("usarFechaPersonalizada");
-  const isDynamicTariff =
-    configuracionTarifa?.tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO";
 
   const mutation = useMutation({
     mutationFn: addUserToAdmin,
@@ -85,7 +93,6 @@ export const FormCreateUser = ({
         administradorId,
       };
 
-      // Solo incluir fecha de inicio si es sistema dinámico y se especificó una fecha personalizada
       if (
         isDynamicTariff &&
         data.usarFechaPersonalizada &&
@@ -100,12 +107,27 @@ export const FormCreateUser = ({
     }
   };
 
-  console.log(isDynamicTariff);
+  // 💡 Lógica para obtener tarifas únicas
+  const uniqueTarifas = [];
+  const namesSeen = new Set();
+  if (tarifasDisponibles) {
+    for (const tarifa of tarifasDisponibles) {
+      // Si la tarifa no es dinámica, filtra por nombre único
+      if (!isDynamicTariff) {
+        if (!namesSeen.has(tarifa.nombre)) {
+          namesSeen.add(tarifa.nombre);
+          uniqueTarifas.push(tarifa);
+        }
+      } else {
+        // Si es dinámica, agrega todas las opciones
+        uniqueTarifas.push(tarifa);
+      }
+    }
+  }
 
   return (
     <div className="w-full max-w-lg mx-auto">
       <div className="bg-white rounded-xl shadow-lg border border-gray-100 p-6 sm:p-8">
-        {/* Header */}
         <div className="text-center mb-6">
           <div className="mx-auto w-12 h-12 bg-gradient-to-r from-purple-500 to-purple-600 rounded-full flex items-center justify-center mb-4">
             <User className="w-6 h-6 text-white" />
@@ -116,18 +138,6 @@ export const FormCreateUser = ({
           <p className="text-gray-500 text-sm">
             Completa los datos del usuario para agregarlo al sistema
           </p>
-
-          {/* Mostrar tipo de configuración */}
-          {configuracionTarifa && (
-            <div className="mt-3 p-3 bg-blue-50 rounded-lg border border-blue-200">
-              <p className="text-sm text-blue-800">
-                <strong>Sistema de tarifas:</strong>{" "}
-                {isDynamicTariff
-                  ? "Dinámico por fecha de ingreso"
-                  : "Fijo mensual"}
-              </p>
-            </div>
-          )}
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-5">
@@ -219,6 +229,39 @@ export const FormCreateUser = ({
             )}
           </div>
 
+          {/* Correo electrónico */}
+          <div>
+            <label
+              htmlFor="correo"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Correo Electrónico{" "}
+              <span className="text-gray-400">(opcional)</span>
+            </label>
+            <input
+              {...register("correo", {
+                pattern: {
+                  value: /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/,
+                  message: "Ingrese un correo electrónico válido",
+                },
+              })}
+              type="email"
+              className="w-full h-11 px-4 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 placeholder:text-gray-400 bg-purple-50/50"
+              placeholder="Ej: usuario@correo.com"
+              disabled={mutation.isPending}
+            />
+            {errors.correo && (
+              <p className="mt-2 text-sm text-red-600 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {errors.correo.message}
+              </p>
+            )}
+            <p className="mt-1 text-xs text-gray-500">
+              Agrega un correo para que el usuario reciba notificaciones de
+              pago.
+            </p>
+          </div>
+
           {/* Edad */}
           <div>
             <label
@@ -282,115 +325,119 @@ export const FormCreateUser = ({
           {/* Configuración de fecha de inicio (solo para sistema dinámico) */}
           {isDynamicTariff && (
             <div className="bg-blue-50/50 p-4 rounded-lg border border-blue-200">
-              <div className="flex items-start mb-3">
-                <input
-                  {...register("usarFechaPersonalizada")}
-                  id="usarFechaPersonalizada"
-                  type="checkbox"
-                  className="w-4 h-4 text-blue-600 bg-white border-blue-300 rounded focus:ring-blue-500 focus:ring-2 mt-1"
-                  disabled={mutation.isPending}
-                />
-                <div className="ml-3 flex-1">
-                  <label
-                    htmlFor="usarFechaPersonalizada"
-                    className="text-sm font-medium text-gray-900 flex items-center cursor-pointer"
-                  >
-                    Usar fecha de inicio personalizada
-                    <div className="relative group ml-2">
-                      <HelpCircle className="w-4 h-4 text-blue-500 cursor-help" />
-                      <div className="absolute hidden group-hover:block z-10 w-64 p-3 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg shadow-lg -left-32 top-6">
-                        <p className="font-medium mb-1">
-                          Fecha de inicio de membresía
-                        </p>
-                        <p>
-                          En el sistema dinámico, los pagos se calculan basados
-                          en la fecha de inicio de membresía del usuario.
-                        </p>
-                        <p className="font-medium mt-1">
-                          Por defecto se usa la fecha actual.
-                        </p>
-                      </div>
-                    </div>
-                  </label>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Especifica una fecha de inicio diferente para la membresía
-                  </p>
-                </div>
-              </div>
-
-              {usarFechaPersonalizada && (
-                <div>
-                  <label
-                    htmlFor="fechaInicioMembresia"
-                    className="block text-sm font-medium text-gray-700 mb-2"
-                  >
-                    Fecha de inicio de membresía
-                  </label>
-                  <input
-                    {...register("fechaInicioMembresia", {
-                      required: usarFechaPersonalizada
-                        ? "La fecha de inicio es requerida"
-                        : false,
-                    })}
-                    type="date"
-                    className="w-full h-11 px-4 text-base border-2 border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all duration-300 bg-blue-50/50"
-                    disabled={mutation.isPending}
-                    max={new Date().toISOString().split("T")[0]} // No permitir fechas futuras
-                  />
-                  {errors.fechaInicioMembresia && (
-                    <p className="mt-2 text-sm text-red-600 flex items-center">
-                      <AlertCircle className="w-4 h-4 mr-1" />
-                      {errors.fechaInicioMembresia.message}
-                    </p>
-                  )}
-                </div>
-              )}
+              <Label
+                htmlFor="fechaInicioMembresia"
+                className="block text-sm font-medium text-gray-700 mb-2"
+              >
+                Fecha de inicio de membresía
+              </Label>
+              <Input
+                {...register("fechaInicioMembresia", {
+                  required: usarFechaPersonalizada
+                    ? "La fecha de inicio es requerida"
+                    : false,
+                })}
+                type="date"
+                className="w-full h-11 px-4 text-base border-2 border-blue-200 rounded-lg focus:border-blue-500 focus:ring-2 focus:ring-blue-100 outline-none transition-all duration-300 bg-blue-50/50"
+                disabled={mutation.isPending}
+                defaultValue={new Date().toISOString().split("T")[0]} // 👈 fecha de hoy por defecto
+              />
             </div>
           )}
 
           {/* Checkbox primer pago mes siguiente */}
           <div className="bg-purple-50/50 p-4 rounded-lg border border-purple-200">
-            <div className="flex items-start">
-              <input
-                {...register("primerPagoMesSiguiente")}
-                id="primerPagoMesSiguiente"
-                type="checkbox"
-                className="w-4 h-4 text-purple-600 bg-white border-purple-300 rounded focus:ring-purple-500 focus:ring-2 mt-1"
-                disabled={mutation.isPending}
-              />
-              <div className="ml-3 flex-1">
-                <label
-                  htmlFor="primerPagoMesSiguiente"
-                  className="text-sm font-medium text-gray-900 flex items-center cursor-pointer"
-                >
-                  Primer Pago Mes Siguiente
-                  <div className="relative group ml-2">
-                    <HelpCircle className="w-4 h-4 text-purple-500 cursor-help" />
-                    <div className="absolute hidden group-hover:block z-10 w-64 p-3 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg shadow-lg -left-32 top-6">
-                      <p className="font-medium mb-1">¿Qué significa esto?</p>
-                      <p>
-                        Si activas esta opción, el primer pago se generará{" "}
-                        {isDynamicTariff
-                          ? "un mes después de la fecha de inicio"
-                          : "el mes siguiente"}
-                        .
-                      </p>
-                      <p className="font-medium mt-1">
-                        Por defecto, se crea{" "}
-                        {isDynamicTariff
-                          ? "en la fecha de inicio"
-                          : "en el mes actual"}
-                        .
-                      </p>
-                    </div>
+            <div className="flex flex-col">
+              <label className="text-sm font-medium text-gray-900 mb-2">
+                Estado del pago del mes actual
+                <div className="relative group ml-2 inline-block">
+                  <HelpCircle className="w-4 h-4 text-purple-500 cursor-help" />
+                  <div className="absolute hidden group-hover:block z-10 w-64 p-3 text-xs text-gray-700 bg-white border border-gray-200 rounded-lg shadow-lg -left-32 top-6">
+                    <p className="font-medium mb-1">¿Qué significa esto?</p>
+                    <p>
+                      Aquí defines si el sistema debe crear el <b>pago</b> del
+                      mes actual en estado{" "}
+                      <span className="font-semibold">Pagado</span> o{" "}
+                      <span className="font-semibold">Pendiente</span>.
+                    </p>
                   </div>
+                </div>
+              </label>
+
+              <div className="flex gap-6 mt-1">
+                <label className="flex items-center text-sm text-gray-700 cursor-pointer">
+                  <input
+                    {...register("fechaInicioMembresia", { required: true })}
+                    type="radio"
+                    value="PAGADO"
+                    className="w-4 h-4 text-purple-600 border-purple-300 focus:ring-purple-500"
+                    disabled={mutation.isPending}
+                  />
+                  <span className="ml-2">Pagado</span>
                 </label>
-                <p className="text-xs text-gray-500 mt-1">
-                  Marca esta opción si el primer pago debe generarse{" "}
-                  {isDynamicTariff ? "un mes después" : "el próximo mes"}
-                </p>
+
+                <label className="flex items-center text-sm text-gray-700 cursor-pointer">
+                  <input
+                    {...register("fechaInicioMembresia", { required: true })}
+                    type="radio"
+                    value="PENDIENTE"
+                    className="w-4 h-4 text-purple-600 border-purple-300 focus:ring-purple-500"
+                    disabled={mutation.isPending}
+                  />
+                  <span className="ml-2">Pendiente</span>
+                </label>
               </div>
             </div>
+          </div>
+
+          {/* Tarifa */}
+
+          <div className="bg-gradient-to-r from-purple-50 to-blue-50 p-4 rounded-lg border border-purple-200">
+            <label
+              htmlFor="tariffSelection"
+              className="block text-sm font-medium text-gray-700 mb-2"
+            >
+              Tarifa
+              <span className="text-red-500 ml-1">*</span>
+            </label>
+            <select
+              {...register(
+                isDynamicTariff ? "dinamicaTarifaId" : "rangoTarifaId",
+                {
+                  required: "Debe seleccionar una opción de tarifa",
+                }
+              )}
+              className="w-full h-12 px-4 pr-10 text-base border-2 border-gray-200 rounded-lg focus:border-blue-500 focus:ring-4 focus:ring-blue-100 outline-none transition-all duration-300 bg-white hover:border-gray-300 disabled:bg-gray-50 disabled:cursor-not-allowed appearance-none"
+              disabled={mutation.isPending}
+            >
+              <option value="" className="text-gray-500">
+                Seleccione una opción
+              </option>
+              {uniqueTarifas.map((tarifa: any, i) => (
+                <option
+                  key={tarifa.id}
+                  value={tarifa.id}
+                  className="text-gray-800"
+                >
+                  {isDynamicTariff
+                    ? `${tarifa.nombre} - $${tarifa.montoBase}`
+                    : `${tarifa.nombre} - $${tarifa.monto}`}
+                </option>
+              ))}
+            </select>
+
+            {(errors.rangoTarifaId || errors.dinamicaTarifaId) && (
+              <p className="mt-2 text-sm text-red-600 flex items-center">
+                <AlertCircle className="w-4 h-4 mr-1" />
+                {errors.rangoTarifaId?.message ||
+                  errors.dinamicaTarifaId?.message}
+              </p>
+            )}
+            <p className="mt-2 text-xs text-gray-600">
+              {isDynamicTariff
+                ? "Selecciona la configuración dinámica que se aplicará a este usuario"
+                : "Selecciona el rango de tarifa según el día del mes en que pagará"}
+            </p>
           </div>
 
           {/* Submit Button */}

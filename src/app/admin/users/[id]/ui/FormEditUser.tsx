@@ -2,6 +2,7 @@
 
 import { editUser } from "@/actions/users";
 import { getUser } from "@/actions/users/admin/getUser";
+
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useState } from "react";
 import { toast } from "sonner";
@@ -10,12 +11,12 @@ import {
   LoadingState,
   ErrorState,
   UserHeader,
-  DynamicTariffAlert,
   UserForm,
   PagosGrid,
 } from "@/01-components/admin";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
-export const FormEditUser = ({ id }: any) => {
+export const FormEditUser = ({ id, tarifasDisponibles }: any) => {
   const [formData, setFormData] = useState({});
   const queryClient = useQueryClient();
 
@@ -42,6 +43,8 @@ export const FormEditUser = ({ id }: any) => {
 
   const handleChange = (e: any) => {
     const { name, value } = e.target;
+    if (name === "tarifa") {
+    }
     setFormData((prevData) => ({
       ...prevData,
       [name]: value,
@@ -51,8 +54,13 @@ export const FormEditUser = ({ id }: any) => {
   const handleSubmit = (e: any) => {
     e.preventDefault();
     if (formData) {
+      const dataToSubmit = {
+        ...formData,
+        id: id, // Include the user ID required by the server schema
+      };
       toast.info("Actualizando usuario...");
-      userMutation.mutate(formData);
+      //@ts-ignore
+      userMutation.mutate(dataToSubmit);
     }
   };
 
@@ -63,28 +71,51 @@ export const FormEditUser = ({ id }: any) => {
   if (isPending) return <LoadingState />;
   if (isError) return <ErrorState error={error} />;
 
+  const tarifaActual = data?.dinamicaTarifa?.id || data?.rangoTarifa?.id;
+
   return (
     <div className="space-y-6">
       <UserHeader data={data} isDynamicTariff={isDynamicTariff} />
 
-      {isDynamicTariff && <DynamicTariffAlert data={data} />}
+      <Tabs defaultValue="personal" className="w-full">
+        <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-emerald-50 to-purple-50 border border-emerald-200">
+          <TabsTrigger
+            value="personal"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white"
+          >
+            Información Personal
+          </TabsTrigger>
+          <TabsTrigger
+            value="pagos"
+            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+          >
+            Información de Pagos
+          </TabsTrigger>
+        </TabsList>
 
-      <UserForm
-        formData={formData}
-        originalData={data}
-        handleChange={handleChange}
-        handleSubmit={handleSubmit}
-        isLoading={userMutation.isPending}
-      />
+        <TabsContent value="personal" className="mt-6">
+          <UserForm
+            formData={formData}
+            originalData={data}
+            handleChange={handleChange}
+            handleSubmit={handleSubmit}
+            isLoading={userMutation.isPending}
+            tarifasDisponibles={tarifasDisponibles}
+            tarifaActual={tarifaActual}
+          />
+        </TabsContent>
 
-      <PagosGrid
-        //@ts-ignore
-        pagos={data.pagos}
-        id={id}
-        configuracionTarifa={data.configuracionTarifa}
-        //@ts-ignore
-        fechaInicioMembresia={data.fechaInicioMembresia}
-      />
+        <TabsContent value="pagos" className="mt-6">
+          <PagosGrid
+            //@ts-ignore
+            pagos={data.pagos}
+            id={id}
+            configuracionTarifa={data.configuracionTarifa}
+            //@ts-ignore
+            fechaInicioMembresia={data.fechaInicioMembresia}
+          />
+        </TabsContent>
+      </Tabs>
     </div>
   );
 };

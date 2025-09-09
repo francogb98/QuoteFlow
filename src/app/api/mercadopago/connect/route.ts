@@ -118,8 +118,7 @@ export async function GET(request: NextRequest) {
     });
 
     return NextResponse.redirect(
-      `${process.env
-        .FRONTEND_URL!}/dashboard/integrations?${errorParams.toString()}`
+      `${process.env.FRONTEND_URL!}/admin/failure?${errorParams.toString()}`
     );
   }
 }

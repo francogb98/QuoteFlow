@@ -1,8 +1,8 @@
 import { findUser } from "@/actions/users/public";
-import { HandlePayment } from "../../ui/HandlePayment";
 import { notFound } from "next/navigation";
 import type { FindUserResult } from "@/types/find-user-result";
-import type { Metadata } from "next"; // Importa Metadata
+import type { Metadata } from "next"; // Importa <Metada3ta></Metada3ta>
+import { HandlePayment } from "./ui/HandlePayment";
 
 interface Props {
   params: Promise<{

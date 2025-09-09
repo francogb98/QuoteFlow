@@ -15,6 +15,7 @@ export interface FindUserResult {
   administradorId?: string;
   usuario?: any;
   configuracionTarifa?: any;
+  modoDePago?: string;
   empresa?: {
     id: string;
     nombre: string;

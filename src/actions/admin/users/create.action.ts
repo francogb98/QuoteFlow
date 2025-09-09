@@ -1,12 +1,8 @@
 "use server";
 
-import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { TipoConfiguracionTarifa } from "@prisma/client";
-import {
-  validateTariffConfiguration,
-  getApplicableTariffRange,
-} from "./lib/tariff-utils";
+import prisma from "@/lib/prisma";
 
 export async function addUserToAdmin(data: {
   nombre: string;
@@ -14,9 +10,12 @@ export async function addUserToAdmin(data: {
   documento: string;
   edad?: number;
   telefono?: string;
+  correo?: string;
   administradorId: string;
   primerPagoMesSiguiente: boolean;
   fechaInicioMembresia?: Date;
+  rangoTarifaId?: string;
+  dinamicaTarifaId?: string;
 }) {
   try {
     // Verificar si el usuario ya existe
@@ -38,6 +37,7 @@ export async function addUserToAdmin(data: {
         configuracionTarifa: {
           include: {
             rangos: true,
+            dinamicas: true,
           },
         },
       },
@@ -47,22 +47,41 @@ export async function addUserToAdmin(data: {
       throw new Error("Administrador no encontrado");
     }
 
-    // Validar configuración de tarifas
-    const validation = validateTariffConfiguration(
-      adminExists.configuracionTarifa
-    );
-    if (!validation.isValid) {
-      throw new Error(
-        `Configuración de tarifas inválida: ${validation.errors.join(", ")}`
-      );
+    if (!adminExists.configuracionTarifa) {
+      throw new Error("No hay configuración de tarifas disponible");
     }
 
-    const configuracionTarifa = adminExists.configuracionTarifa!;
+    const configuracionTarifa = adminExists.configuracionTarifa;
+    const isDynamicTariff =
+      configuracionTarifa.tipoConfiguracion ===
+      TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
+
+    if (isDynamicTariff) {
+      if (!data.dinamicaTarifaId) {
+        throw new Error("Debe seleccionar una configuración dinámica");
+      }
+      const dinamicaExists = configuracionTarifa.dinamicas.find(
+        (d) => d.id === data.dinamicaTarifaId
+      );
+      if (!dinamicaExists) {
+        throw new Error("La configuración dinámica seleccionada no existe");
+      }
+    } else {
+      if (!data.rangoTarifaId) {
+        throw new Error("Debe seleccionar un rango de tarifa");
+      }
+      const rangoExists = configuracionTarifa.rangos.find(
+        (r) => r.id === data.rangoTarifaId
+      );
+      if (!rangoExists) {
+        throw new Error("El rango de tarifa seleccionado no existe");
+      }
+    }
 
     // Determinar la fecha de inicio de membresía
-    const fechaInicioMembresia = data.fechaInicioMembresia || new Date();
+    const fechaInicioMembresia =
+      new Date(data.fechaInicioMembresia!) || new Date();
 
-    // Crear el nuevo usuario
     const newUser = await prisma.usuario.create({
       data: {
         nombre: data.nombre.toLowerCase(),
@@ -74,40 +93,43 @@ export async function addUserToAdmin(data: {
         estado: "ACTIVO",
         estaActivo: true,
         fechaInicioMembresia: fechaInicioMembresia,
+        // Assign the selected tariff
+        rangoTarifaId: isDynamicTariff ? null : data.rangoTarifaId,
+        dinamicaTarifaId: isDynamicTariff ? data.dinamicaTarifaId : null,
       },
     });
 
-    // Crear el pago inicial basado en el tipo de configuración
     await createInitialPayment({
       configuracionTarifa,
       newUser,
       primerPagoMesSiguiente: data.primerPagoMesSiguiente,
       fechaInicioMembresia,
+      selectedRangoId: data.rangoTarifaId,
+      selectedDinamicaId: data.dinamicaTarifaId,
     });
 
     revalidatePath("/admin/users/list");
     return newUser;
   } catch (error) {
     console.error("Error al agregar usuario:", error);
-    throw new Error(
-      error instanceof Error
-        ? error.message
-        : "Error desconocido al agregar usuario"
-    );
+    throw new Error("Error en el servidor intente nuevamente más tarde.");
   }
 }
 
-// Función auxiliar para crear el pago inicial
 async function createInitialPayment({
   configuracionTarifa,
   newUser,
   primerPagoMesSiguiente,
   fechaInicioMembresia,
+  selectedRangoId,
+  selectedDinamicaId,
 }: {
   configuracionTarifa: any;
   newUser: any;
   primerPagoMesSiguiente: boolean;
   fechaInicioMembresia: Date;
+  selectedRangoId?: string;
+  selectedDinamicaId?: string;
 }) {
   const now = new Date();
 
@@ -115,12 +137,13 @@ async function createInitialPayment({
     configuracionTarifa.tipoConfiguracion ===
     TipoConfiguracionTarifa.FIJA_MENSUAL
   ) {
-    // Sistema de tarifas fijas mensuales
-    const diaDelMes = fechaInicioMembresia.getDate();
-    const rangoTarifa = getApplicableTariffRange(
-      configuracionTarifa.rangos,
-      diaDelMes
+    // Use selected range tariff
+    const rangoTarifa = configuracionTarifa.rangos.find(
+      (r: any) => r.id === selectedRangoId
     );
+    if (!rangoTarifa) {
+      throw new Error("Rango de tarifa no encontrado");
+    }
 
     const targetDate = primerPagoMesSiguiente
       ? new Date(now.getFullYear(), now.getMonth() + 1, 1)
@@ -130,9 +153,7 @@ async function createInitialPayment({
       data: {
         año: targetDate.getFullYear(),
         mes: targetDate.getMonth() + 1,
-        periodo: `${targetDate.getFullYear()}-${String(
-          targetDate.getMonth() + 1
-        ).padStart(2, "0")}`,
+        periodo: `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, "0")}`,
         monto: rangoTarifa.monto,
         usuarioId: newUser.id,
         estaVencido: false,
@@ -140,73 +161,45 @@ async function createInitialPayment({
         metodo: "EFECTIVO",
         comprobante: null,
         fecha: now,
-        fechaVencimiento: null, // No se usa en sistema fijo mensual
+        fechaVencimiento: null,
       },
     });
   } else if (
     configuracionTarifa.tipoConfiguracion ===
     TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO
   ) {
-    // Sistema dinámico por fecha de ingreso
+    // Use selected dynamic configuration
+    const dinamicaTarifa = configuracionTarifa.dinamicas.find(
+      (d: any) => d.id === selectedDinamicaId
+    );
+    if (!dinamicaTarifa) {
+      throw new Error("Configuración dinámica no encontrada");
+    }
+
     const fechaVencimiento = new Date(fechaInicioMembresia);
 
     if (primerPagoMesSiguiente) {
-      // Si el primer pago es el mes siguiente, agregar un mes a la fecha de inicio
       fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1);
     }
 
-    // El período se basa en la fecha de vencimiento
-    const periodo = `${fechaVencimiento.getFullYear()}-${String(
-      fechaVencimiento.getMonth() + 1
-    ).padStart(2, "0")}`;
+    const periodo = `${fechaVencimiento.getFullYear()}-${String(fechaVencimiento.getMonth() + 1).padStart(2, "0")}`;
 
     await prisma.pago.create({
       data: {
         año: fechaVencimiento.getFullYear(),
         mes: fechaVencimiento.getMonth() + 1,
         periodo: periodo,
-        monto: configuracionTarifa.montoBase,
+        monto: dinamicaTarifa.montoBase,
         usuarioId: newUser.id,
         estaVencido: false,
         estado: "PENDIENTE",
         metodo: "EFECTIVO",
         comprobante: null,
         fecha: now,
-        fechaVencimiento: fechaVencimiento, // Fecha específica de vencimiento
+        fechaVencimiento: fechaVencimiento,
       },
     });
   } else {
     throw new Error("Tipo de configuración de tarifa no válido");
-  }
-}
-
-// Server Action para obtener información de configuración de tarifas
-export async function getTariffConfigurationInfo(administradorId: string) {
-  try {
-    const configuracion = await prisma.configuracionTarifa.findUnique({
-      where: { administradorId },
-      include: { rangos: true },
-    });
-
-    if (!configuracion) {
-      return {
-        hasConfiguration: false,
-        message:
-          "No hay configuración de tarifas. Configure las tarifas antes de agregar usuarios.",
-      };
-    }
-
-    const validation = validateTariffConfiguration(configuracion);
-
-    return {
-      hasConfiguration: true,
-      isValid: validation.isValid,
-      errors: validation.errors,
-      configuracion,
-      tipo: configuracion.tipoConfiguracion,
-    };
-  } catch (error) {
-    console.error("Error al obtener configuración de tarifas:", error);
-    throw new Error("Error al obtener la configuración de tarifas");
   }
 }

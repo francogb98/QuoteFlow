@@ -44,6 +44,9 @@ export async function updatePayment(data: any) {
 
     // Revalidar la ruta
     revalidatePath(`/admin/users/${updatedPayment.usuarioId}`);
+    revalidatePath(`/admin/users`);
+
+    console.log("Payment updated successfully:", updatedPayment);
 
     return {
       ok: true,

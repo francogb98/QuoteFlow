@@ -1,7 +1,6 @@
-import { auth } from "@/*";
-import { DatosPersonales } from "./ui"; // Asegúrate de que TariffDashboard esté en ui.tsx
+import { auth } from "@/lib/auth";
 import { redirect } from "next/navigation";
-import { TariffManagement } from "./ui/tarifas/TariffManagement";
+import { DatosPersonales } from "./ui/datosAdmin/DatosPersonales";
 
 export const metadata = {
   title: "Configuraciones",
@@ -15,14 +14,15 @@ export default async function NamePage() {
     redirect("/auth/login");
   }
   const user = session.user;
+
   return (
     <div className="flex flex-col gap-5">
       <DatosPersonales
         documento={user.documento}
         empresa={user.empresa.nombre}
         nombre={user.nombre}
+        email={user.email}
       />
-      <TariffManagement user={user} />
     </div>
   );
 }

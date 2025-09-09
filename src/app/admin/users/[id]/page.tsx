@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { getUser } from "@/actions/users";
 
 import { FormEditUser } from "./ui/FormEditUser";
+import { auth } from "@/*";
 
 interface Props {
   params: Promise<{
@@ -28,12 +29,24 @@ export default async function NamePage({ params }: Props) {
     redirect("/users/list");
   }
 
+  const session = await auth();
+
+  if (!session) {
+    redirect("/auth/login");
+  }
+
+  const tarifasDisponibles =
+    session.user.configuracionTarifa?.tipoConfiguracion === "FIJA_MENSUAL"
+      ? session.user.configuracionTarifa.rangos
+      : //@ts-ignore
+        session.user.configuracionTarifa.dinamicas;
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50 p-4 md:p-6">
-      <div className="max-w-6xl mx-auto">
+      <div className="px-10">
         {id && (
           <div className="space-y-6">
-            <FormEditUser id={id} />
+            <FormEditUser id={id} tarifasDisponibles={tarifasDisponibles} />
           </div>
         )}
       </div>
