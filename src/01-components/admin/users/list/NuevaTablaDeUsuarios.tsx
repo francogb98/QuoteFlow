@@ -248,117 +248,81 @@ export function NuevaTablaDeUsuarios({ profesorId }: Props) {
           </div>
         ) : (
           <div className="overflow-x-auto">
-            <table className="min-w-full divide-y divide-gray-200">
+            <table className="min-w-full divide-y divide-gray-200 text-xs sm:text-sm">
               <thead className="bg-gray-50">
                 <tr>
                   <th
-                    className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer transition-colors hover:bg-gray-100"
+                    className="px-2 sm:px-6 py-2 sm:py-3 text-left font-semibold text-gray-600 uppercase tracking-wider cursor-pointer transition-colors hover:bg-gray-100"
                     onClick={() => handleSort("apellido")}
                   >
                     <div className="flex items-center gap-1.5">
                       Nombre
-                      <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                      <ArrowUpDown className="w-3 h-3 text-gray-400" />
                     </div>
                   </th>
-                  <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider">
-                    Documento
+                  <th className="px-2 sm:px-6 py-2 sm:py-3 text-left font-semibold text-gray-600 uppercase tracking-wider hidden md:table-cell">
+                    DNI
                   </th>
                   {isDynamicTariff && (
-                    <th className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider hidden sm:table-cell">
+                    <th className="px-2 sm:px-6 py-2 sm:py-3 text-left font-semibold text-gray-600 uppercase tracking-wider ">
                       Vencimiento
                     </th>
                   )}
-
                   <th
                     scope="col"
-                    className="px-6 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wider cursor-pointer transition-colors hover:bg-gray-100"
+                    className="px-2 sm:px-6 py-2 sm:py-3 text-left font-semibold text-gray-600 uppercase tracking-wider cursor-pointer transition-colors hover:bg-gray-100"
                     onClick={() => handleSort("estado")}
                   >
                     <div className="flex items-center gap-1.5">
                       Estado
-                      <ArrowUpDown className="w-3 h-3 text-gray-400 group-hover:text-purple-600 transition-colors" />
+                      <ArrowUpDown className="w-3 h-3 text-gray-400" />
                     </div>
-                  </th>
-                  <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Acciones</span>
                   </th>
                 </tr>
               </thead>
               <tbody className="bg-white divide-y divide-gray-200">
                 {paginatedUsers.map((user) => {
-                  const estado = getUserStatus({
-                    ...user,
-                    pagos: user.pagos.map((pago) => ({
-                      mes: pago.mes,
-                      año: pago.año,
-                      estado: [
-                        "PAGADO",
-                        "PENDIENTE",
-                        "INACTIVO",
-                        "VENCIDO",
-                      ].includes(pago.estado as string)
-                        ? (pago.estado as
-                            | "PAGADO"
-                            | "PENDIENTE"
-                            | "INACTIVO"
-                            | "VENCIDO")
-                        : "INACTIVO",
-                    })),
-                  });
+                  //@ts-ignore
+                  const estado = getUserStatus(user);
                   const config = statusConfig[estado] || statusConfig.PENDIENTE;
+
                   return (
                     <tr
                       key={user.id}
                       className="hover:bg-gray-50 transition-colors"
                     >
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
+                      <td className="px-2 sm:px-6 py-3 whitespace-nowrap font-medium text-gray-900 truncate max-w-[120px] sm:max-w-none">
                         <Link
                           href={`/admin/users/${user.id}`}
-                          rel="noopener noreferrer"
-                          className="capitalize underline text-blue-600 hover:text-blue-800 transition-colors"
+                          className="capitalize underline text-blue-600 hover:text-blue-800 text-xs sm:text-sm"
                         >
                           {user.apellido} {user.nombre}
                         </Link>
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                      <td className="px-2 sm:px-6 py-3 whitespace-nowrap text-gray-500 hidden md:table-cell">
                         {user.documento}
                       </td>
                       {isDynamicTariff && (
-                        <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 hidden sm:table-cell">
-                          {user.fechaInicioMembresia ? (
-                            <div className="flex items-center gap-1.5">
-                              {format(
+                        <td className="px-2 sm:px-6 py-3 whitespace-nowrap text-gray-500 ">
+                          {user.fechaInicioMembresia
+                            ? format(
                                 new Date(
                                   filterYear,
                                   filterMonth - 1,
                                   new Date(user.fechaInicioMembresia).getDate()
                                 ),
                                 "d/MM/yyyy"
-                              )}
-                            </div>
-                          ) : (
-                            "-"
-                          )}
+                              )
+                            : "-"}
                         </td>
                       )}
-                      <td className="px-6 py-4 whitespace-nowrap">
+                      <td className="px-2 sm:px-6 py-3 whitespace-nowrap">
                         <span
-                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border ${config.bg} ${config.text}`}
+                          className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-[10px] sm:text-xs font-medium border ${config.bg} ${config.text}`}
                         >
                           {config.icon}
                           {config.label}
                         </span>
-                      </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <Link
-                          href={`/admin/users/${user.id}`}
-                          rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white text-xs font-medium rounded-lg shadow-sm hover:shadow-md transform hover:scale-[1.02] transition-all duration-300"
-                          title="Editar usuario"
-                        >
-                          <Edit className="w-3 h-3" />
-                          Editar
-                        </Link>
                       </td>
                     </tr>
                   );

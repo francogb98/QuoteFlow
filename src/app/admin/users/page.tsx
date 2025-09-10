@@ -6,6 +6,9 @@ import { ModalCreateUser, NotAllowed } from "@/01-components/admin";
 import { UserDashboardWrapper } from "@/01-components/admin/users/list/UsersDashboardWrapper";
 
 import type { Metadata } from "next";
+
+export const revalidate = 0;
+
 interface Props {
   searchParams: Promise<{
     profesorId?: string;

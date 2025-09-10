@@ -107,6 +107,8 @@ export async function actualizarConfiguracionTarifa(data: any) {
     });
 
     revalidatePath(`/admin/settings`);
+    revalidatePath(`/admin/users`);
+    revalidatePath(`/admin/home`);
     return { ok: true, configActualizada };
   } catch (error) {
     console.error(error);

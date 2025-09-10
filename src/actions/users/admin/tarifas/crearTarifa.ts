@@ -31,6 +31,9 @@ export async function crearConfiguracionTarifa(data: any) {
     });
 
     revalidatePath(`/admin/settings`);
+    revalidatePath(`/admin/users`);
+    revalidatePath(`/admin/home`);
+
     return { ok: true, configuracion: nuevaConfiguracion };
   } catch (error) {
     console.error("Error creating tariff configuration:", error);
