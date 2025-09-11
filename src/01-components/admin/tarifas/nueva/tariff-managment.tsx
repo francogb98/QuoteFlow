@@ -161,7 +161,7 @@ export function TariffManagement({ user }: TariffManagementProps) {
   };
 
   return (
-    <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8">
+    <div className="max-w-6xl mx-auto space-y-6 px-4 sm:px-6 lg:px-8 pb-10">
       {/* Header */}
       <div className="text-center space-y-2 sm:space-y-4">
         <h1 className="text-2xl sm:text-4xl font-bold text-gray-900">

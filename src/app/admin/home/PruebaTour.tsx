@@ -44,7 +44,7 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
   // const { startTour } = useTour();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="bg-background">
       {/* <InteractiveTour /> */}
       {/* Main Content */}
       <main className="container mx-auto px-4 space-y-2">

@@ -26,7 +26,7 @@ export const Footer = () => {
   };
 
   return (
-    <div className="flex justify-around">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-md flex justify-around py-2 z-50">
       <Link href="/admin/users" className={getLinkClasses("/admin/users").link}>
         <Users className={getLinkClasses("/admin/users").icon} />
         <span className={getLinkClasses("/admin/users").text}>Usuarios</span>
