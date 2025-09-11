@@ -41,31 +41,37 @@ export function ShareCompanyLink({ companyName, link }: Props) {
   };
 
   return (
-    <div className="w-full md:w-[350px] flex items-center justify-between gap-2 p-3 border border-emerald-200 rounded-lg bg-gradient-to-r from-emerald-50 to-purple-50 shadow-sm hover:border-purple-300 transition-all">
-      <div className="flex items-center gap-2 min-w-0">
-        <Share2 className="w-4 h-4 text-emerald-600" />
-        <span className="text-sm font-medium text-emerald-800 truncate">
-          {fullLink}
-        </span>
+    <div className="w-full md:w-[350px] flex flex-col">
+      <div className="flex items-center justify-between gap-2 p-3 border border-emerald-200 rounded-lg bg-gradient-to-r from-emerald-50 to-purple-50 shadow-sm hover:border-purple-300 transition-all">
+        <div className="flex items-center gap-2 min-w-0">
+          <Share2 className="w-4 h-4 text-emerald-600" />
+          <span className="text-sm font-medium text-emerald-800 truncate">
+            {fullLink}
+          </span>
+        </div>
+        <div className="flex-shrink-0 flex gap-1.5">
+          <button
+            onClick={handleCopy}
+            className="p-1.5 rounded-md text-emerald-600 hover:bg-purple-100 transition-colors"
+          >
+            {copied ? (
+              <Check className="h-4 w-4 text-emerald-500" />
+            ) : (
+              <Copy className="h-4 w-4 cursor-pointer" />
+            )}
+          </button>
+          <button
+            onClick={handleShare}
+            className="p-1.5 rounded-md text-emerald-600 hover:bg-purple-100 transition-colors"
+          >
+            <Share2 className="h-4 w-4 cursor-pointer" />
+          </button>
+        </div>
       </div>
-      <div className="flex-shrink-0 flex gap-1.5">
-        <button
-          onClick={handleCopy}
-          className="p-1.5 rounded-md text-emerald-600 hover:bg-purple-100 transition-colors"
-        >
-          {copied ? (
-            <Check className="h-4 w-4 text-emerald-500" />
-          ) : (
-            <Copy className="h-4 w-4 cursor-pointer" />
-          )}
-        </button>
-        <button
-          onClick={handleShare}
-          className="p-1.5 rounded-md text-emerald-600 hover:bg-purple-100 transition-colors"
-        >
-          <Share2 className="h-4 w-4 cursor-pointer" />
-        </button>
-      </div>
+
+      <small className="mt-1 text-xs text-muted-foreground text-wrap text-center">
+        Comparte este link para que tus usuarios puedan acceder a sus pagos.
+      </small>
     </div>
   );
 }

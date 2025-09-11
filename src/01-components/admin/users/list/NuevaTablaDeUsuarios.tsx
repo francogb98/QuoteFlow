@@ -175,7 +175,7 @@ export function NuevaTablaDeUsuarios({ profesorId }: Props) {
     data?.tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO";
 
   return (
-    <div className="p-6 bg-gray-50 rounded-3xl font-sans text-gray-800">
+    <div className="py-6 bg-gray-50 rounded-3xl font-sans text-gray-800">
       <h1 className="capitalize mb-6 text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-green-500 to-purple-600 bg-clip-text text-transparent text-center">
         {profesorId ? "Usuarios de Profesor" : "Usuarios del Sistema"}
       </h1>

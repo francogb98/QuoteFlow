@@ -21,10 +21,10 @@ export function TariffManagement({ user }: TariffManagementProps) {
   const hasConfiguracion = !!user?.configuracionTarifa;
 
   return (
-    <div className="w-full mx-auto space-y-6 px-10">
+    <div className="w-full mx-auto space-y-6">
       {/* Header */}
       <div className="flex flex-col gap-4">
-        <h1 className="text-5xl font-bold bg-gradient-to-r from-green-600 to-purple-600 bg-clip-text text-transparent text-center">
+        <h1 className="text-5xl font-bold text-gray-800 dark:text-gray-100 text-center">
           Gestión de Tarifas
         </h1>
         {user.modeloDeCobro === "MERCADOPAGO" && <InfoBanner />}

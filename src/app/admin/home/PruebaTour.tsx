@@ -21,8 +21,8 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { ShareCompanyLink } from "./ui/SharedCompanyLink";
-import { InteractiveTour } from "@/01-components/admin/tour/interactive-tour";
-import { useTour } from "@/01-components/admin/tour/use-tour";
+// import { InteractiveTour } from "@/01-components/admin/tour/interactive-tour";
+// import { useTour } from "@/01-components/admin/tour/use-tour";
 import { Rol } from "@prisma/client";
 
 interface PruebaTourProps {
@@ -41,11 +41,11 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
   const companyName = user?.empresa?.nombre || "Mi Empresa";
   const shareLink = link || "http://localhost:3000";
 
-  const { startTour } = useTour();
+  // const { startTour } = useTour();
 
   return (
     <div className="min-h-screen bg-background">
-      <InteractiveTour />
+      {/* <InteractiveTour /> */}
       {/* Main Content */}
       <main className="container mx-auto px-4 space-y-2">
         {/* Welcome Section */}
@@ -59,13 +59,13 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
           <p className="text-muted-foreground mb-4">
             Descubre todas las funcionalidades que tenemos para ti.
           </p>
-          <Button
+          {/* <Button
             onClick={startTour}
             variant="outline"
             className="border-emerald-200 text-emerald-700 hover:bg-purple-50 hover:text-emerald-800 hover:border-purple-300"
           >
             Hacer tour de la aplicación
-          </Button>
+          </Button> */}
         </div>
 
         {/* Feature Cards */}
@@ -86,11 +86,6 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                       Selecciona tu modelo de cobro preferido.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-[8px] sm:text-sm text-muted-foreground">
-                      Puedes elegir entre Mercado Pago o Comprobante.
-                    </p>
-                  </CardContent>
                 </Card>
               </Link>
               <Link href="/admin/tarifas">
@@ -107,11 +102,6 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                       Gestiona tus tarifas de manera eficiente.
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-[8px] sm:text-sm text-muted-foreground">
-                      Crea distintos tipos de tarifas adaptadas a tu negocio.
-                    </p>
-                  </CardContent>
                 </Card>
               </Link>
               <Link href="/admin/account">
@@ -128,11 +118,6 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                       Administra tu equipo de trabajo y permisos
                     </CardDescription>
                   </CardHeader>
-                  <CardContent>
-                    <p className="text-[8px] sm:text-sm text-muted-foreground">
-                      Roles, permisos, usuarios y más.
-                    </p>
-                  </CardContent>
                 </Card>
               </Link>
             </>
@@ -153,11 +138,6 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                   </p>
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-[8px] sm:text-sm text-muted-foreground">
-                  Gestiona y revisa los pagos de tus clientes de forma sencilla.
-                </p>
-              </CardContent>
             </Card>
           </Link>
           <Link href="/admin/users">
@@ -174,12 +154,6 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                   Gestiona tus usuarios, crea, modifica y elimina.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-[8px] sm:text-sm text-muted-foreground">
-                  Ve el estado de tus usuarios, crea nuevos y gestiona sus
-                  pagos.
-                </p>
-              </CardContent>
             </Card>
           </Link>
           {user?.rol === "SUPER_ADMIN" && (
@@ -214,11 +188,6 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                   Gestiona tus datos personales y de cuenta.
                 </CardDescription>
               </CardHeader>
-              <CardContent>
-                <p className="text-[8px] sm:text-sm text-muted-foreground">
-                  Edita tu informacion personal (nombre, email, etc.)
-                </p>
-              </CardContent>
             </Card>
           </Link>
         </div>

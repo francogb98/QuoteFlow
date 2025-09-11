@@ -54,7 +54,7 @@ export function Header({ user }: HeaderProps) {
                 onClick={() => setIsSearchModalOpen(true)}
               >
                 <Search className="w-4 h-4 mr-2" />
-                Buscar usuario
+                <span className="hidden sm:inline">Buscar usuario</span>
               </Button>
               <Link href="/admin/notificaciones">
                 <div className="relative" data-tour="notifications">

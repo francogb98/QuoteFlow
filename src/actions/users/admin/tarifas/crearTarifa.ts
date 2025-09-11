@@ -37,6 +37,6 @@ export async function crearConfiguracionTarifa(data: any) {
     return { ok: true, configuracion: nuevaConfiguracion };
   } catch (error) {
     console.error("Error creating tariff configuration:", error);
-    throw new Error("Error en el servidor, intente nuevamente");
+    return { ok: false, error: "Error en el servidor, intente nuevamente" };
   }
 }

@@ -24,27 +24,13 @@ export const ModalCreateUser = ({
   return (
     <>
       {/* Botón para abrir el modal */}
-      <div className="hidden sm:flex flex-col gap-4">
+      <div className="flex flex-col gap-4">
         <button
           onClick={() => setIsOpen(true)}
           className={`font-medium ms-auto px-6 py-3 rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-300 flex items-center justify-center gap-2 ${"bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-600 hover:to-emerald-700 text-white"}`}
         >
           <Plus className="w-5 h-5" />
           <span>Agregar Usuario</span>
-        </button>
-      </div>
-
-      <div className="fixed sm:hidden z-5 right-4 bottom-4">
-        <button
-          onClick={() => setIsOpen(true)}
-          className={`
-        w-14 h-14 rounded-full shadow-lg transition-all duration-300
-        flex items-center justify-center
-        ${"bg-gradient-to-br from-emerald-500 to-purple-600 hover:from-emerald-600 hover:to-purple-700 text-white transform hover:scale-110 active:scale-95"}
-      `}
-          title="Agregar Usuario"
-        >
-          <Plus className="w-6 h-6" />
         </button>
       </div>
 
