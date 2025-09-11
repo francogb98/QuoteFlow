@@ -2,10 +2,9 @@
 import prisma from "@/lib/prisma";
 import { v4 as uuidv4 } from "uuid";
 import { auth } from "@/auth.config";
-import type { CodigoPromocional } from "@prisma/client";
 
 interface CreatePromoCodeResult {
-  promoCode?: CodigoPromocional;
+  promoCode?: any;
   ok: boolean;
   error?: string;
 }
