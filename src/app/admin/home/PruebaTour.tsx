@@ -82,7 +82,7 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                       <CreditCard className="w-5 h-5 text-emerald-600" />
                       Modelo de Cobro
                     </CardTitle>
-                    <CardDescription className="text-[8px] sm:text-xs">
+                    <CardDescription className="text-[9px] sm:text-xs">
                       Selecciona tu modelo de cobro preferido.
                     </CardDescription>
                   </CardHeader>
@@ -98,7 +98,7 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                       <BarChart3 className="w-5 h-5 text-emerald-600" />
                       Tarifas
                     </CardTitle>
-                    <CardDescription className="text-[8px] sm:text-xs">
+                    <CardDescription className="text-[9px] sm:text-xs">
                       Gestiona tus tarifas de manera eficiente.
                     </CardDescription>
                   </CardHeader>
@@ -114,7 +114,7 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                       <Users className="w-5 h-5 text-emerald-600" />
                       Gestión de Equipo
                     </CardTitle>
-                    <CardDescription className="text-[8px] sm:text-xs">
+                    <CardDescription className="text-[9px] sm:text-xs">
                       Administra tu equipo de trabajo y permisos
                     </CardDescription>
                   </CardHeader>
@@ -132,8 +132,8 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                   <Users className="w-5 h-5 text-emerald-600" />
                   Pagos
                 </CardTitle>
-                <CardDescription className="text-[8px] sm:text-xs">
-                  <p className="text-[8px] sm:text-sm text-muted-foreground">
+                <CardDescription className="text-[9px] sm:text-xs">
+                  <p className="text-[9px] sm:text-sm text-muted-foreground">
                     Visualiza todos los pagos realizados y su estado actual.
                   </p>
                 </CardDescription>
@@ -150,7 +150,7 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                   <Table2 className="w-5 h-5 text-emerald-600" />
                   Mis Usuarios
                 </CardTitle>
-                <CardDescription className="text-[8px] sm:text-xs">
+                <CardDescription className="text-[9px] sm:text-xs">
                   Gestiona tus usuarios, crea, modifica y elimina.
                 </CardDescription>
               </CardHeader>
@@ -167,7 +167,7 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                     <Settings className="w-5 h-5 text-emerald-600" />
                     Test
                   </CardTitle>
-                  <CardDescription className="text-[8px] sm:text-xs">
+                  <CardDescription className="text-[9px] sm:text-xs">
                     Funcion para ejecutar Test de la aplicacion
                   </CardDescription>
                 </CardHeader>
@@ -184,7 +184,7 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                   <Settings className="w-5 h-5 text-emerald-600" />
                   Mis Datos
                 </CardTitle>
-                <CardDescription className="text-[8px] sm:text-xs">
+                <CardDescription className="text-[9px] sm:text-xs">
                   Gestiona tus datos personales y de cuenta.
                 </CardDescription>
               </CardHeader>
