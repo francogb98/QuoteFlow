@@ -10,14 +10,12 @@ interface CreatePromoCodeResult {
 }
 
 const generateRandomCode = () => {
-  // Genera un código aleatorio de 8 caracteres
   return uuidv4().substring(0, 8).toUpperCase();
 };
 
 export const createPromoCode = async (): Promise<CreatePromoCodeResult> => {
   try {
     const session = await auth();
-    // Opcional: validar si el usuario tiene permiso para crear códigos
     if (!session?.user || session.user.rol !== "SUPER_ADMIN") {
       return { ok: false, error: "No autorizado." };
     }
