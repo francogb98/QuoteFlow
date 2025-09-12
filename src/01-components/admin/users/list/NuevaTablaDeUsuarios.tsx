@@ -176,10 +176,6 @@ export function NuevaTablaDeUsuarios({ profesorId }: Props) {
 
   return (
     <div className="py-6 bg-gray-50 rounded-3xl font-sans text-gray-800">
-      <h1 className="capitalize mb-6 text-4xl sm:text-5xl font-extrabold bg-gradient-to-r from-green-500 to-purple-600 bg-clip-text text-transparent text-center">
-        {profesorId ? "Usuarios de Profesor" : "Usuarios del Sistema"}
-      </h1>
-
       <div className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
         {/* Filtros */}
         <div className="bg-gradient-to-r from-purple-50 to-emerald-50 p-4 sm:p-6 border-b border-purple-100 flex flex-col sm:flex-row items-center justify-between gap-4">

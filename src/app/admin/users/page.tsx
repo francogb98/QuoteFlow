@@ -2,22 +2,26 @@
 import { auth } from "@/auth.config";
 import { redirect } from "next/navigation";
 
-import { ModalCreateUser, NotAllowed } from "@/01-components/admin";
+import { NotAllowed } from "@/01-components/admin";
 import { UserDashboardWrapper } from "@/01-components/admin/users/list/UsersDashboardWrapper";
 
 import type { Metadata } from "next";
+import { CreateUserButton } from "@/01-components/admin/users/new/create-user-button";
 
 export const revalidate = 0;
 
 interface Props {
-  searchParams: Promise<{
-    profesorId?: string;
-  }>;
+  searchParams:
+    | Promise<{
+        profesorId?: string;
+      }>
+    | undefined;
 }
 
 export async function generateMetadata({
   searchParams,
 }: Props): Promise<Metadata> {
+  //@ts-ignore
   const { profesorId } = (await searchParams) || null;
   return {
     title: `Usuarios - ${profesorId ? `Profesor` : "Administrador "}`,
@@ -30,6 +34,7 @@ export default async function UsersListPage({ searchParams }: Props) {
   if (!session?.user) redirect("/auth/login");
 
   const { user } = session;
+  //@ts-ignore
   const { profesorId } = (await searchParams) || null; // Leer el ID del profesor de los searchParams
 
   const missingTariff = !user.configuracionTarifa;
@@ -55,14 +60,23 @@ export default async function UsersListPage({ searchParams }: Props) {
           missingMercadoPago={missingMercadoPago}
         />
       ) : (
-        // Renderizar el modal solo si es el administrador principal y no hay un profesorId
         !profesorId && (
-          //@ts-ignore
-          <ModalCreateUser
-            administradorId={user.id}
-            tarifasDisponibles={tarifasDisponibles}
-            isDynamicTariff={isDynamicTariff}
-          />
+          <div className="mb-6 flex justify-between items-center">
+            <div>
+              <h1 className="text-2xl font-bold text-gray-900">
+                Gestión de Usuarios
+              </h1>
+              <p className="text-gray-600 mt-1">
+                Administra los usuarios de tu sistema
+              </p>
+            </div>
+            <CreateUserButton
+              administradorId={user.id}
+              configuracionTarifa={user.configuracionTarifa}
+              tarifasDisponibles={tarifasDisponibles}
+              isDynamicTariff={isDynamicTariff}
+            />
+          </div>
         )
       )}
       <UserDashboardWrapper profesorId={profesorId} session={session} />
