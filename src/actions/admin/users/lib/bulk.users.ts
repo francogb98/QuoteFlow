@@ -11,7 +11,7 @@ export interface BulkUserData {
   documento: string;
   rangoTarifaId?: string;
   dinamicaTarifaId?: string;
-  fechaInicioMembresia: string; // obligatorio siempre (yyyy-MM-dd)
+  fechaInicioMembresia: string; // yyyy-MM-dd
   primerPagoMesSiguiente?: boolean;
 }
 
@@ -20,10 +20,10 @@ export interface BulkUserCreationData {
   administradorId: string;
 }
 
-// ✅ Parseo seguro a fecha local Argentina (UTC-3)
+// ✅ Parseo seguro: genera la fecha en UTC ajustada +3h (hora Argentina)
 function parseDateToArgentina(dateString: string): Date {
   const [year, month, day] = dateString.split("-").map(Number);
-  return new Date(year, month - 1, day, 0, 0, 0); // 00:00 hora local
+  return new Date(Date.UTC(year, month - 1, day, 3, 0, 0));
 }
 
 export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
@@ -61,7 +61,7 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
       configuracionTarifa.tipoConfiguracion ===
       TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
 
-    // Validaciones de tarifas por usuario
+    // Validaciones de tarifas
     for (const user of data.users) {
       if (isDynamicTariff) {
         if (!user.dinamicaTarifaId) {
@@ -95,7 +95,7 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
     }
 
     // Verificar duplicados
-    const documentos = data.users.map((user) => user.documento);
+    const documentos = data.users.map((u) => u.documento);
     const duplicateDocuments = documentos.filter(
       (doc, index) => documentos.indexOf(doc) !== index
     );
@@ -105,7 +105,7 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
       );
     }
 
-    // Verificar si ya existen
+    // Verificar existencia previa
     const existingUsers = await prisma.usuario.findMany({
       where: {
         documento: { in: documentos },
@@ -125,7 +125,7 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
       errors: [] as { documento: string; error: string }[],
     };
 
-    // Crear usuarios
+    // Crear usuarios en transacción
     await prisma.$transaction(async (tx) => {
       for (const userData of data.users) {
         try {
@@ -135,7 +135,6 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
             );
           }
 
-          // ✅ Usamos la función que evita el shift de timezone
           const fechaInicioMembresiaUsuario = parseDateToArgentina(
             userData.fechaInicioMembresia
           );
@@ -224,19 +223,20 @@ async function createInitialPaymentForBulk({
     const rangoTarifa = configuracionTarifa.rangos.find(
       (r: any) => r.id === selectedRangoId
     );
-    if (!rangoTarifa) {
-      throw new Error("Rango de tarifa no encontrado");
-    }
+    if (!rangoTarifa) throw new Error("Rango de tarifa no encontrado");
 
+    // Fecha del pago: 1er día del mes actual o siguiente
     const targetDate = primerPagoMesSiguiente
-      ? new Date(now.getFullYear(), now.getMonth() + 1, 1)
-      : new Date(now.getFullYear(), now.getMonth(), 1);
+      ? new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 3))
+      : new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 3));
 
     await tx.pago.create({
       data: {
-        año: targetDate.getFullYear(),
-        mes: targetDate.getMonth() + 1,
-        periodo: `${targetDate.getFullYear()}-${String(targetDate.getMonth() + 1).padStart(2, "0")}`,
+        año: targetDate.getUTCFullYear(),
+        mes: targetDate.getUTCMonth() + 1,
+        periodo: `${targetDate.getUTCFullYear()}-${String(
+          targetDate.getUTCMonth() + 1
+        ).padStart(2, "0")}`,
         monto: rangoTarifa.monto,
         usuarioId: newUser.id,
         estaVencido: false,
@@ -254,23 +254,23 @@ async function createInitialPaymentForBulk({
     const dinamicaTarifa = configuracionTarifa.dinamicas.find(
       (d: any) => d.id === selectedDinamicaId
     );
-    if (!dinamicaTarifa) {
+    if (!dinamicaTarifa)
       throw new Error("Configuración dinámica no encontrada");
-    }
 
-    const fechaVencimiento = new Date(fechaInicioMembresia);
-
-    if (primerPagoMesSiguiente) {
+    // Fecha de vencimiento: misma lógica que parseDateToArgentina
+    const fechaVencimiento = new Date(fechaInicioMembresia.getTime());
+    if (primerPagoMesSiguiente)
       fechaVencimiento.setMonth(fechaVencimiento.getMonth() + 1);
-    }
 
-    const periodo = `${fechaVencimiento.getFullYear()}-${String(fechaVencimiento.getMonth() + 1).padStart(2, "0")}`;
+    const periodo = `${fechaVencimiento.getUTCFullYear()}-${String(
+      fechaVencimiento.getUTCMonth() + 1
+    ).padStart(2, "0")}`;
 
     await tx.pago.create({
       data: {
-        año: fechaVencimiento.getFullYear(),
-        mes: fechaVencimiento.getMonth() + 1,
-        periodo: periodo,
+        año: fechaVencimiento.getUTCFullYear(),
+        mes: fechaVencimiento.getUTCMonth() + 1,
+        periodo,
         monto: dinamicaTarifa.montoBase,
         usuarioId: newUser.id,
         estaVencido: false,
@@ -278,7 +278,7 @@ async function createInitialPaymentForBulk({
         metodo: "EFECTIVO",
         comprobante: null,
         fecha: now,
-        fechaVencimiento: fechaVencimiento,
+        fechaVencimiento,
       },
     });
   } else {
