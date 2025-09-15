@@ -27,6 +27,7 @@ const editUserSchema = z.object({
     .optional()
     .nullable(),
   tarifa: z.string().optional().nullable(), // For tariff ID
+  fechaInicioMembresia: z.string().optional().nullable(),
 });
 
 export const editUser = async (
@@ -43,6 +44,8 @@ export const editUser = async (
 
     const validatedContent = editUserSchema.parse(content);
 
+    console.log(validatedContent);
+
     const dataToEdit = {
       nombre: validatedContent.nombre.toLocaleLowerCase(),
       apellido: validatedContent.apellido.toLowerCase(),
@@ -52,6 +55,9 @@ export const editUser = async (
       estado: validatedContent.estado as Estado, // Explicitly cast to Estado enum
       email: validatedContent.email,
       edad: validatedContent.edad,
+      fechaInicioMembresia: validatedContent.fechaInicioMembresia
+        ? new Date(validatedContent.fechaInicioMembresia)
+        : null,
     };
     // Verificar documento único (excluyendo al usuario actual)
     const existingUser = await prisma.usuario.findFirst({

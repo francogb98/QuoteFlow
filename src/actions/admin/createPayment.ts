@@ -15,6 +15,23 @@ interface CreatePaymentData {
   fechaVencimiento?: Date;
 }
 
+function createArgentinaDate(date: Date): Date {
+  // Convert to Argentina timezone (UTC-3)
+  const argentinaOffset = -3 * 60; // -3 hours in minutes
+  const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+  const argentinaTime = new Date(utc + argentinaOffset * 60000);
+
+  // Create a new date at noon in Argentina timezone to avoid day shifts
+  return new Date(
+    argentinaTime.getFullYear(),
+    argentinaTime.getMonth(),
+    argentinaTime.getDate(),
+    12,
+    0,
+    0
+  );
+}
+
 export async function createPayment(data: CreatePaymentData) {
   try {
     const session = await auth();
@@ -50,17 +67,22 @@ export async function createPayment(data: CreatePaymentData) {
       configuracionTarifa.tipoConfiguracion ===
       TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
 
+    let processedFechaVencimiento: Date | undefined;
+    if (data.fechaVencimiento) {
+      processedFechaVencimiento = createArgentinaDate(data.fechaVencimiento);
+    }
+
     // Verificar si ya existe un pago para el período
     let existingPayment;
-    if (isDynamicTariff && data.fechaVencimiento) {
+    if (isDynamicTariff && processedFechaVencimiento) {
       const startOfMonth = new Date(
-        data.fechaVencimiento.getFullYear(),
-        data.fechaVencimiento.getMonth(),
+        processedFechaVencimiento.getFullYear(),
+        processedFechaVencimiento.getMonth(),
         1
       );
       const endOfMonth = new Date(
-        data.fechaVencimiento.getFullYear(),
-        data.fechaVencimiento.getMonth() + 1,
+        processedFechaVencimiento.getFullYear(),
+        processedFechaVencimiento.getMonth() + 1,
         0,
         23,
         59,
@@ -98,13 +120,13 @@ export async function createPayment(data: CreatePaymentData) {
     };
 
     if (isDynamicTariff) {
-      if (!data.fechaVencimiento)
+      if (!processedFechaVencimiento)
         throw new Error("Fecha de vencimiento requerida para sistema dinámico");
 
-      paymentData.fechaVencimiento = data.fechaVencimiento;
-      paymentData.mes = data.fechaVencimiento.getMonth() + 1;
-      paymentData.año = data.fechaVencimiento.getFullYear();
-      paymentData.periodo = `${data.fechaVencimiento.getFullYear()}-${String(data.fechaVencimiento.getMonth() + 1).padStart(2, "0")}`;
+      paymentData.fechaVencimiento = processedFechaVencimiento;
+      paymentData.mes = processedFechaVencimiento.getMonth() + 1;
+      paymentData.año = processedFechaVencimiento.getFullYear();
+      paymentData.periodo = `${processedFechaVencimiento.getFullYear()}-${String(processedFechaVencimiento.getMonth() + 1).padStart(2, "0")}`;
     } else {
       if (!data.mes || !data.año)
         throw new Error("Mes y año requeridos para sistema fijo");

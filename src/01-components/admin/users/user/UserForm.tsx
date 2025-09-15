@@ -11,6 +11,7 @@ import {
   Loader2,
   Mail,
   DollarSign,
+  CalendarDays,
 } from "lucide-react";
 import { StatusChangeAlert } from "./StatusChangeAlert";
 
@@ -23,6 +24,23 @@ interface UserFormProps {
   tarifasDisponibles: any;
   tarifaActual: any;
 }
+
+const formatDateForArgentina = (date: Date | string | null): string => {
+  if (!date) return "";
+
+  const dateObj = typeof date === "string" ? new Date(date) : date;
+
+  // Ensure we're working with a valid date
+  if (isNaN(dateObj.getTime())) return "";
+
+  // Get the date in Argentina timezone and format for input
+  // Using UTC methods to avoid browser timezone interference
+  const year = dateObj.getUTCFullYear();
+  const month = String(dateObj.getUTCMonth() + 1).padStart(2, "0");
+  const day = String(dateObj.getUTCDate()).padStart(2, "0");
+
+  return `${year}-${month}-${day}`;
+};
 
 export function UserForm({
   formData,
@@ -165,6 +183,24 @@ export function UserForm({
             </select>
             <p className="text-xs text-gray-500 mt-1">
               Los usuarios inactivos no podrán acceder al sistema
+            </p>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">
+              <CalendarDays className="w-4 h-4 inline mr-1" />
+              Fecha de Inicio de Membresía
+            </label>
+            <input
+              type="date"
+              name="fechaInicioMembresia"
+              value={formatDateForArgentina(formData?.fechaInicioMembresia)}
+              onChange={handleChange}
+              className="w-full h-11 px-4 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 placeholder:text-gray-400 bg-purple-50/50"
+            />
+            <p className="mt-1 text-xs text-gray-500">
+              Fecha en que el usuario comenzó su membresía (zona horaria de
+              Argentina)
             </p>
           </div>
 

@@ -150,10 +150,24 @@ export const ModalCreatePayment = ({
         name === "monto"
           ? Number.parseFloat(value) || 0
           : name === "mes" || name === "año"
-          ? Number.parseInt(value)
-          : name === "fechaVencimiento"
-          ? new Date(value)
-          : value,
+            ? Number.parseInt(value)
+            : name === "fechaVencimiento"
+              ? (() => {
+                  if (!value) return undefined;
+                  // Create date at noon in Argentina timezone to avoid day shifts
+                  const [year, month, day] = value.split("-").map(Number);
+                  const argentinaDate = new Date();
+                  argentinaDate.setFullYear(year, month - 1, day);
+                  argentinaDate.setHours(12, 0, 0, 0); // Set to noon to avoid timezone issues
+                  // Adjust for Argentina timezone (UTC-3)
+                  argentinaDate.setMinutes(
+                    argentinaDate.getMinutes() -
+                      argentinaDate.getTimezoneOffset() -
+                      180
+                  );
+                  return argentinaDate;
+                })()
+              : value,
     }));
   };
 
@@ -205,10 +219,26 @@ export const ModalCreatePayment = ({
     (_, i) => currentDate.getFullYear() - 5 + i
   );
 
+  const formatDateForArgentina = (date: Date | undefined): string => {
+    if (!date) return "";
+
+    // Create a new date adjusted for Argentina timezone (UTC-3)
+    const argentinaOffset = -180; // Argentina is UTC-3 (180 minutes behind UTC)
+    const utc = date.getTime() + date.getTimezoneOffset() * 60000;
+    const argentinaTime = new Date(utc + argentinaOffset * 60000);
+
+    // Format as YYYY-MM-DD for the input
+    const year = argentinaTime.getUTCFullYear();
+    const month = String(argentinaTime.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(argentinaTime.getUTCDate()).padStart(2, "0");
+
+    return `${year}-${month}-${day}`;
+  };
+
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-100 overflow-y-auto animate-in fade-in duration-300">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
@@ -271,13 +301,14 @@ export const ModalCreatePayment = ({
                 <input
                   type="date"
                   name="fechaVencimiento"
-                  value={
-                    formData.fechaVencimiento?.toISOString().split("T")[0] || ""
-                  }
+                  value={formatDateForArgentina(formData.fechaVencimiento)}
                   onChange={handleChange}
                   className="w-full h-11 px-4 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 bg-purple-50/50"
                   required
                 />
+                <p className="text-xs text-gray-500 mt-1">
+                  * Las fechas se manejan en zona horaria argentina (UTC-3)
+                </p>
               </div>
             ) : (
               <div className="grid grid-cols-2 gap-4">
@@ -364,8 +395,8 @@ export const ModalCreatePayment = ({
                     statusConfig.color === "emerald"
                       ? "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-800"
                       : statusConfig.color === "amber"
-                      ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 text-amber-800"
-                      : "bg-gradient-to-r from-red-50 to-red-50 border-red-200 text-red-800"
+                        ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 text-amber-800"
+                        : "bg-gradient-to-r from-red-50 to-red-50 border-red-200 text-red-800"
                   }`}
                 >
                   {estadosPago.map((estado) => (

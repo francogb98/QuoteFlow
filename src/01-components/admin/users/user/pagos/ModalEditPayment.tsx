@@ -114,7 +114,7 @@ export const ModalEditPayment = ({ pago, isOpen, onClose, userId }: any) => {
   if (!isOpen || !pago) return null;
 
   return (
-    <div className="fixed inset-0 z-50 overflow-y-auto animate-in fade-in duration-300">
+    <div className="fixed inset-0 z-100 overflow-y-auto animate-in fade-in duration-300">
       {/* Backdrop */}
       <div
         className="fixed inset-0 bg-black/50 backdrop-blur-sm transition-opacity"
