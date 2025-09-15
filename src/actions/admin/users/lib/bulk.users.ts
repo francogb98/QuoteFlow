@@ -11,13 +11,19 @@ export interface BulkUserData {
   documento: string;
   rangoTarifaId?: string;
   dinamicaTarifaId?: string;
-  fechaInicioMembresia: string; // obligatorio siempre
-  primerPagoMesSiguiente?: boolean; // ahora por usuario
+  fechaInicioMembresia: string; // obligatorio siempre (yyyy-MM-dd)
+  primerPagoMesSiguiente?: boolean;
 }
 
 export interface BulkUserCreationData {
   users: BulkUserData[];
   administradorId: string;
+}
+
+// ✅ Parseo seguro a fecha local Argentina (UTC-3)
+function parseDateToArgentina(dateString: string): Date {
+  const [year, month, day] = dateString.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0); // 00:00 hora local
 }
 
 export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
@@ -30,7 +36,6 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
   const adminId = session.user.id;
 
   try {
-    // Verificar que el administrador existe y obtener su configuración de tarifas
     const adminExists = await prisma.administrador.findUnique({
       where: { id: adminId },
       include: {
@@ -89,7 +94,7 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
       }
     }
 
-    // Verificar documentos duplicados en el lote
+    // Verificar duplicados
     const documentos = data.users.map((user) => user.documento);
     const duplicateDocuments = documentos.filter(
       (doc, index) => documentos.indexOf(doc) !== index
@@ -100,7 +105,7 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
       );
     }
 
-    // Verificar si algún usuario ya existe
+    // Verificar si ya existen
     const existingUsers = await prisma.usuario.findMany({
       where: {
         documento: { in: documentos },
@@ -120,7 +125,7 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
       errors: [] as { documento: string; error: string }[],
     };
 
-    // Crear usuarios en lote usando transacción
+    // Crear usuarios
     await prisma.$transaction(async (tx) => {
       for (const userData of data.users) {
         try {
@@ -130,11 +135,10 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
             );
           }
 
-          // ✅ Parseo seguro sin timezone shift
-          const [year, month, day] = userData.fechaInicioMembresia
-            .split("-")
-            .map(Number);
-          const fechaInicioMembresiaUsuario = new Date(year, month - 1, day);
+          // ✅ Usamos la función que evita el shift de timezone
+          const fechaInicioMembresiaUsuario = parseDateToArgentina(
+            userData.fechaInicioMembresia
+          );
 
           const newUser = await tx.usuario.create({
             data: {

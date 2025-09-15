@@ -1,7 +1,6 @@
 "use client";
 
 import { toast } from "sonner";
-import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
@@ -51,7 +50,7 @@ export function BulkUserForm({ empresaId, configuracionTarifa }: any) {
   const mutation = useMutation({
     mutationFn: addBulkUsersToAdmin,
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["users", empresaId] });
+      queryClient.invalidateQueries({ queryKey: ["usuarios"] });
       toast.success("Usuarios cargados exitosamente.");
       router.push(`/admin/users`);
     },

@@ -157,22 +157,40 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
             </Card>
           </Link>
           {user?.rol === "SUPER_ADMIN" && (
-            <Link href="/admin/test">
-              <Card
-                data-tour="test"
-                className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
-              >
-                <CardHeader>
-                  <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
-                    <Settings className="w-5 h-5 text-emerald-600" />
-                    Test
-                  </CardTitle>
-                  <CardDescription className="text-[9px] sm:text-xs">
-                    Funcion para ejecutar Test de la aplicacion
-                  </CardDescription>
-                </CardHeader>
-              </Card>
-            </Link>
+            <>
+              <Link href="/admin/test">
+                <Card
+                  data-tour="test"
+                  className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                      <Settings className="w-5 h-5 text-emerald-600" />
+                      Test
+                    </CardTitle>
+                    <CardDescription className="text-[9px] sm:text-xs">
+                      Funcion para ejecutar Test de la aplicacion
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+              <Link href="/admin/codigos">
+                <Card
+                  data-tour="codigos"
+                  className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                      <Settings className="w-5 h-5 text-emerald-600" />
+                      Codigos
+                    </CardTitle>
+                    <CardDescription className="text-[9px] sm:text-xs">
+                      Funcion para gestionar los codigos de la aplicacion
+                    </CardDescription>
+                  </CardHeader>
+                </Card>
+              </Link>
+            </>
           )}
           <Link href="/admin/settings">
             <Card
