@@ -130,9 +130,11 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
             );
           }
 
-          const fechaInicioMembresiaUsuario = new Date(
-            userData.fechaInicioMembresia
-          );
+          // ✅ Parseo seguro sin timezone shift
+          const [year, month, day] = userData.fechaInicioMembresia
+            .split("-")
+            .map(Number);
+          const fechaInicioMembresiaUsuario = new Date(year, month - 1, day);
 
           const newUser = await tx.usuario.create({
             data: {
@@ -172,7 +174,7 @@ export async function addBulkUsersToAdmin(data: BulkUserCreationData) {
       }
     });
 
-    revalidatePath("/admin/users/list");
+    revalidatePath("/admin/users");
 
     return {
       success: true,

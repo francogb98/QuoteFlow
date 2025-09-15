@@ -53,7 +53,7 @@ export function BulkUserForm({ empresaId, configuracionTarifa }: any) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["users", empresaId] });
       toast.success("Usuarios cargados exitosamente.");
-      router.push(`/admin/empresas/${empresaId}/users`);
+      router.push(`/admin/users`);
     },
     onError: () => {
       toast.error("Error al cargar los usuarios.");

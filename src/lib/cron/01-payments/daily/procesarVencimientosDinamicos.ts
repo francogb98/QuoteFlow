@@ -5,13 +5,36 @@ import { logger } from "../lib";
  * Calcula la fecha de vencimiento del mes actual según la fecha de inicio de membresía
  */
 function getMonthlyDueDate(fechaInicio: Date, fechaActual: Date): Date {
-  const dueDate = new Date(fechaActual);
-  dueDate.setDate(fechaInicio.getDate());
-  dueDate.setHours(23, 59, 59, 999); // fin del día
+  const year = fechaActual.getFullYear();
+  const month = fechaActual.getMonth();
+  const day = fechaInicio.getDate();
 
-  // Si el día aún no llegó en este mes, retrocedemos al mes anterior
-  if (dueDate > fechaActual) {
-    dueDate.setMonth(dueDate.getMonth() - 1);
+  // Ver cuántos días tiene el mes actual
+  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
+  const dueDay = Math.min(day, lastDayOfMonth);
+
+  let dueDate = new Date(year, month, dueDay, 23, 59, 59, 999);
+
+  // Si la fecha aún no llegó en este mes (ej: hoy 10 y vencimiento es 15),
+  // mantenemos este mes. Si ya pasó, lo dejamos así.
+  // Si es el mismo día, se queda en este mes.
+  if (
+    dueDate.getTime() > fechaActual.getTime() &&
+    dueDate.getDate() !== fechaActual.getDate()
+  ) {
+    // Retroceder al mes anterior
+    const prevMonth = new Date(year, month - 1, 1);
+    const lastDayPrevMonth = new Date(year, month, 0).getDate();
+    const prevDueDay = Math.min(day, lastDayPrevMonth);
+    dueDate = new Date(
+      prevMonth.getFullYear(),
+      prevMonth.getMonth(),
+      prevDueDay,
+      23,
+      59,
+      59,
+      999
+    );
   }
 
   return dueDate;
@@ -81,10 +104,6 @@ export async function procesarVencimientosDinamicos(fechaActual: Date) {
           estado: "VENCIDO",
           estaVencido: true,
           monto: montoRecargo > 0 ? montoRecargo : pago.monto,
-          comprobante:
-            montoRecargo > 0
-              ? `RECARGO_APLICADO_${montoRecargo}`
-              : pago.comprobante,
         },
       });
       pagosVencidos++;
@@ -101,7 +120,6 @@ export async function procesarVencimientosDinamicos(fechaActual: Date) {
         where: { id: pago.id },
         data: {
           monto: montoRecargo,
-          comprobante: `RECARGO_APLICADO_${montoRecargo}`,
         },
       });
       recargosAplicados++;

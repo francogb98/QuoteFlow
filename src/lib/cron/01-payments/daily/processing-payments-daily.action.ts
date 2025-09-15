@@ -29,10 +29,9 @@ export async function processDailyComplete() {
   let totalRecordatoriosEnviados = 0; // NEW: Contador para los recordatorios
 
   // 🔥 PASO 1: Enviar recordatorios (NEW)
-  /*logger.info("📢 [PASO EXTRA] Notificando vencimientos de tarifas fijas...");
+  logger.info("📢 [PASO EXTRA] Notificando vencimientos de tarifas fijas...");
   const resultadoNotificaciones = await notificarVencimientosFijos(fechaActual);
 
-  
   totalRecordatoriosEnviados += resultadoNotificaciones.notificacionesEnviadas;
   logger.info(
     `📬 Recordatorios enviados: ${resultadoNotificaciones.notificacionesEnviadas}`
@@ -46,7 +45,7 @@ export async function processDailyComplete() {
     resultadoNotificacionesDinamicas.notificacionesEnviadas;
   logger.info(
     `📬 Recordatorios dinámicos enviados: ${resultadoNotificacionesDinamicas.notificacionesEnviadas}`
-  );*/
+  );
 
   // 🔥 PASO 2: Procesar vencimientos (configuración dinámica)
   logger.info(

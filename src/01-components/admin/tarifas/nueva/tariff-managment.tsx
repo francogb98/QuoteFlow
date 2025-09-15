@@ -52,11 +52,18 @@ export function TariffManagement({ user }: TariffManagementProps) {
   const [modalOpen, setModalOpen] = useState(false);
   const [editingTariff, setEditingTariff] = useState<TariffData | null>(null);
   const [showConfigSelector, setShowConfigSelector] = useState(false);
-  const [showTypeSwitchDialog, setShowTypeSwitchDialog] = useState(false); // <--- NUEVO ESTADO
+  const [showTypeSwitchDialog, setShowTypeSwitchDialog] = useState(false);
 
   const configuracion = user.configuracionTarifa;
   const hasConfiguracion = !!configuracion;
-  const tipoActual = configuracion?.tipoConfiguracion || "FIJA_MENSUAL";
+
+  // 👇 nuevo estado local para manejar el tipo antes de crear la config
+  const [tipoSeleccionado, setTipoSeleccionado] =
+    useState<TipoConfiguracionTarifa>("FIJA_MENSUAL");
+
+  const tipoActual = hasConfiguracion
+    ? configuracion!.tipoConfiguracion
+    : tipoSeleccionado;
 
   const tarifasActuales: TariffData[] = (
     tipoActual === "FIJA_MENSUAL"
@@ -113,21 +120,18 @@ export function TariffManagement({ user }: TariffManagementProps) {
       const existingTariffs = tarifasActuales.filter((t) => t.id !== data.id);
       const updatedTariffs = isNewTariff
         ? [...existingTariffs, data]
-        : [
-            ...existingTariffs,
-            { ...data, id: data.id }, // ensure id is not lost on update
-          ];
+        : [...existingTariffs, { ...data, id: data.id }];
 
       const payload =
         tipoActual === "FIJA_MENSUAL"
           ? {
-              id: configuracion.id,
+              id: configuracion!.id,
               tipoConfiguracion: tipoActual,
               rangos: updatedTariffs,
               dinamicas: [],
             }
           : {
-              id: configuracion.id,
+              id: configuracion!.id,
               tipoConfiguracion: tipoActual,
               rangos: [],
               dinamicas: updatedTariffs,
@@ -145,18 +149,22 @@ export function TariffManagement({ user }: TariffManagementProps) {
 
   const handleTipoChange = async (newTipo: TipoConfiguracionTarifa) => {
     if (hasConfiguracion) {
+      // si ya existe la config → actualizar en BD
       const result = await actualizarConfiguracionTarifa({
-        id: configuracion.id,
+        id: configuracion!.id,
         tipoConfiguracion: newTipo,
         rangos: [],
         dinamicas: [],
       });
       if (result.ok) {
         toast.success("Tipo de configuración actualizado");
-        setModalOpen(false); // Close modal after changing type
+        setModalOpen(false);
       } else {
         toast.error(result.error);
       }
+    } else {
+      // si no existe aún → solo actualizar estado local
+      setTipoSeleccionado(newTipo);
     }
   };
 

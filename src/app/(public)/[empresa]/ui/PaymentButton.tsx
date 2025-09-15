@@ -25,8 +25,14 @@ export const PaymentButton = ({
 }: PaymentButtonProps) => {
   const router = useRouter(); // Moved to the top level
 
+  console.log(pago);
+
   // Lógica para pagos PENDIENTES o RECHAZADOS
-  if (pago.estado === "PENDIENTE" || pago.estado === "RECHAZADO") {
+  if (
+    pago.estado === "PENDIENTE" ||
+    pago.estado === "RECHAZADO" ||
+    pago.estado === "VENCIDO"
+  ) {
     if (modeloCobro === "MERCADOPAGO") {
       return (
         <button

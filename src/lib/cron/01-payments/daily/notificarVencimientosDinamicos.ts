@@ -84,59 +84,28 @@ export async function notificarVencimientosDinamicos(fechaActual: Date) {
         continue;
       }
 
-      const notificacionExistente = await prisma.notificacion.findFirst({
-        where: {
-          usuarioId: usuario.id,
-          entidadTipo: "PAGO",
-          entidadId: pagoPendiente.id,
-          tipo: diasFaltantes === 0 ? "PAGO_VENCIDO" : "PAGO_PROXIMO_VENCER",
-          fechaCreacion: {
-            gte: startOfDay(fechaActual),
-            lte: endOfDay(fechaActual),
-          },
-        },
+      const newStatus = diasFaltantes === 0 ? "VENCE_HOY" : "FALTA_3_DIAS";
+      const motivo =
+        diasFaltantes === 0
+          ? "Tu pago vence hoy"
+          : `Tu pago vence en ${diasFaltantes} días`;
+
+      console.log(
+        `[v0] Enviando email a ${usuario.email || admin.email} - ${motivo}`
+      );
+
+      await sendReminderEmail({
+        nombre: usuario.nombre,
+        apellido: usuario.apellido || "Sin apellido",
+        empresa: admin.empresa?.nombre || "Sin empresa",
+        documento: usuario.documento,
+        to: usuario.email || admin.email,
+        newStatus,
+        motivo,
       });
 
-      if (!notificacionExistente) {
-        const newStatus = diasFaltantes === 0 ? "VENCE_HOY" : "FALTA_3_DIAS";
-        const motivo =
-          diasFaltantes === 0
-            ? "Tu pago vence hoy"
-            : `Tu pago vence en ${diasFaltantes} días`;
-
-        console.log(
-          `[v0] Enviando email a ${usuario.email || admin.email} - ${motivo}`
-        );
-
-        await sendReminderEmail({
-          nombre: usuario.nombre,
-          apellido: usuario.apellido || "Sin apellido",
-          empresa: admin.empresa?.nombre || "Sin empresa",
-          documento: usuario.documento,
-          to: usuario.email || admin.email,
-          newStatus,
-          motivo,
-        });
-
-        await prisma.notificacion.create({
-          data: {
-            tipo: diasFaltantes === 0 ? "PAGO_VENCIDO" : "PAGO_PROXIMO_VENCER",
-            titulo: `Recordatorio de pago - ${admin.empresa?.nombre}`,
-            mensaje: motivo,
-            usuarioId: usuario.id,
-            administradorId: admin.id,
-            enviadaPorEmail: true,
-            fechaEnvioEmail: fechaActual,
-            entidadTipo: "PAGO",
-            entidadId: pagoPendiente.id,
-          },
-        });
-
-        notificacionesEnviadas++;
-        console.log(`[v0] Notificación enviada a ${usuario.nombre}`);
-      } else {
-        console.log(`[v0] Ya existe notificación para ${usuario.nombre} hoy`);
-      }
+      notificacionesEnviadas++;
+      console.log(`[v0] Notificación enviada a ${usuario.nombre}`);
     }
   }
 

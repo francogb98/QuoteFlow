@@ -73,7 +73,10 @@ export const UserDataUnified = ({
   };
 
   const pagosPendientes = usuario.pagos.filter(
-    (p) => p.estado === "PENDIENTE" || p.estado === "RECHAZADO"
+    (p) =>
+      p.estado === "PENDIENTE" ||
+      p.estado === "RECHAZADO" ||
+      p.estado === "VENCIDO"
   );
   const pagosAMostrar = mostrarTodos ? usuario.pagos : pagosPendientes;
   const totalPendiente = pagosPendientes.reduce((sum, p) => sum + p.monto, 0);
@@ -231,7 +234,12 @@ export const UserDataUnified = ({
                     {pagosAMostrar.map((pago) => (
                       <tr
                         key={pago.id}
-                        className={`hover:bg-purple-50/50 transition-colors ${pago.estado === "PENDIENTE" ? "bg-orange-50/30" : ""}`}
+                        className={`hover:bg-purple-50/50 transition-colors ${
+                          pago.estado === "PENDIENTE" ||
+                          pago.estado === "VENCIDO"
+                            ? "bg-orange-50/30"
+                            : ""
+                        }`}
                       >
                         <td className="px-4 py-4 whitespace-nowrap">
                           <div className="flex items-center">
@@ -248,7 +256,9 @@ export const UserDataUnified = ({
                                 ? "bg-green-100 text-green-800 border border-green-200"
                                 : pago.estado === "PENDIENTE"
                                   ? "bg-orange-100 text-orange-800 border border-orange-200"
-                                  : "bg-red-100 text-red-800 border border-red-200"
+                                  : pago.estado === "VENCIDO"
+                                    ? "bg-red-100 text-red-800 border border-red-200"
+                                    : "bg-red-100 text-red-800 border border-red-200" // Catch-all for "RECHAZADO"
                             }`}
                           >
                             {pago.estado}
@@ -279,7 +289,7 @@ export const UserDataUnified = ({
                   <div
                     key={pago.id}
                     className={`border rounded-xl p-4 shadow-sm hover:shadow-md transition-all duration-200 ${
-                      pago.estado === "PENDIENTE"
+                      pago.estado === "PENDIENTE" || pago.estado === "VENCIDO"
                         ? "bg-gradient-to-r from-orange-50 to-yellow-50/30 border-orange-200"
                         : "bg-gradient-to-r from-white to-purple-50/30 border-purple-100"
                     }`}
@@ -297,7 +307,9 @@ export const UserDataUnified = ({
                             ? "bg-green-100 text-green-800 border-green-200"
                             : pago.estado === "PENDIENTE"
                               ? "bg-orange-100 text-orange-800 border-orange-200"
-                              : "bg-red-100 text-red-800 border-red-200"
+                              : pago.estado === "VENCIDO"
+                                ? "bg-red-100 text-red-800 border-red-200"
+                                : "bg-red-100 text-red-800 border-red-200" // Catch-all for "RECHAZADO"
                         }`}
                       >
                         {pago.estado}
