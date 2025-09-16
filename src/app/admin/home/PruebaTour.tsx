@@ -122,6 +122,24 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
               </Link>
             </>
           )}
+          <Link href="/admin/analytics">
+            <Card
+              data-tour="analitica"
+              className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                  <Users className="w-5 h-5 text-emerald-600" />
+                  Analítica de Pagos
+                </CardTitle>
+                <CardDescription className="text-[9px] sm:text-xs">
+                  <p className="text-[9px] sm:text-sm text-muted-foreground">
+                    Visualiza estadísticas detalladas de los pagos realizados.
+                  </p>
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
           <Link href="/admin/pagos">
             <Card
               data-tour="pagos"
