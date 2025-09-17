@@ -1,14 +1,32 @@
+// src/actions/admin/cron/dynamicReminders.ts
 "use server";
 
-import { differenceInCalendarDays, endOfDay, startOfDay } from "date-fns";
+import {
+  addMonths,
+  differenceInCalendarDays,
+  endOfDay,
+  startOfDay,
+} from "date-fns";
 import { sendReminderEmail } from "@/01-actions/admin/emails/sendReminderEmail";
 import prisma from "@/lib/prisma";
+import moment from "moment-timezone";
+
+// Función auxiliar para normalizar una fecha a la medianoche de Argentina
+const normalizeDateToArgentina = (date: Date) => {
+  return moment
+    .tz(date, "America/Argentina/Buenos_Aires")
+    .startOf("day")
+    .toDate();
+};
 
 export async function notificarVencimientosDinamicos(fechaActual: Date) {
   console.log(
     `[v0] Iniciando notificaciones dinámicas para fecha: ${fechaActual.toISOString()}`
   );
   let notificacionesEnviadas = 0;
+
+  // Normalizamos la fecha actual a la medianoche de Argentina
+  const todayInArgentina = normalizeDateToArgentina(fechaActual);
 
   const admins = await prisma.administrador.findMany({
     where: {
@@ -25,12 +43,20 @@ export async function notificarVencimientosDinamicos(fechaActual: Date) {
         },
       },
       usuarios: {
+        where: {
+          // Filtramos usuarios activos y con una fecha de inicio de membresía
+          estaActivo: true,
+          fechaInicioMembresia: {
+            not: null,
+          },
+        },
         include: {
           pagos: {
             where: {
-              estado: "PENDIENTE", // Solo pagos pendientes
-              mes: fechaActual.getMonth() + 1,
-              año: fechaActual.getFullYear(),
+              // Filtrar pagos pendientes del mes actual
+              estado: "PENDIENTE",
+              mes: todayInArgentina.getMonth() + 1,
+              año: todayInArgentina.getFullYear(),
             },
           },
         },
@@ -55,31 +81,34 @@ export async function notificarVencimientosDinamicos(fechaActual: Date) {
     );
 
     for (const usuario of admin.usuarios) {
-      if (!usuario.fechaInicioMembresia) {
-        console.log(
-          `[v0] Usuario ${usuario.nombre} no tiene fecha de inicio de membresía`
-        );
-        continue;
+      // Normalizamos la fecha de inicio del usuario
+      const fechaInicio = normalizeDateToArgentina(
+        new Date(usuario.fechaInicioMembresia as Date)
+      );
+
+      // Calculamos la fecha de vencimiento para el mes actual
+      let fechaVencimiento = new Date(
+        todayInArgentina.getFullYear(),
+        todayInArgentina.getMonth(),
+        fechaInicio.getDate()
+      );
+
+      // Si la fecha de vencimiento es anterior a hoy, la pasamos al próximo mes
+      if (fechaVencimiento < todayInArgentina) {
+        fechaVencimiento = addMonths(fechaVencimiento, 1);
       }
 
-      const pagoPendiente = usuario.pagos.find((p) => p.estado === "PENDIENTE");
-      if (!pagoPendiente || !pagoPendiente.fechaVencimiento) {
-        console.log(
-          `[v0] Usuario ${usuario.nombre} no tiene pagos pendientes con fecha de vencimiento`
-        );
-        continue;
-      }
-
+      // Calculamos los días restantes
       const diasFaltantes = differenceInCalendarDays(
-        pagoPendiente.fechaVencimiento,
-        fechaActual
+        startOfDay(fechaVencimiento),
+        startOfDay(todayInArgentina)
       );
 
       console.log(
-        `[v0] Usuario ${usuario.nombre}: faltan ${diasFaltantes} días para vencimiento`
+        `[v1] Usuario ${usuario.nombre}: fechaInicio=${fechaInicio.toDateString()} | fechaVencimiento=${fechaVencimiento.toDateString()} | faltan ${diasFaltantes} días`
       );
 
-      // Solo notificar si faltan exactamente 3 días o vence hoy (0 días)
+      // Solo notificar si faltan 3 días o vence hoy
       if (diasFaltantes !== 3 && diasFaltantes !== 0) {
         continue;
       }
@@ -91,21 +120,25 @@ export async function notificarVencimientosDinamicos(fechaActual: Date) {
           : `Tu pago vence en ${diasFaltantes} días`;
 
       console.log(
-        `[v0] Enviando email a ${usuario.email || admin.email} - ${motivo}`
+        `[v1] Enviando email a ${usuario.email || admin.email} - ${motivo}`
       );
 
-      await sendReminderEmail({
-        nombre: usuario.nombre,
-        apellido: usuario.apellido || "Sin apellido",
-        empresa: admin.empresa?.nombre || "Sin empresa",
-        documento: usuario.documento,
-        to: usuario.email || admin.email,
-        newStatus,
-        motivo,
-      });
+      // Enviar el correo solo si el usuario tiene un pago pendiente para este mes y año
+      const tienePagoPendiente = usuario.pagos.length > 0;
+      if (tienePagoPendiente) {
+        await sendReminderEmail({
+          nombre: usuario.nombre,
+          apellido: usuario.apellido || "Sin apellido",
+          empresa: admin.empresa?.nombre || "Sin empresa",
+          documento: usuario.documento,
+          to: usuario.email || admin.email,
+          newStatus,
+          motivo,
+        });
 
-      notificacionesEnviadas++;
-      console.log(`[v0] Notificación enviada a ${usuario.nombre}`);
+        notificacionesEnviadas++;
+        console.log(`[v1] Notificación enviada a ${usuario.nombre}`);
+      }
     }
   }
 

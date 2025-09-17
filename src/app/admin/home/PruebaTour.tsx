@@ -18,6 +18,7 @@ import {
   BarChart,
   Table,
   Table2,
+  LineChart,
 } from "lucide-react";
 import Link from "next/link";
 import { ShareCompanyLink } from "./ui/SharedCompanyLink";
@@ -129,7 +130,7 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
             >
               <CardHeader>
                 <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
-                  <Users className="w-5 h-5 text-emerald-600" />
+                  <LineChart className="w-5 h-5 text-emerald-600" />
                   Analítica de Pagos
                 </CardTitle>
                 <CardDescription className="text-[9px] sm:text-xs">

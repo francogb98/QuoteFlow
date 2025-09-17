@@ -1,6 +1,7 @@
+// src/actions/admin/users/lib/editUser.ts
 "use server";
 
-import { auth } from "@/*";
+import { auth } from "@/auth";
 import prisma from "@/prisma";
 import { TipoConfiguracionTarifa, type Estado } from "@prisma/client";
 import { revalidatePath } from "next/cache";
@@ -8,7 +9,7 @@ import {
   type ActionResponse,
   handleActionError,
 } from "@/lib/utils/action-errors";
-import { z } from "zod"; // Import Zod
+import { z } from "zod";
 
 const editUserSchema = z.object({
   id: z.string().min(1, "ID de usuario es obligatorio"),
@@ -47,7 +48,22 @@ export const editUser = async (
 
     const validatedContent = editUserSchema.parse(content);
 
-    console.log(validatedContent);
+    // Lógica para manejar la fecha en horario de Argentina
+    let fechaInicioMembresia: Date | null = null;
+    if (validatedContent.fechaInicioMembresia) {
+      const [year, month, day] =
+        validatedContent.fechaInicioMembresia.split("-");
+      // Creamos un objeto Date que represente la medianoche de la fecha en el huso horario de Argentina
+      // El "3" en la hora se usa para evitar problemas con los cambios de horario (daylight saving)
+      fechaInicioMembresia = new Date(
+        Number(year),
+        Number(month) - 1,
+        Number(day),
+        3,
+        0,
+        0
+      );
+    }
 
     const dataToEdit = {
       nombre: validatedContent.nombre.toLocaleLowerCase(),
@@ -55,13 +71,12 @@ export const editUser = async (
       documento: validatedContent.documento,
       telefono: validatedContent.telefono,
       estaActivo: validatedContent.estaActivo,
-      estado: validatedContent.estado as Estado, // Explicitly cast to Estado enum
+      estado: validatedContent.estado as Estado,
       email: validatedContent.email,
       edad: validatedContent.edad,
-      fechaInicioMembresia: validatedContent.fechaInicioMembresia
-        ? new Date(validatedContent.fechaInicioMembresia)
-        : null,
+      fechaInicioMembresia: fechaInicioMembresia, // Usa la fecha ajustada
     };
+
     // Verificar documento único (excluyendo al usuario actual)
     const existingUser = await prisma.usuario.findFirst({
       where: {

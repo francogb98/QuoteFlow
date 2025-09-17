@@ -73,6 +73,8 @@ export const FormEditUser = ({ id, tarifasDisponibles }: any) => {
 
   const tarifaActual = data?.dinamicaTarifa?.id || data?.rangoTarifa?.id;
 
+  console.log({ data });
+
   return (
     <div className="space-y-6">
       <UserHeader data={data} isDynamicTariff={isDynamicTariff} />
