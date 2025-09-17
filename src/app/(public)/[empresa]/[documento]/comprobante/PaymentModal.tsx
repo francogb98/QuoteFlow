@@ -12,6 +12,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { Upload, Eye, Edit2, Check, X } from "lucide-react";
 import Image from "next/image";
+import { useNotifications } from "@/components/admin/tarifas/components/use-notifications";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -37,6 +38,8 @@ export function PaymentModal({
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
+
+  const { showSuccess, showError } = useNotifications(); // 👈 usar notificaciones
 
   const hasComprobante = pago.comprobante;
 
@@ -98,8 +101,18 @@ export function PaymentModal({
       }
 
       pago.comprobante = cloudinaryData.secure_url;
+
+      showSuccess(
+        hasComprobante ? "Comprobante actualizado" : "Comprobante cargado",
+        "Tu comprobante se guardó correctamente."
+      );
+
       onClose();
-    } catch (error) {
+    } catch (error: any) {
+      showError(
+        "Error al subir comprobante",
+        error?.message || "Intenta nuevamente"
+      );
     } finally {
       setIsUploading(false);
     }
