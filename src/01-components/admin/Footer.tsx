@@ -28,7 +28,7 @@ export const Footer = () => {
   };
 
   return (
-    <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-md flex justify-around py-2 z-50">
+    <div className="fixed bottom-0 left-0 right-0 bg-white border-t shadow-md flex justify-around py-2 z-10">
       {/* En pantallas grandes (desktop/tablet) se muestran los links directos */}
       <Link href="/admin/users" className={getLinkClasses("/admin/users")}>
         <Users className="h-5 w-5" />

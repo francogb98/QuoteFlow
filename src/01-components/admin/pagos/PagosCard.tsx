@@ -38,6 +38,19 @@ const estadoIcons = {
   VENCIDO: <Clock className="w-4 h-4" />,
 };
 
+function isValidImageUrl(url: string | null): boolean {
+  if (!url) return false;
+
+  try {
+    const parsed = new URL(url);
+    // Opcional: restringir a Cloudinary
+    if (!parsed.hostname.includes("res.cloudinary.com")) return false;
+    return true;
+  } catch {
+    return false;
+  }
+}
+
 export const PagosCard = ({ pago, userName }: Props) => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false); // Nuevo estado para el modal de la imagen
@@ -93,7 +106,7 @@ export const PagosCard = ({ pago, userName }: Props) => {
           </div>
         )}
 
-        {pago.comprobante ? (
+        {pago.comprobante && isValidImageUrl(pago.comprobante) ? (
           <div
             className="relative w-full h-48 rounded-xl border border-gray-200 group cursor-pointer"
             onClick={() => setIsImageModalOpen(true)}
@@ -105,10 +118,15 @@ export const PagosCard = ({ pago, userName }: Props) => {
               objectFit="cover"
               className="rounded-xl transition-transform duration-300"
             />
-            {/* Overlay con el ícono de lupa */}
             <div className="absolute inset-0 flex items-center justify-center bg-transparent bg-opacity-40 opacity-0 group-hover:opacity-100 transition-opacity rounded-xl">
               <ZoomIn className="w-8 h-8 text-white" />
             </div>
+          </div>
+        ) : pago.comprobante ? (
+          <div className="w-full h-48 flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300">
+            <p className="text-gray-400 text-sm">
+              Comprobante no es una imagen válida
+            </p>
           </div>
         ) : (
           <div className="w-full h-48 flex items-center justify-center bg-gray-50 rounded-xl border border-dashed border-gray-300">

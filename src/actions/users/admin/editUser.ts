@@ -27,7 +27,10 @@ const editUserSchema = z.object({
     .optional()
     .nullable(),
   tarifa: z.string().optional().nullable(), // For tariff ID
-  fechaInicioMembresia: z.string().optional().nullable(),
+  fechaInicioMembresia: z.preprocess(
+    (val) => (val instanceof Date ? val.toISOString().split("T")[0] : val),
+    z.string().optional().nullable()
+  ),
 });
 
 export const editUser = async (

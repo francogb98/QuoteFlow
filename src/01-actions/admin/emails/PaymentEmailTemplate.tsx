@@ -1,4 +1,3 @@
-"use client";
 import React from "react";
 const main = {
   backgroundColor: "#f0f2f5", // Un gris muy claro para un fondo suave
