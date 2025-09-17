@@ -1,23 +1,48 @@
+import {
+  deleteFromCloudinary,
+  extractCloudinaryPublicId,
+} from "@/lib/images/cloudinary-utils";
 import prisma from "@/lib/prisma";
-import { revalidatePath } from "next/cache";
 import { type NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
   try {
-    const { pagoId, comprobanteUrl, administradorId, usuarioId } =
-      await request.json();
-
-    console.log("Received data:", {
+    const body = await request.json();
+    const {
       pagoId,
       comprobanteUrl,
-      administradorId,
+      previousComprobanteUrl,
       usuarioId,
-    });
+      administradorId,
+    } = body;
+
     if (!pagoId || !comprobanteUrl || !administradorId || !usuarioId) {
       return NextResponse.json(
         { error: "Faltan datos requeridos" },
         { status: 400 }
       );
+    }
+
+    if (previousComprobanteUrl) {
+      console.log(
+        "[v0] Attempting to delete previous image:",
+        previousComprobanteUrl
+      );
+
+      const publicId = extractCloudinaryPublicId(previousComprobanteUrl);
+      if (publicId) {
+        const deleted = await deleteFromCloudinary(publicId);
+        if (deleted) {
+          console.log(
+            "[v0] Successfully deleted previous image from Cloudinary"
+          );
+        } else {
+          console.warn("[v0] Failed to delete previous image from Cloudinary");
+          // No fallar la operación completa si no se puede eliminar la imagen anterior
+        }
+      } else {
+        console.warn("[v0] Could not extract public_id from previous URL");
+      }
     }
 
     const updatedPago = await prisma.pago.update({

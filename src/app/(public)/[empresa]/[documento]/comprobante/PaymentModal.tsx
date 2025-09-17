@@ -1,3 +1,5 @@
+"use client";
+
 import type React from "react";
 import { useState } from "react";
 import {
@@ -8,9 +10,8 @@ import {
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
-import { Upload, Eye, Edit2, Check, X } from "lucide-react"; // Importamos X para el botón de cerrar
-import { useNotifications } from "@/components/admin/tarifas/components/use-notifications";
-import Image from "next/image"; // Importamos Image de Next.js
+import { Upload, Eye, Edit2, Check, X } from "lucide-react";
+import Image from "next/image";
 
 interface PaymentModalProps {
   isOpen: boolean;
@@ -35,8 +36,7 @@ export function PaymentModal({
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
-  const [isImageModalOpen, setIsImageModalOpen] = useState(false); // Nuevo estado para el modal de la imagen
-  const { showSuccess, showError } = useNotifications();
+  const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
   const hasComprobante = pago.comprobante;
 
@@ -50,9 +50,7 @@ export function PaymentModal({
   };
 
   const handleUpload = async () => {
-    // ... (Tu lógica de subida a Cloudinary)
     if (!selectedFile) {
-      showError("Por favor selecciona un archivo");
       return;
     }
 
@@ -63,8 +61,10 @@ export function PaymentModal({
       formData.append("file", selectedFile);
       formData.append("upload_preset", "cuotaFacil");
 
+      const cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME;
+
       const cloudinaryResponse = await fetch(
-        `https://api.cloudinary.com/v1_1/${process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME}/image/upload`,
+        `https://api.cloudinary.com/v1_1/${cloudName}/image/upload`,
         {
           method: "POST",
           body: formData,
@@ -85,6 +85,7 @@ export function PaymentModal({
         body: JSON.stringify({
           pagoId: pago.id,
           comprobanteUrl: cloudinaryData.secure_url,
+          previousComprobanteUrl: hasComprobante ? pago.comprobante : null,
           usuarioId,
           administradorId,
           empresa,
@@ -96,15 +97,9 @@ export function PaymentModal({
         throw new Error("Error al guardar comprobante");
       }
 
-      showSuccess(
-        "Comprobante subido exitosamente",
-        "El administrador será notificado"
-      );
-      window.location.reload();
+      pago.comprobante = cloudinaryData.secure_url;
       onClose();
     } catch (error) {
-      console.error("Error:", error);
-      showError("Error al subir comprobante", "Por favor intenta nuevamente");
     } finally {
       setIsUploading(false);
     }
@@ -164,7 +159,7 @@ export function PaymentModal({
                 : `Sube el comprobante de pago de $${pago.monto} para ${pago.descripcion}`}
             </DialogDescription>
             {pago.motivo && pago.estado === "RECHAZADO" && (
-              <p className="text-sm text-gray-700">
+              <p className="text-sm text-muted-foreground">
                 Motivo: <b>{pago.motivo}</b>
               </p>
             )}
@@ -175,7 +170,10 @@ export function PaymentModal({
               <div className="space-y-3">
                 <div className="border rounded-lg p-4 bg-muted/50 relative h-48">
                   <Image
-                    src={pago.comprobante || "/placeholder.svg"}
+                    src={
+                      pago.comprobante ||
+                      "/placeholder.svg?height=200&width=300&query=comprobante"
+                    }
                     alt="Comprobante actual"
                     fill
                     sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"
@@ -188,7 +186,7 @@ export function PaymentModal({
                     variant="outline"
                     size="sm"
                     onClick={handleViewFull}
-                    className="flex-1"
+                    className="flex-1 bg-transparent"
                   >
                     <Eye className="h-4 w-4 mr-2" />
                     Ver Completo
@@ -254,30 +252,30 @@ export function PaymentModal({
                 Cancelar
               </Button>
 
-              {(selectedFile || (!hasComprobante && !selectedFile)) &&
-                selectedFile && (
-                  <Button
-                    onClick={handleUpload}
-                    disabled={isUploading}
-                    className="flex-1"
-                  >
-                    {isUploading ? (
-                      <>
-                        <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
-                        Subiendo...
-                      </>
-                    ) : (
-                      <>
-                        <Check className="h-4 w-4 mr-2" />
-                        {hasComprobante ? "Actualizar" : "Subir"}
-                      </>
-                    )}
-                  </Button>
-                )}
+              {selectedFile && (
+                <Button
+                  onClick={handleUpload}
+                  disabled={isUploading}
+                  className="flex-1"
+                >
+                  {isUploading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2" />
+                      Subiendo...
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4 mr-2" />
+                      {hasComprobante ? "Actualizar" : "Subir"}
+                    </>
+                  )}
+                </Button>
+              )}
             </div>
           </div>
         </DialogContent>
       </Dialog>
+
       {isImageModalOpen && (
         <div
           className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm"
@@ -295,7 +293,10 @@ export function PaymentModal({
               <X className="h-5 w-5" />
             </Button>
             <Image
-              src={pago.comprobante}
+              src={
+                pago.comprobante ||
+                "/placeholder.svg?height=600&width=800&query=comprobante ampliado"
+              }
               alt="Comprobante de pago ampliado"
               fill
               sizes="(max-width: 768px) 100vw, (max-width: 1200px) 50vw, 33vw"

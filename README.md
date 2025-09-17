@@ -1,3 +1,1 @@
-## hacer que los profesores puedan elegir modo de tarifa,
-
-##  Ver el tema de crear pagos, el ts ignore
+## ver el tema de editarr la informacion del usuario
