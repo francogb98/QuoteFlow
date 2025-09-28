@@ -1,5 +1,10 @@
 "use client";
+import {
+  revertirVencidosDelMesSiguiente,
+  pagosMontoCero,
+} from "@/01-actions/admin/test/editarPagos";
 import { processDailyComplete } from "@/lib/cron/01-payments/daily";
+
 import { useMutation } from "@tanstack/react-query";
 
 export default function NamePage() {
@@ -29,7 +34,7 @@ export default function NamePage() {
       {fetch.data && (
         <div className="p-4 bg-green-100 text-green-800 rounded">
           <h2 className="text-lg font-bold mb-2">Resultado:</h2>
-          <pre>{JSON.stringify(fetch.data, null, 2)}</pre>
+          {/* <pre>{JSON.stringify(fetch.data, null, 2)}</pre> */}
         </div>
       )}
     </>

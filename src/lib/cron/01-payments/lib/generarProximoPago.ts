@@ -8,19 +8,37 @@ export async function generarProximoPago(
   fechaActual: Date
 ) {
   let proximaFecha: Date;
-  let monto: number;
+  let monto: number | null = null;
 
   if (configuracion.tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO") {
     proximaFecha = calculateNextPaymentDate(pagoReferencia);
-    monto = configuracion.montoBase || 0;
+
+    // 👇 monto desde la tarifa dinámica del usuario
+    if (usuario.dinamicaTarifa) {
+      monto = usuario.dinamicaTarifa.montoBase;
+      // acá podrías sumar lógica para diasGracia / recargo
+    }
   } else {
     const rangos = configuracion.rangos;
     if (!rangos || rangos.length === 0) return null;
 
     proximaFecha = new Date(fechaActual);
     proximaFecha.setMonth(proximaFecha.getMonth() + 1);
-    proximaFecha.setDate(rangos[0].diaInicio);
-    monto = rangos[0].monto;
+
+    // 👇 si el usuario tiene rango asignado, usar ese
+    if (usuario.rangoTarifa) {
+      proximaFecha.setDate(usuario.rangoTarifa.diaInicio);
+      monto = usuario.rangoTarifa.monto;
+    } else {
+      // fallback al primer rango
+      proximaFecha.setDate(rangos[0].diaInicio);
+      monto = rangos[0].monto;
+    }
+  }
+
+  if (!monto) {
+    console.warn(`⚠️ No se pudo calcular monto para usuario ${usuario.id}`);
+    return null;
   }
 
   const proximoPeriodo = `${proximaFecha.getFullYear()}-${String(
@@ -36,12 +54,10 @@ export async function generarProximoPago(
     select: { id: true },
   });
 
-  if (pagoExistente) {
-    return null;
-  }
+  if (pagoExistente) return null;
 
   // Crear el nuevo pago
-  const nuevoPago = await prisma.pago.create({
+  return await prisma.pago.create({
     data: {
       usuarioId: usuario.id,
       monto,
@@ -53,6 +69,4 @@ export async function generarProximoPago(
       metodo: "EFECTIVO",
     },
   });
-
-  return nuevoPago;
 }

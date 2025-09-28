@@ -11,6 +11,8 @@ import {
 import { Edit, CheckCircle, XCircle, Loader2 } from "lucide-react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { editPayment } from "@/01-actions/admin/pago/editPago";
+
+
 interface Props {
   isOpen: boolean;
   onOpenChange: (open: boolean) => void;

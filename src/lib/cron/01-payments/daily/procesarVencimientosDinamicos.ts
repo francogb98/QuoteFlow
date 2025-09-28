@@ -64,6 +64,8 @@ export async function procesarVencimientosDinamicos(fechaActual: Date) {
   const pagosDinamicos = await prisma.pago.findMany({
     where: {
       estado: { in: ["PENDIENTE", "VENCIDO"] },
+      mes: fechaActual.getMonth() + 1, // en JS los meses van 0-11, por eso +1
+      año: fechaActual.getFullYear(),
       usuario: {
         estado: "ACTIVO",
         estaActivo: true,
@@ -75,6 +77,8 @@ export async function procesarVencimientosDinamicos(fechaActual: Date) {
       usuario: { include: { dinamicaTarifa: true } }, // incluimos config dinámica específica del usuario
     },
   });
+
+  console.log({ pagosDinamicos });
 
   logger.info(
     `🔍 Encontrados ${pagosDinamicos.length} pagos dinámicos para verificar vencimiento`

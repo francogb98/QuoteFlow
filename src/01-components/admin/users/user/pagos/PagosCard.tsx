@@ -100,42 +100,13 @@ export const PagosCard = ({
               actualStatusConfig.color === "emerald"
                 ? "bg-gradient-to-r from-emerald-50 to-green-50 border-emerald-200 text-emerald-800"
                 : actualStatusConfig.color === "amber"
-                ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 text-amber-800"
-                : "bg-gradient-to-r from-red-50 to-red-50 border-red-200 text-red-800"
+                  ? "bg-gradient-to-r from-amber-50 to-yellow-50 border-amber-200 text-amber-800"
+                  : "bg-gradient-to-r from-red-50 to-red-50 border-red-200 text-red-800"
             }`}
           >
             <actualStatusConfig.icon className="w-3 h-3" />
             {actualStatusConfig.label}
           </span>
-
-          {/* Indicador de vencimiento para sistema dinámico */}
-          {isDynamicTariff &&
-            pago.fechaVencimiento &&
-            pago.estado !== "PAGADO" && (
-              <div className="mt-2">
-                {isOverdue ? (
-                  <div className="flex items-center gap-1 text-xs text-red-600">
-                    <AlertTriangle className="w-3 h-3" />
-                    <span>
-                      Vencido desde{" "}
-                      {new Date(pago.fechaVencimiento).toLocaleDateString(
-                        "es-ES"
-                      )}
-                    </span>
-                  </div>
-                ) : (
-                  <div className="flex items-center gap-1 text-xs text-amber-600">
-                    <Clock className="w-3 h-3" />
-                    <span>
-                      Vence el{" "}
-                      {new Date(pago.fechaVencimiento).toLocaleDateString(
-                        "es-ES"
-                      )}
-                    </span>
-                  </div>
-                )}
-              </div>
-            )}
         </div>
 
         {/* Información del pago */}
