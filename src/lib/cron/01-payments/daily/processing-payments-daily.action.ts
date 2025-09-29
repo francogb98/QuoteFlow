@@ -1,90 +1,98 @@
 "use server";
-import { logger } from "../lib";
+
+import moment from "moment-timezone";
 import {
   actualizarTarifasFijas,
   generarPagosFuturos,
   procesarVencimientosDinamicos,
 } from ".";
+import { logger } from "../lib";
 import { notificarVencimientosFijos } from "./notificarVencimientosFijos";
 import { notificarVencimientosDinamicos } from "./notificarVencimientosDinamicos";
 
+// Zona horaria de referencia
+const TIMEZONE = "America/Argentina/Buenos_Aires";
+
+/**
+ * Obtiene la fecha de negocio (medianoche en Argentina)
+ */
+function getNormalizedBusinessDate(): Date {
+  return moment().tz(TIMEZONE).startOf("day").toDate();
+}
+
 export async function processDailyComplete() {
+  const cronId = `CRON-${Date.now()}`; // Para rastrear logs
   const tiempoInicio = Date.now();
-  const fechaActual = new Date();
+  const fechaActual = getNormalizedBusinessDate();
   const mesActual = fechaActual.getMonth() + 1;
   const añoActual = fechaActual.getFullYear();
   const diaActual = fechaActual.getDate();
 
   logger.info(
-    `🌅 [DIARIO] Iniciando procesamiento completo: ${fechaActual.toLocaleDateString(
-      "es-AR"
-    )}`
+    `[${cronId}] 🌅 Iniciando procesamiento completo: ${fechaActual.toLocaleDateString("es-AR")}`
   );
 
-  // 📊 Contadores para el resumen
+  // 📊 Contadores
   let totalPagosVencidos = 0;
   let totalRecargosAplicados = 0;
   let totalTarifasActualizadas = 0;
   let totalPagosFuturosGenerados = 0;
-  let totalRecordatoriosEnviados = 0; // NEW: Contador para los recordatorios
+  let totalRecordatoriosEnviados = 0;
 
-  // 🔥 PASO 1: Enviar recordatorios (NEW)
-  logger.info("📢 [PASO EXTRA] Notificando vencimientos de tarifas fijas...");
-  const resultadoNotificaciones = await notificarVencimientosFijos(fechaActual);
+  // 🔥 PASO 1: Notificar vencimientos fijos
+  logger.info(`[${cronId}] 📢 Notificando vencimientos de tarifas fijas...`);
+  const resultadoNotificacionesFijas =
+    await notificarVencimientosFijos(fechaActual);
+  totalRecordatoriosEnviados +=
+    resultadoNotificacionesFijas.notificacionesEnviadas;
 
-  totalRecordatoriosEnviados += resultadoNotificaciones.notificacionesEnviadas;
   logger.info(
-    `📬 Recordatorios enviados: ${resultadoNotificaciones.notificacionesEnviadas}`
-  );
-  logger.info(
-    "📢 [PASO EXTRA] Notificando vencimientos de tarifas dinámicas..."
+    `[${cronId}] 📢 Notificando vencimientos de tarifas dinámicas...`
   );
   const resultadoNotificacionesDinamicas =
     await notificarVencimientosDinamicos(fechaActual);
   totalRecordatoriosEnviados +=
     resultadoNotificacionesDinamicas.notificacionesEnviadas;
-  logger.info(
-    `📬 Recordatorios dinámicos enviados: ${resultadoNotificacionesDinamicas.notificacionesEnviadas}`
-  );
 
-  // 🔥 PASO 2: Procesar vencimientos (configuración dinámica)
+  // 🔥 PASO 2: Procesar vencimientos dinámicos
   logger.info(
-    "🔍 [PASO 2] Procesando vencimientos de configuración dinámica..."
+    `[${cronId}] 🔍 Procesando vencimientos de configuración dinámica...`
   );
   const resultadoVencimientos =
     await procesarVencimientosDinamicos(fechaActual);
   totalPagosVencidos += resultadoVencimientos.pagosVencidos;
   totalRecargosAplicados += resultadoVencimientos.recargosAplicados;
 
-  // 🔥 PASO 3: Actualizar tarifas (configuración fija)
-  logger.info("💰 [PASO 3] Actualizando tarifas de configuración fija...");
+  // 🔥 PASO 3: Actualizar tarifas fijas
+  logger.info(`[${cronId}] 💰 Actualizando tarifas de configuración fija...`);
   const resultadoTarifas = await actualizarTarifasFijas(
     fechaActual,
     diaActual,
     mesActual,
-    añoActual
+    añoActual,
+    cronId
   );
   totalTarifasActualizadas += resultadoTarifas.tarifasActualizadas;
 
-  // 🔥 PASO 4: Generar pagos futuros (usuarios que ya pagaron)
+  // 🔥 PASO 4: Generar pagos futuros
   logger.info(
-    "📅 [PASO 4] Generando pagos futuros para usuarios que ya pagaron..."
+    `[${cronId}] 📅 Generando pagos futuros para usuarios que ya pagaron...`
   );
-
   const resultadoFuturos = await generarPagosFuturos(
     fechaActual,
     mesActual,
-    añoActual
+    añoActual,
+    cronId
   );
   totalPagosFuturosGenerados += resultadoFuturos.pagosGenerados;
 
   const tiempoEjecucion = Date.now() - tiempoInicio;
 
-  // 📊 RESUMEN FINAL
+  // 📊 RESUMEN
   logger.info(
-    `✅ [DIARIO] Procesamiento completo finalizado en ${tiempoEjecucion}ms:`
+    `[${cronId}] ✅ Procesamiento completo finalizado en ${tiempoEjecucion}ms:`
   );
-  logger.info(`  • Recordatorios enviados: ${totalRecordatoriosEnviados}`); // NEW: Resumen del paso
+  logger.info(`  • Recordatorios enviados: ${totalRecordatoriosEnviados}`);
   logger.info(`  • Pagos vencidos procesados: ${totalPagosVencidos}`);
   logger.info(`  • Recargos aplicados: ${totalRecargosAplicados}`);
   logger.info(`  • Tarifas actualizadas: ${totalTarifasActualizadas}`);
@@ -95,7 +103,7 @@ export async function processDailyComplete() {
     recargosAplicados: totalRecargosAplicados,
     tarifasActualizadas: totalTarifasActualizadas,
     pagosFuturosGenerados: totalPagosFuturosGenerados,
-    recordatoriosEnviados: totalRecordatoriosEnviados, // NEW: Devolver el contador en el objeto
+    recordatoriosEnviados: totalRecordatoriosEnviados,
     tiempoEjecucion,
     tipo: "diario_completo",
   };

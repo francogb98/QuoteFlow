@@ -13,10 +13,9 @@ export async function generarProximoPago(
   if (configuracion.tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO") {
     proximaFecha = calculateNextPaymentDate(pagoReferencia);
 
-    // 👇 monto desde la tarifa dinámica del usuario
+    // Siempre usar montoBase de la tarifa dinámica
     if (usuario.dinamicaTarifa) {
       monto = usuario.dinamicaTarifa.montoBase;
-      // acá podrías sumar lógica para diasGracia / recargo
     }
   } else {
     const rangos = configuracion.rangos;
@@ -25,19 +24,21 @@ export async function generarProximoPago(
     proximaFecha = new Date(fechaActual);
     proximaFecha.setMonth(proximaFecha.getMonth() + 1);
 
-    // 👇 si el usuario tiene rango asignado, usar ese
+    // Si el usuario tiene rango asignado, usar su monto base
     if (usuario.rangoTarifa) {
       proximaFecha.setDate(usuario.rangoTarifa.diaInicio);
       monto = usuario.rangoTarifa.monto;
     } else {
-      // fallback al primer rango
+      // fallback al primer rango definido en la config
       proximaFecha.setDate(rangos[0].diaInicio);
       monto = rangos[0].monto;
     }
   }
 
   if (!monto) {
-    console.warn(`⚠️ No se pudo calcular monto para usuario ${usuario.id}`);
+    console.warn(
+      `⚠️ No se pudo calcular monto base para usuario ${usuario.id}`
+    );
     return null;
   }
 
@@ -56,7 +57,7 @@ export async function generarProximoPago(
 
   if (pagoExistente) return null;
 
-  // Crear el nuevo pago
+  // Crear el nuevo pago siempre con monto base
   return await prisma.pago.create({
     data: {
       usuarioId: usuario.id,

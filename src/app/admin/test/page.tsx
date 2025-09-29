@@ -1,7 +1,10 @@
 "use client";
+import { revisarPagosUsuarios } from "@/01-actions/admin/test/controlarPagos";
 import {
   revertirVencidosDelMesSiguiente,
   pagosMontoCero,
+  simularCorreccionMontosPagosPendientes,
+  corregirMontosPagosPendientes,
 } from "@/01-actions/admin/test/editarPagos";
 import { processDailyComplete } from "@/lib/cron/01-payments/daily";
 
@@ -10,7 +13,7 @@ import { useMutation } from "@tanstack/react-query";
 export default function NamePage() {
   const fetch = useMutation({
     mutationFn: async () => {
-      const resp = await processDailyComplete();
+      const resp = await revisarPagosUsuarios();
       return resp;
     },
   });

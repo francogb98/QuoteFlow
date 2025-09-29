@@ -1,70 +1,22 @@
+"use server";
+
 import prisma from "@/lib/prisma";
 import { logger } from "../lib";
+import {
+  getNormalizedBusinessDate,
+  isDynamicPaymentOverdue,
+} from "../utils/dateUtils";
 
-/**
- * Calcula la fecha de vencimiento del mes actual según la fecha de inicio de membresía
- */
-function getMonthlyDueDate(fechaInicio: Date, fechaActual: Date): Date {
-  const year = fechaActual.getFullYear();
-  const month = fechaActual.getMonth();
-  const day = fechaInicio.getDate();
-
-  // Ver cuántos días tiene el mes actual
-  const lastDayOfMonth = new Date(year, month + 1, 0).getDate();
-  const dueDay = Math.min(day, lastDayOfMonth);
-
-  let dueDate = new Date(year, month, dueDay, 23, 59, 59, 999);
-
-  // Si la fecha aún no llegó en este mes (ej: hoy 10 y vencimiento es 15),
-  // mantenemos este mes. Si ya pasó, lo dejamos así.
-  // Si es el mismo día, se queda en este mes.
-  if (
-    dueDate.getTime() > fechaActual.getTime() &&
-    dueDate.getDate() !== fechaActual.getDate()
-  ) {
-    // Retroceder al mes anterior
-    const prevMonth = new Date(year, month - 1, 1);
-    const lastDayPrevMonth = new Date(year, month, 0).getDate();
-    const prevDueDay = Math.min(day, lastDayPrevMonth);
-    dueDate = new Date(
-      prevMonth.getFullYear(),
-      prevMonth.getMonth(),
-      prevDueDay,
-      23,
-      59,
-      59,
-      999
-    );
-  }
-
-  return dueDate;
-}
-
-/**
- * Verifica si el pago mensual está vencido considerando días de gracia
- */
-function isMonthlyPaymentOverdue(
-  fechaInicio: Date,
-  diasGracia: number,
-  fechaActual: Date
-): boolean {
-  const dueDate = getMonthlyDueDate(fechaInicio, fechaActual);
-  dueDate.setDate(dueDate.getDate() + diasGracia);
-  return fechaActual > dueDate;
-}
-
-/**
- * Procesa los pagos dinámicos mensuales
- */
-export async function procesarVencimientosDinamicos(fechaActual: Date) {
+export async function procesarVencimientosDinamicos(fecha?: Date) {
+  const fechaActual = fecha || getNormalizedBusinessDate();
   let pagosVencidos = 0;
   let recargosAplicados = 0;
 
-  // Traer todos los usuarios activos con configuración dinámica
+  // Traer pagos pendientes o vencidos del mes actual
   const pagosDinamicos = await prisma.pago.findMany({
     where: {
       estado: { in: ["PENDIENTE", "VENCIDO"] },
-      mes: fechaActual.getMonth() + 1, // en JS los meses van 0-11, por eso +1
+      mes: fechaActual.getMonth() + 1,
       año: fechaActual.getFullYear(),
       usuario: {
         estado: "ACTIVO",
@@ -74,11 +26,9 @@ export async function procesarVencimientosDinamicos(fechaActual: Date) {
       },
     },
     include: {
-      usuario: { include: { dinamicaTarifa: true } }, // incluimos config dinámica específica del usuario
+      usuario: { include: { dinamicaTarifa: true } },
     },
   });
-
-  console.log({ pagosDinamicos });
 
   logger.info(
     `🔍 Encontrados ${pagosDinamicos.length} pagos dinámicos para verificar vencimiento`
@@ -92,7 +42,7 @@ export async function procesarVencimientosDinamicos(fechaActual: Date) {
     const diasGracia = config.diasGracia || 0;
     const montoRecargo = config.montoRecargo || 0;
 
-    const vencido = isMonthlyPaymentOverdue(
+    const vencido = isDynamicPaymentOverdue(
       usuario.fechaInicioMembresia,
       diasGracia,
       fechaActual
@@ -118,16 +68,13 @@ export async function procesarVencimientosDinamicos(fechaActual: Date) {
       );
     }
 
-    // CASO 2: aplique el recargo de todas maneras si ya está vencido
+    // CASO 2: Pago ya vencido → aplicar recargo si corresponde
     if (pago.estado === "VENCIDO" && montoRecargo > 0) {
       await prisma.pago.update({
         where: { id: pago.id },
-        data: {
-          monto: montoRecargo,
-        },
+        data: { monto: montoRecargo },
       });
       recargosAplicados++;
-
       logger.debug(
         `⚡ Recargo aplicado a pago ya vencido: Usuario ${usuario.nombre} - Período ${pago.periodo}`
       );
