@@ -62,7 +62,7 @@ export async function getAnalytics() {
   let fechaFinal = new Date();
   if (pagos.length > 0) {
     const ultimoPago = pagos.reduce(
-      (max: (typeof pagos)[0], p: any) =>
+      (max: (typeof pagos)[0], p: (typeof pagos)[0]) =>
         p.año > max.año || (p.año === max.año && p.mes > max.mes) ? p : max,
       pagos[0]
     );
@@ -71,8 +71,10 @@ export async function getAnalytics() {
 
   const meses = generarMeses(fechaInicio, fechaFinal);
 
-  const pagosPorMes = meses.map(({ mes, nombreMes, año }) => {
-    const pagosDelMes = pagos.filter((p) => p.mes === mes && p.año === año);
+  const pagosPorMes = meses.map(({ mes, nombreMes, año }: any) => {
+    const pagosDelMes = pagos.filter(
+      (p: (typeof pagos)[0]) => p.mes === mes && p.año === año
+    );
 
     return {
       mes,
@@ -82,24 +84,34 @@ export async function getAnalytics() {
       pagosPagados: pagosDelMes.filter((p) => p.estado === "PAGADO").length,
       pagosPendientes: pagosDelMes.filter((p) => p.estado === "PENDIENTE")
         .length,
-      pagosVencidos: pagosDelMes.filter((p) => p.estado === "VENCIDO").length,
+      pagosVencidos: pagosDelMes.filter(
+        (p: (typeof pagos)[0]) => p.estado === "VENCIDO"
+      ).length,
       pagosRechazados: pagosDelMes.filter((p) => p.estado === "RECHAZADO")
         .length,
       montoTotal: pagosDelMes
-        .filter((p) => p.estado === "PAGADO")
-        .reduce((sum, p) => sum + p.monto, 0),
+        .filter((p: (typeof pagos)[0]) => p.estado === "PAGADO")
+        .reduce((sum: number, p: (typeof pagos)[0]) => sum + p.monto, 0),
     };
   });
 
   // Calcular totales históricos
   const totalPagos = pagos.length;
-  const totalPagados = pagos.filter((p) => p.estado === "PAGADO").length;
-  const totalPendientes = pagos.filter((p) => p.estado === "PENDIENTE").length;
-  const totalVencidos = pagos.filter((p) => p.estado === "VENCIDO").length;
-  const totalRechazados = pagos.filter((p) => p.estado === "RECHAZADO").length;
+  const totalPagados = pagos.filter(
+    (p: (typeof pagos)[0]) => p.estado === "PAGADO"
+  ).length;
+  const totalPendientes = pagos.filter(
+    (p: (typeof pagos)[0]) => p.estado === "PENDIENTE"
+  ).length;
+  const totalVencidos = pagos.filter(
+    (p: (typeof pagos)[0]) => p.estado === "VENCIDO"
+  ).length;
+  const totalRechazados = pagos.filter(
+    (p: (typeof pagos)[0]) => p.estado === "RECHAZADO"
+  ).length;
   const totalMonto = pagos
-    .filter((p) => p.estado === "PAGADO")
-    .reduce((sum, p) => sum + p.monto, 0);
+    .filter((p: (typeof pagos)[0]) => p.estado === "PAGADO")
+    .reduce((sum: number, p: (typeof pagos)[0]) => sum + p.monto, 0);
 
   return {
     pagosPorMes,
