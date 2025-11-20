@@ -62,7 +62,7 @@ export async function getAnalytics() {
   let fechaFinal = new Date();
   if (pagos.length > 0) {
     const ultimoPago = pagos.reduce(
-      (max: (typeof pagos)[0], p) =>
+      (max: (typeof pagos)[0], p: any) =>
         p.año > max.año || (p.año === max.año && p.mes > max.mes) ? p : max,
       pagos[0]
     );
