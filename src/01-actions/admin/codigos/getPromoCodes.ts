@@ -1,10 +1,9 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/auth.config";
-import type { CodigoPromocional } from "@prisma/client";
 
 export const getPromoCodes = async (): Promise<{
-  promoCodes: CodigoPromocional[];
+  promoCodes: any;
   ok: boolean;
 }> => {
   try {
