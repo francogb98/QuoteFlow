@@ -81,14 +81,18 @@ export async function getAnalytics() {
       nombreMes,
       año,
       totalPagos: pagosDelMes.length,
-      pagosPagados: pagosDelMes.filter((p) => p.estado === "PAGADO").length,
-      pagosPendientes: pagosDelMes.filter((p) => p.estado === "PENDIENTE")
-        .length,
+      pagosPagados: pagosDelMes.filter(
+        (p: (typeof pagos)[0]) => p.estado === "PAGADO"
+      ).length,
+      pagosPendientes: pagosDelMes.filter(
+        (p: (typeof pagos)[0]) => p.estado === "PENDIENTE"
+      ).length,
       pagosVencidos: pagosDelMes.filter(
         (p: (typeof pagos)[0]) => p.estado === "VENCIDO"
       ).length,
-      pagosRechazados: pagosDelMes.filter((p) => p.estado === "RECHAZADO")
-        .length,
+      pagosRechazados: pagosDelMes.filter(
+        (p: (typeof pagos)[0]) => p.estado === "RECHAZADO"
+      ).length,
       montoTotal: pagosDelMes
         .filter((p: (typeof pagos)[0]) => p.estado === "PAGADO")
         .reduce((sum: number, p: (typeof pagos)[0]) => sum + p.monto, 0),
