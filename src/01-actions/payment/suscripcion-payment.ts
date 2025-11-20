@@ -9,7 +9,7 @@ const config = new MercadoPagoConfig({
 
 interface HandleSuscriberParams {
   empresaId: string;
-  adminEmail: string; // Asumo que el documento es el "email" para MP, o debes pasar un email real
+  adminEmail: string;
   transactionAmount: number;
   planName: string;
   frecuenciaPago: FrecuenciaPago;
@@ -19,6 +19,7 @@ interface HandleSuscriberParams {
 interface SuscriberResult {
   redirectUrl?: string;
   error?: string;
+  preapprovalId?: string;
 }
 
 export const handleSuscriber = async ({
@@ -30,17 +31,38 @@ export const handleSuscriber = async ({
   adminEmail,
 }: HandleSuscriberParams): Promise<SuscriberResult> => {
   try {
+    if (
+      !empresaId ||
+      !adminEmail ||
+      !transactionAmount ||
+      transactionAmount <= 0
+    ) {
+      throw new Error("Parámetros inválidos para la suscripción");
+    }
+
     const preApproval = new PreApproval(config);
 
-    const mpFrequencyType =
-      frecuenciaPago === FrecuenciaPago.MENSUAL ? "months" : "years";
-    const mpFrequency = 1;
+    // Mercado Pago acepta 'days' o 'months' como frequency_type.
+    // Para suscripciones anuales usemos 'months' con frequency = 12.
+    let mpFrequencyType: "days" | "months" = "months";
+    let mpFrequency = 1;
+    if (frecuenciaPago === FrecuenciaPago.MENSUAL) {
+      mpFrequencyType = "months";
+      mpFrequency = 1;
+    } else if (frecuenciaPago === FrecuenciaPago.ANUAL) {
+      mpFrequencyType = "months";
+      mpFrequency = 12;
+    } else {
+      // fallback a mensual
+      mpFrequencyType = "months";
+      mpFrequency = 1;
+    }
 
     const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
 
     const successUrl = `${baseUrl}/auth/success?preapproval_created=true&empresaId=${empresaId}&planType=${planTipo}&frequency=${frecuenciaPago}`;
 
-    const newSuscriber = await preApproval.create({
+    const newSuscriber: any = await preApproval.create({
       body: {
         payer_email: adminEmail,
         auto_recurring: {
@@ -56,10 +78,18 @@ export const handleSuscriber = async ({
       },
     });
 
-    return { redirectUrl: newSuscriber.init_point };
+    // Intentamos obtener un id de preaprobación si viene en la respuesta
+    const preapprovalId =
+      newSuscriber.id ||
+      newSuscriber.preapproval_id ||
+      newSuscriber?.response?.id;
+
+    return {
+      redirectUrl: newSuscriber.init_point,
+      ...(preapprovalId ? { preapprovalId } : {}),
+    } as any;
   } catch (error) {
     console.error("Error al iniciar suscripción de Mercado Pago:", error);
-    // Devolvemos el error en un formato amigable para el cliente
     return {
       error: "Error al procesar el pago. Por favor, inténtalo de nuevo.",
     };

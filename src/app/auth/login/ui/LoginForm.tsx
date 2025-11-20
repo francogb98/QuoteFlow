@@ -7,6 +7,7 @@ import { useForm } from "react-hook-form";
 import { Loader2, AlertCircle, CheckCircle, EyeOff, Eye } from "lucide-react";
 import { login } from "@/01-actions/auth/login";
 import { Button } from "@/components/ui/button";
+import ForgotPasswordButton from "@/components/auth/ForgotPasswordButton";
 
 interface LoginFormData {
   documento: string;
@@ -183,6 +184,8 @@ export const LoginForm = () => {
           <span className="px-4 bg-white/80 text-gray-500 rounded-full">O</span>
         </div>
       </div>
+
+      <ForgotPasswordButton />
 
       <Button
         variant="outline"

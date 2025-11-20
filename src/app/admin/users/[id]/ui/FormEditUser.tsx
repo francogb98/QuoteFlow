@@ -4,7 +4,7 @@ import { editUser } from "@/actions/users";
 import { getUser } from "@/actions/users/admin/getUser";
 
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { TipoConfiguracionTarifa } from "@prisma/client";
 import {
@@ -17,18 +17,34 @@ import {
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const FormEditUser = ({ id, tarifasDisponibles }: any) => {
-  const [formData, setFormData] = useState({});
+  const [formData, setFormData] = useState<any>({});
   const queryClient = useQueryClient();
 
-  const { data, isPending, isError, error } = useQuery({
+  const { data, isLoading, isError, error } = useQuery({
     queryKey: ["user", id],
     queryFn: async () => {
       const userData = await getUser(id);
-      setFormData(userData);
       return userData;
     },
     enabled: !!id,
   });
+
+  // Sincronizar formData cuando cambia el data (por cambio de id o refetch)
+  useEffect(() => {
+    if (!data) return;
+    // Clonar y normalizar fechas a ISO (yyyy-mm-dd) para inputs tipo date si existen
+    const clone = JSON.parse(JSON.stringify(data));
+    if (clone.fechaInicioMembresia) {
+      try {
+        clone.fechaInicioMembresia = new Date(clone.fechaInicioMembresia)
+          .toISOString()
+          .slice(0, 10);
+      } catch {
+        // dejar tal cual si no es convertible
+      }
+    }
+    setFormData(clone);
+  }, [data, id]);
 
   const userMutation = useMutation({
     mutationFn: editUser,
@@ -36,39 +52,74 @@ export const FormEditUser = ({ id, tarifasDisponibles }: any) => {
       toast.success("Usuario actualizado correctamente");
       queryClient.invalidateQueries({ queryKey: ["user", id] });
     },
-    onError: (error) => {
-      toast.error(error.message || "Error al actualizar usuario");
+    onError: (error: any) => {
+      toast.error(error?.message || "Error al actualizar usuario");
     },
   });
 
   const handleChange = (e: any) => {
-    const { name, value } = e.target;
+    const { name, value, type, checked } = e.target;
+    let parsedValue: any = value;
+
+    if (type === "checkbox") parsedValue = checked;
+    else if (type === "number") parsedValue = value === "" ? "" : Number(value);
+
+    // Manejo especial para la selección de tarifa
     if (name === "tarifa") {
+      // Se asume que el value trae el id de la tarifa seleccionada
+      if (
+        data?.configuracionTarifa?.tipoConfiguracion ===
+        TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO
+      ) {
+        setFormData((prev: any) => ({
+          ...prev,
+          dinamicaTarifaId: parsedValue || null,
+          rangoTarifaId: null,
+          nombreTarifaAsignada:
+            tarifasDisponibles?.find((t: any) => t.id === parsedValue)
+              ?.nombre || null,
+        }));
+        return;
+      } else {
+        setFormData((prev: any) => ({
+          ...prev,
+          rangoTarifaId: parsedValue || null,
+          dinamicaTarifaId: null,
+          nombreTarifaAsignada:
+            tarifasDisponibles?.find((t: any) => t.id === parsedValue)
+              ?.nombre || null,
+        }));
+        return;
+      }
     }
-    setFormData((prevData) => ({
+
+    setFormData((prevData: any) => ({
       ...prevData,
-      [name]: value,
+      [name]: parsedValue,
     }));
   };
 
   const handleSubmit = (e: any) => {
     e.preventDefault();
-    if (formData) {
-      const dataToSubmit = {
-        ...formData,
-        id: id, // Include the user ID required by the server schema
-      };
-      toast.info("Actualizando usuario...");
-      //@ts-ignore
-      userMutation.mutate(dataToSubmit);
+    if (!formData) return;
+
+    // Preparar payload: convertir strings de fecha a ISO completo si hace falta
+    const payload = { ...formData, id };
+    if (payload.fechaInicioMembresia) {
+      // si viene en formato yyyy-mm-dd, convertir a ISO completo
+      const d = new Date(payload.fechaInicioMembresia);
+      if (!isNaN(d.getTime())) payload.fechaInicioMembresia = d.toISOString();
     }
+
+    toast.info("Actualizando usuario...");
+    userMutation.mutate(payload);
   };
 
   const isDynamicTariff =
     data?.configuracionTarifa?.tipoConfiguracion ===
     TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
 
-  if (isPending) return <LoadingState />;
+  if (isLoading) return <LoadingState />;
   if (isError) return <ErrorState error={error} />;
 
   const tarifaActual = data?.dinamicaTarifa?.id || data?.rangoTarifa?.id;
@@ -112,6 +163,7 @@ export const FormEditUser = ({ id, tarifasDisponibles }: any) => {
             //@ts-ignore
             pagos={data.pagos}
             id={id}
+            //@ts-ignore
             configuracionTarifa={data.configuracionTarifa}
             //@ts-ignore
             fechaInicioMembresia={data.fechaInicioMembresia}

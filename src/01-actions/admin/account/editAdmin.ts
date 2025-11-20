@@ -1,17 +1,22 @@
-// 01-actions/admin/account/editAdmin.ts
 "use server";
+
 import prisma from "@/lib/prisma";
 import { hash } from "bcryptjs";
 import { z } from "zod";
 import { revalidatePath } from "next/cache";
 import { ActionResponse, handleActionError } from "@/lib/utils/action-errors";
+import { auth } from "@/*";
 
 const editAdminSchema = z.object({
-  id: z.string(),
-  nombre: z.string().min(1, "El nombre es obligatorio").max(25),
-  email: z.string().email("Correo inválido"),
-  documento: z.string().min(1, "El documento es obligatorio").max(10),
-  telefono: z.string().min(1, "El teléfono es obligatorio").max(15),
+  id: z.string().min(1, "El ID es obligatorio").optional(), // opcional, se obtiene de sesión
+  nombre: z.string().min(1, "El nombre es obligatorio").max(25).optional(),
+  email: z.string().email("Correo inválido").optional(),
+  documento: z
+    .string()
+    .min(1, "El documento es obligatorio")
+    .max(10)
+    .optional(),
+  telefono: z.string().min(1, "El teléfono es obligatorio").max(15).optional(),
   password: z
     .string()
     .optional()
@@ -34,8 +39,15 @@ export async function editAdmin(
   formData: z.infer<typeof editAdminSchema>
 ): Promise<ActionResponse<any>> {
   try {
-    const validatedData = editAdminSchema.parse(formData);
-    const { id, password, ...rest } = validatedData;
+    // Si id no viene, obtenerlo de sesión
+    let { id, password, ...rest } = formData;
+    if (!id) {
+      const session = await auth(); // adaptá según tu setup (ej: auth() para next-auth v5)
+      id = session?.user?.id;
+      if (!id) {
+        return { ok: false, error: "No autenticado o sin ID en sesión." };
+      }
+    }
 
     // Buscar el admin por id
     const currentAdmin = await prisma.administrador.findUnique({

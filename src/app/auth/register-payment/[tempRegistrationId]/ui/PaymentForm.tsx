@@ -1,20 +1,36 @@
 "use client";
-import { handleSuscriber } from "@/01-actions/payment/suscripcion.payment";
 import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
-import { useState } from "react";
+import { useState, useTransition } from "react";
+import { useRouter } from "next/navigation";
+import { handleSuscriber } from "@/01-actions/payment/suscripcion-payment";
+
+interface PaymentFormProps {
+  transactionAmount: number;
+  selectedPlan: {
+    id: string;
+    name: string;
+    price: string;
+    period: string;
+    features: string[];
+    originalPrice?: string;
+  };
+  tempRegistration: {
+    id: string;
+    email: string;
+    nombreEmpresa: string;
+    planTipo: string;
+    frecuenciaPago: string;
+  };
+}
 
 export function PaymentForm({
   transactionAmount,
   selectedPlan,
   tempRegistration,
-}: {
-  tempRegistrationId: string;
-  transactionAmount: number;
-  selectedPlan: any;
-  tempRegistration: any;
-}) {
-  "use client";
+}: PaymentFormProps) {
+  const router = useRouter();
+  const [isPending, startTransition] = useTransition();
 
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -26,7 +42,11 @@ export function PaymentForm({
     setSuccess(false);
 
     try {
-      if (transactionAmount === undefined || isNaN(transactionAmount)) {
+      if (
+        typeof transactionAmount !== "number" ||
+        transactionAmount <= 0 ||
+        isNaN(transactionAmount)
+      ) {
         throw new Error("Monto de transacción inválido.");
       }
 
@@ -35,17 +55,16 @@ export function PaymentForm({
         adminEmail: tempRegistration.email,
         transactionAmount: transactionAmount,
         planName: selectedPlan.name,
-        frecuenciaPago: tempRegistration.frecuenciaPago,
-        planTipo: tempRegistration.planTipo,
+        frecuenciaPago: tempRegistration.frecuenciaPago as any,
+        planTipo: tempRegistration.planTipo as any,
       });
 
       if (suscriberResponse.redirectUrl) {
         setSuccess(true);
 
-        // Pequeña pausa para mostrar el éxito antes de redirigir
-        setTimeout(() => {
+        startTransition(() => {
           window.location.href = suscriberResponse.redirectUrl!;
-        }, 1500);
+        });
       } else {
         setError(suscriberResponse.error || "Error al iniciar el pago.");
       }
@@ -86,7 +105,7 @@ export function PaymentForm({
 
       <Button
         onClick={handlePayment}
-        disabled={isLoading || success}
+        disabled={isLoading || success || isPending}
         className={`w-full py-4 rounded-xl font-medium shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100 text-lg ${
           success
             ? "bg-green-600 hover:bg-green-700"

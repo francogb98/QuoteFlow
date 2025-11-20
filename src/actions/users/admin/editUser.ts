@@ -15,22 +15,47 @@ const editUserSchema = z.object({
   id: z.string().min(1, "ID de usuario es obligatorio"),
   nombre: z.string().min(1, "El nombre es obligatorio").max(50),
   apellido: z.string().min(1, "El apellido es obligatorio").max(50),
-  documento: z.string().min(1, "El documento es obligatorio").max(10),
+  documento: z.preprocess(
+    (val) => (typeof val === "string" ? val.trim() : val),
+    z.string().min(1, "El documento es obligatorio").max(20)
+  ),
   telefono: z.string().optional().nullable(),
   estaActivo: z.boolean(),
   estado: z.string().min(1, "El estado es obligatorio"),
   email: z.email("Correo inválido").optional().nullable(),
   edad: z
     .preprocess(
-      (val) => Number(val),
-      z.number().int().positive("La edad debe ser un número positivo")
+      (val) => (val === "" || val == null ? null : Number(val)),
+      z
+        .number()
+        .int()
+        .positive("La edad debe ser un número positivo")
+        .nullable()
     )
     .optional()
     .nullable(),
-  tarifa: z.string().optional().nullable(), // For tariff ID
+  tarifa: z.string().optional().nullable(),
   fechaInicioMembresia: z.preprocess(
-    (val) => (val instanceof Date ? val.toISOString().split("T")[0] : val),
-    z.string().optional().nullable()
+    (val) => {
+      // Normalize many possible inputs to either "YYYY-MM-DD" or null
+      if (val == null) return null;
+      if (typeof val === "string") {
+        const s = val.trim();
+        if (s === "") return null;
+        // If value contains time, keep date part
+        const datePart = s.includes("T") ? s.split("T")[0] : s;
+        return datePart;
+      }
+      if (val instanceof Date) {
+        if (isNaN(val.getTime())) return null;
+        return val.toISOString().split("T")[0];
+      }
+      return null;
+    },
+    z
+      .string()
+      .regex(/^\d{4}-\d{2}-\d{2}$/, "Fecha inválida, espere YYYY-MM-DD")
+      .nullable()
   ),
 });
 
@@ -51,18 +76,16 @@ export const editUser = async (
     // Lógica para manejar la fecha en horario de Argentina
     let fechaInicioMembresia: Date | null = null;
     if (validatedContent.fechaInicioMembresia) {
-      const [year, month, day] =
-        validatedContent.fechaInicioMembresia.split("-");
-      // Creamos un objeto Date que represente la medianoche de la fecha en el huso horario de Argentina
-      // El "3" en la hora se usa para evitar problemas con los cambios de horario (daylight saving)
-      fechaInicioMembresia = new Date(
-        Number(year),
-        Number(month) - 1,
-        Number(day),
-        3,
-        0,
-        0
-      );
+      const dateStr = validatedContent.fechaInicioMembresia;
+      // dateStr tiene formato YYYY-MM-DD garantizado por Zod
+      const [year, month, day] = dateStr.split("-").map((s) => Number(s));
+      const candidate = new Date(year, month - 1, day, 3, 0, 0);
+      if (!isNaN(candidate.getTime())) {
+        fechaInicioMembresia = candidate;
+      } else {
+        // fallback: null en vez de pasar Invalid Date a Prisma
+        fechaInicioMembresia = null;
+      }
     }
 
     const dataToEdit = {
@@ -74,7 +97,7 @@ export const editUser = async (
       estado: validatedContent.estado as Estado,
       email: validatedContent.email,
       edad: validatedContent.edad,
-      fechaInicioMembresia: fechaInicioMembresia, // Usa la fecha ajustada
+      fechaInicioMembresia: fechaInicioMembresia ?? null,
     };
 
     // Verificar documento único (excluyendo al usuario actual)
@@ -153,7 +176,7 @@ export const editUser = async (
       },
       data: {
         ...dataToEdit,
-        ...tariffUpdateData, // Include tariff updates
+        ...tariffUpdateData,
       },
     });
 

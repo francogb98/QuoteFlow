@@ -25,6 +25,7 @@ import { ShareCompanyLink } from "./ui/SharedCompanyLink";
 // import { InteractiveTour } from "@/01-components/admin/tour/interactive-tour";
 // import { useTour } from "@/01-components/admin/tour/use-tour";
 import { Rol } from "@prisma/client";
+import { SubscriptionPage } from "@/01-components/admin/suscripcion/SuscripcionPage";
 
 interface PruebaTourProps {
   user?: {
@@ -70,6 +71,13 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
         </div>
 
         {/* Feature Cards */}
+        {/* Embed SubscriptionPage here for admins (not professors) - moved above cards */}
+        {/* {user?.rol !== "PROFESOR" && (
+          <div className="mb-6">
+            <SubscriptionPage />
+          </div>
+        )} */}
+
         <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">
           {user?.rol !== "PROFESOR" && (
             <>
@@ -175,6 +183,23 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
               </CardHeader>
             </Card>
           </Link>
+          <Link href="/admin/settings">
+            <Card
+              data-tour="settings"
+              className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+            >
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                  <Settings className="w-5 h-5 text-emerald-600" />
+                  Mis Datos
+                </CardTitle>
+                <CardDescription className="text-[9px] sm:text-xs">
+                  Gestiona tus datos personales y de cuenta.
+                </CardDescription>
+              </CardHeader>
+            </Card>
+          </Link>
+
           {user?.rol === "SUPER_ADMIN" && (
             <>
               <Link href="/admin/test">
@@ -209,24 +234,47 @@ export default function PruebaTour({ user, link }: PruebaTourProps) {
                   </CardHeader>
                 </Card>
               </Link>
+              <Link href="/admin/fix-payments">
+                <Card
+                  data-tour="settings"
+                  className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                      <Settings className="w-5 h-5 text-emerald-600" />
+                      corregidale
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+              </Link>
+              <Link href="/admin/diagrama">
+                <Card
+                  data-tour="settings"
+                  className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                      <Settings className="w-5 h-5 text-emerald-600" />
+                      Diagramas
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+              </Link>
+              <Link href="/admin/users/report">
+                <Card
+                  data-tour="settings"
+                  className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
+                >
+                  <CardHeader>
+                    <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
+                      <Settings className="w-5 h-5 text-emerald-600" />
+                      Reporte Usuarios
+                    </CardTitle>
+                  </CardHeader>
+                </Card>
+              </Link>
             </>
           )}
-          <Link href="/admin/settings">
-            <Card
-              data-tour="settings"
-              className="border-emerald-200 hover:border-purple-300 bg-gradient-to-br from-emerald-50/50 to-purple-50/50 hover:shadow-lg transition-all duration-300"
-            >
-              <CardHeader>
-                <CardTitle className="flex items-center gap-2 text-[10px] sm:text-[15px]">
-                  <Settings className="w-5 h-5 text-emerald-600" />
-                  Mis Datos
-                </CardTitle>
-                <CardDescription className="text-[9px] sm:text-xs">
-                  Gestiona tus datos personales y de cuenta.
-                </CardDescription>
-              </CardHeader>
-            </Card>
-          </Link>
         </div>
       </main>
     </div>

@@ -1,6 +1,7 @@
 "use server";
 import { auth } from "@/auth.config";
 import prisma from "@/lib/prisma";
+import { EstadoEmpresa } from "@prisma/client";
 
 export const cancelSubscription = async (): Promise<{
   ok: boolean;
@@ -14,13 +15,35 @@ export const cancelSubscription = async (): Promise<{
       return { ok: false, error: "No autorizado." };
     }
 
-    // 1. (Opcional) Llamar a la API de Mercado Pago para cancelar la pre-aprobación
-    // Esto es crucial para que no se sigan generando cobros.
-    // Necesitarías el ID de la pre-aprobación que se generó al crear la suscripción
-    // const preApprovalId = "..."
-    // const mpResponse = await mpApi.cancelPreApproval(preApprovalId);
+    // 1. Buscar la empresa y su preapproval id
+    const empresa = await prisma.empresa.findFirst({
+      where: {
+        administradores: {
+          some: { id: adminId },
+        },
+      },
+      select: { id: true, mercadoPagoPreApprovalId: true },
+    });
 
-    // 2. Actualizar el estado de la empresa en tu base de datos
+    // 2. Intentar cancelar en Mercado Pago si existe preapproval id
+    if (empresa?.mercadoPagoPreApprovalId) {
+      try {
+        await fetch(
+          `https://api.mercadopago.com/preapproval/${empresa.mercadoPagoPreApprovalId}`,
+          {
+            method: "DELETE",
+            headers: {
+              Authorization: `Bearer ${process.env.MERCADO_PAGO_ACCESS_TOKEN}`,
+              "Content-Type": "application/json",
+            },
+          }
+        );
+      } catch (mpErr) {
+        console.warn("No se pudo cancelar la preaprobación en MP:", mpErr);
+      }
+    }
+
+    // 3. Actualizar el estado de la empresa en la BD
     await prisma.empresa.updateMany({
       where: {
         administradores: {
@@ -30,9 +53,8 @@ export const cancelSubscription = async (): Promise<{
         },
       },
       data: {
-        estaActiva: false, // La empresa deja de estar activa
-        estadoPago: "SUSPENDIDO_MANUALMENTE", // Se marca como suspendida manualmente
-        // Aquí podrías agregar una fecha de cancelación si tuvieras el campo
+        estaActiva: false,
+        estadoPago: EstadoEmpresa.SUSPENDIDO_MANUALMENTE,
       },
     });
 

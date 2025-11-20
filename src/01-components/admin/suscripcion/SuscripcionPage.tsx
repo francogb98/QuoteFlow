@@ -6,9 +6,165 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 import { plans, PlanOption } from "@/lib/data/plansData";
 import { toast } from "sonner";
-import { Gift, Zap, Crown, CheckCircle2 } from "lucide-react";
+import {
+  Gift,
+  Zap,
+  Crown,
+  CheckCircle2,
+  AlertCircle,
+  Clock,
+} from "lucide-react";
 import { getSubscriptionInfo } from "@/01-actions/admin/suscripcion/getInfoSuscripcion";
 import { updateSubscription } from "@/01-actions/admin/suscripcion/updateSuscripcion";
+import { cancelSubscription } from "@/01-actions/admin/suscripcion/cancelSuscripcion";
+
+// Componente para mostrar el estado de la suscripción con barra de progreso
+const StatusCard = ({ empresa, onCancel, isCancelling }: any) => {
+  const isTrial = empresa?.esCuentaPrueba;
+  const diasRestantes = empresa?.diasRestantesPrueba ?? 0;
+  const estaProximoAVencer = empresa?.estaProximoAVencer;
+
+  if (isTrial) {
+    const totalDiasPrueba = 60; // Ajusta según tu duración de prueba (por defecto 2 meses = ~60 días)
+    const diasUsados = totalDiasPrueba - diasRestantes;
+    const porcentajeUsado = Math.min((diasUsados / totalDiasPrueba) * 100, 100);
+
+    return (
+      <div className="mb-10 max-w-2xl mx-auto bg-gradient-to-r from-blue-50 to-blue-100 rounded-xl shadow-lg p-8 border-l-4 border-blue-600">
+        <div className="flex items-start justify-between mb-4">
+          <div>
+            <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+              <Gift size={28} className="text-blue-600" />
+              Plan de Prueba Activo
+            </h2>
+            <p className="text-sm text-gray-600 mt-1">
+              Acceso completo durante tu período de evaluación
+            </p>
+          </div>
+        </div>
+
+        {/* Barra de progreso */}
+        <div className="my-6">
+          <div className="flex justify-between items-center mb-2">
+            <span className="text-sm font-semibold text-gray-700">
+              Tiempo restante:
+            </span>
+            <span className="text-2xl font-bold text-blue-600 flex items-center gap-1">
+              <Clock size={20} />
+              {diasRestantes} día{diasRestantes !== 1 ? "s" : ""}
+            </span>
+          </div>
+          <div className="w-full bg-gray-300 rounded-full h-3 overflow-hidden">
+            <div
+              className="bg-gradient-to-r from-blue-500 to-blue-600 h-full rounded-full transition-all duration-500"
+              style={{ width: `${porcentajeUsado}%` }}
+            ></div>
+          </div>
+          <p className="text-xs text-gray-600 mt-1">
+            {diasUsados} de {totalDiasPrueba} días usados
+          </p>
+        </div>
+
+        {/* Fecha de finalización */}
+        {empresa?.fechaFinPrueba && (
+          <p className="text-sm text-gray-700">
+            Tu período de prueba finaliza el{" "}
+            <span className="font-bold text-blue-600">
+              {format(
+                new Date(empresa.fechaFinPrueba),
+                "EEEE, dd 'de' MMMM 'de' yyyy",
+                { locale: es }
+              )}
+            </span>
+          </p>
+        )}
+
+        <p className="text-sm text-gray-700 mt-4 italic">
+          💡 Selecciona un plan de abajo para suscribirte cuando estés listo.
+          Puedes cambiar o upgrade tu plan incluso antes de que venza la prueba.
+        </p>
+      </div>
+    );
+  }
+
+  // Estado de suscrito
+  return (
+    <div
+      className={`mb-10 max-w-2xl mx-auto rounded-xl shadow-lg p-8 border-l-4 transition-all ${
+        estaProximoAVencer
+          ? "bg-gradient-to-r from-orange-50 to-orange-100 border-orange-600"
+          : "bg-gradient-to-r from-green-50 to-green-100 border-green-600"
+      }`}
+    >
+      <div className="flex items-start justify-between mb-4">
+        <div>
+          <h2 className="text-2xl font-bold text-gray-800 flex items-center gap-2">
+            {estaProximoAVencer ? (
+              <AlertCircle size={28} className="text-orange-600" />
+            ) : (
+              <CheckCircle2 size={28} className="text-green-600" />
+            )}
+            {estaProximoAVencer ? "Próximo a Vencer" : "Plan Activo"}
+          </h2>
+          <p className="text-sm text-gray-600 mt-1">
+            {empresa?.planTipo} • {empresa?.frecuenciaPago}
+          </p>
+        </div>
+      </div>
+
+      {/* Información de pago */}
+      <div className="grid grid-cols-2 gap-4 my-6">
+        {empresa?.fechaUltimoPago && (
+          <div className="bg-white rounded-lg p-4">
+            <p className="text-xs text-gray-600 uppercase tracking-wide">
+              Último pago
+            </p>
+            <p className="text-lg font-bold text-gray-800">
+              {format(new Date(empresa.fechaUltimoPago), "dd MMM yyyy", {
+                locale: es,
+              })}
+            </p>
+          </div>
+        )}
+        {empresa?.fechaProximoVencimiento && (
+          <div
+            className={`rounded-lg p-4 ${estaProximoAVencer ? "bg-orange-100" : "bg-white"}`}
+          >
+            <p className="text-xs text-gray-600 uppercase tracking-wide">
+              Próximo vencimiento
+            </p>
+            <p
+              className={`text-lg font-bold ${estaProximoAVencer ? "text-orange-600" : "text-gray-800"}`}
+            >
+              {format(
+                new Date(empresa.fechaProximoVencimiento),
+                "dd MMM yyyy",
+                { locale: es }
+              )}
+            </p>
+          </div>
+        )}
+      </div>
+
+      {estaProximoAVencer && (
+        <p className="text-sm text-orange-700 bg-orange-50 rounded-lg p-3 border border-orange-200">
+          ⚠️ Tu suscripción vence en los próximos 7 días. Renuévala para
+          mantener el acceso sin interrupciones.
+        </p>
+      )}
+      {/* Botones de acción */}
+      <div className="mt-4 flex gap-3">
+        <button
+          onClick={() => onCancel && onCancel()}
+          disabled={isCancelling}
+          className="px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 disabled:opacity-60"
+        >
+          {isCancelling ? "Cancelando..." : "Cancelar suscripción"}
+        </button>
+      </div>
+    </div>
+  );
+};
 
 // Componente para la tarjeta de cada plan
 const PlanCard = ({
@@ -113,8 +269,31 @@ export const SubscriptionPage = () => {
     },
   });
 
+  // Mutación para cancelar la suscripción
+  const { mutate: mutateCancel, isPending: isCancelPending } = useMutation({
+    mutationFn: cancelSubscription,
+    onSuccess: (res) => {
+      if (res.ok) {
+        toast.success("Suscripción cancelada correctamente.");
+        queryClient.invalidateQueries({ queryKey: ["subscription-info"] });
+      } else {
+        toast.error(res.error || "No se pudo cancelar la suscripción.");
+      }
+    },
+    onError: (err) => {
+      console.error(err);
+      toast.error("Error al cancelar la suscripción.");
+    },
+  });
+
+  // Local state for confirmation modal when cancelling
+  const [showCancelConfirm, setShowCancelConfirm] = React.useState(false);
+
   const handleSelectPlan = (planId: string) => {
-    mutate({ planId });
+    // Redirect to dedicated change route where user confirms the change
+    router.push(
+      `/admin/suscripcion/change?planId=${encodeURIComponent(planId)}`
+    );
   };
 
   if (isSubscriptionPending) {
@@ -145,52 +324,42 @@ export const SubscriptionPage = () => {
         </p>
       </div>
 
-      {/* Sección de estado actual (plan o prueba) */}
-      <div className="mb-10 max-w-xl mx-auto bg-white rounded-xl shadow-lg p-6 border-l-4 border-purple-600">
-        <h2 className="text-xl font-bold mb-2">Estado Actual de tu Cuenta</h2>
-        {isTrial ? (
-          <div className="text-gray-700">
-            <p className="font-semibold text-purple-600">
-              Estás en un plan de prueba.
+      {/* Sección de estado actual mejorada con barra de progreso */}
+      <StatusCard
+        empresa={empresa}
+        onCancel={() => setShowCancelConfirm(true)}
+        isCancelling={isCancelPending}
+      />
+
+      {/* Confirm modal for cancellation */}
+      {showCancelConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+          <div className="bg-white rounded-lg shadow-lg p-6 w-full max-w-md">
+            <h3 className="text-lg font-bold mb-2">Confirmar cancelación</h3>
+            <p className="text-sm text-gray-600 mb-4">
+              ¿Estás seguro de que deseas cancelar la suscripción? Esta acción
+              suspenderá la cuenta y detendrá cobros futuros.
             </p>
-            {empresa?.fechaFinPrueba && (
-              <p className="text-sm mt-1">
-                Tu período de prueba finaliza el{" "}
-                <span className="font-bold">
-                  {format(
-                    new Date(empresa.fechaFinPrueba),
-                    "dd 'de' MMMM, yyyy",
-                    { locale: es }
-                  )}
-                </span>
-              </p>
-            )}
-            <p className="text-sm mt-3">
-              Selecciona un plan de la lista de abajo para iniciar tu
-              suscripción de pago.
-            </p>
+            <div className="flex justify-end gap-3">
+              <button
+                className="px-4 py-2 rounded border"
+                onClick={() => setShowCancelConfirm(false)}
+              >
+                Volver
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded"
+                onClick={async () => {
+                  await mutateCancel();
+                  setShowCancelConfirm(false);
+                }}
+              >
+                Confirmar cancelación
+              </button>
+            </div>
           </div>
-        ) : (
-          <div className="text-gray-700">
-            <p>
-              Estás suscrito al plan **{empresa?.planTipo}** con frecuencia **
-              {empresa?.frecuenciaPago}**.
-            </p>
-            {empresa?.fechaProximoVencimiento && (
-              <p className="text-sm mt-1">
-                Próximo vencimiento:{" "}
-                <span className="font-bold">
-                  {format(
-                    new Date(empresa.fechaProximoVencimiento),
-                    "dd 'de' MMMM, yyyy",
-                    { locale: es }
-                  )}
-                </span>
-              </p>
-            )}
-          </div>
-        )}
-      </div>
+        </div>
+      )}
 
       {/* Sección de planes disponibles */}
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">

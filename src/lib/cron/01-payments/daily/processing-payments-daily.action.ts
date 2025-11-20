@@ -6,9 +6,11 @@ import {
   generarPagosFuturos,
   procesarVencimientosDinamicos,
 } from ".";
+
 import { logger } from "../lib";
 import { notificarVencimientosFijos } from "./notificarVencimientosFijos";
 import { notificarVencimientosDinamicos } from "./notificarVencimientosDinamicos";
+import { ensureNextMonthPaymentsForPaidUsers } from "./ensureNextMonthPayments";
 
 // Zona horaria de referencia
 const TIMEZONE = "America/Argentina/Buenos_Aires";
@@ -20,7 +22,46 @@ function getNormalizedBusinessDate(): Date {
   return moment().tz(TIMEZONE).startOf("day").toDate();
 }
 
-export async function processDailyComplete() {
+export async function processDailyComplete(/* params */) {
+  // Ejecutar al inicio: asegurar pagos del mes siguiente para usuarios que pagaron el mes actual
+  try {
+    logger.info(
+      "[cron-daily] Iniciando ensureNextMonthPaymentsForPaidUsers (inicio del cron diario)"
+    );
+    const result = await ensureNextMonthPaymentsForPaidUsers(
+      new Date(),
+      "cron-daily-ensure-next"
+    );
+    // logs resumidos para testeo
+    const rAny = result as any; // tipado flexible para ajustarnos a la forma real del retorno
+    logger.info(
+      `[cron-daily] ensureNextMonthPaymentsForPaidUsers: usuariosProcesados=${rAny.checked ?? 0}, fallas=${rAny.failures?.length ?? 0}, pagosGenerados=${rAny.generados ?? rAny.checked ?? 0}`
+    );
+
+    if (rAny.generadosUsers && rAny.generadosUsers.length > 0) {
+      // mostrar detalle usuario(admin) -> pagoId
+      const resumen = rAny.generadosUsers.map(
+        (g: any) =>
+          `${g.usuarioId} (admin: ${g.administradorId ?? "?"}:${g.administradorNombre ?? "?"}) -> pago:${g.pagoId ?? "?"}`
+      );
+      logger.info(
+        `[cron-daily] Pagos generados para usuarios: ${resumen.join(", ")}`
+      );
+    }
+
+    if (rAny.errores && rAny.errores.length > 0) {
+      logger.warn(
+        `[cron-daily] Errores al generar pagos para ${rAny.errores.length} usuarios. Revisar logs detallados.`
+      );
+    }
+  } catch (err) {
+    // No abortar el cron: registramos y seguimos con el resto del procesamiento
+    logger.error(
+      "[cron-daily] Error en ensureNextMonthPaymentsForPaidUsers:",
+      err
+    );
+  }
+
   const cronId = `CRON-${Date.now()}`; // Para rastrear logs
   const tiempoInicio = Date.now();
   const fechaActual = getNormalizedBusinessDate();

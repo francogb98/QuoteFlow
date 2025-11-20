@@ -8,7 +8,6 @@ export async function login(
   password: string
 ): Promise<{ ok: boolean; error?: string }> {
   try {
-    console.log({ documento, password });
     await signIn("credentials", {
       documento,
       password,

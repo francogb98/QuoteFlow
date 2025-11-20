@@ -1,36 +1,59 @@
 "use client";
 
+import { useEffect, useState } from "react";
+import { useSearchParams, useRouter } from "next/navigation";
 import Link from "next/link";
-import { useState } from "react";
-import { useRouter } from "next/navigation";
 import { useForm } from "react-hook-form";
 import { useMutation } from "@tanstack/react-query";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 
 import { Button } from "@/components/ui/button";
-
 import { TipoPlanEmpresa, FrecuenciaPago } from "@prisma/client";
 
 import { PlanSelection } from "./PlanSelection";
 import { PersonalInfoForm } from "./PersonalInfoForm";
-
-import { type PlanOption, plans } from "@/lib";
-import { prepareRegistrationForPayment } from "@/01-actions/auth/registration/01-prepareRegistration";
 import { PromoCodeField } from "./PromoCodeField";
+
+import { prepareRegistrationForPayment } from "@/01-actions/auth/registration/01-prepareRegistration";
 import { createTrialAccount as createTrialAccountAction } from "@/01-actions/auth/registration/05-createTrialAccount";
+import { plans, PlanOption } from "@/lib";
 
 interface RegisterFormData {
   nombre: string;
   documento: string;
   email: string;
   nombreEmpresa: string;
+  telefono: string;
   password: string;
   confirm_password: string;
-  telefono: string;
+  planTipo?: TipoPlanEmpresa;
+  frecuenciaPago?: FrecuenciaPago;
 }
 
-export const RegisterForm = () => {
+export default function RegisterForm() {
+  const {
+    register,
+    handleSubmit,
+    setValue,
+    setError,
+    formState: { errors },
+    watch,
+  } = useForm<RegisterFormData>({
+    defaultValues: {
+      nombre: "",
+      documento: "",
+      email: "",
+      nombreEmpresa: "",
+      telefono: "",
+      password: "",
+      confirm_password: "",
+    },
+  });
+
+  const searchParams = useSearchParams();
+  const tempId = searchParams?.get("tempId");
   const router = useRouter();
+
   const [selectedPlanId, setSelectedPlanId] =
     useState<PlanOption["id"]>("basico_mensual");
   const [formError, setFormError] = useState<{
@@ -41,15 +64,7 @@ export const RegisterForm = () => {
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
-  const {
-    register,
-    handleSubmit,
-    watch,
-    setError,
-    clearErrors,
-    formState: { errors },
-  } = useForm<RegisterFormData>();
-
+  // --- Mutations ---
   const createTrialAccount = useMutation({
     mutationFn: createTrialAccountAction,
     onSuccess: (data) => {
@@ -57,11 +72,7 @@ export const RegisterForm = () => {
         setSuccess(true);
         setSuccessMessage("¡Cuenta de prueba creada exitosamente!");
         setFormError(null);
-
-        // Redirigir después de mostrar el éxito
-        setTimeout(() => {
-          router.push("/");
-        }, 2000);
+        setTimeout(() => router.push("/"), 2000);
       } else {
         setFormError({
           message: data.error || "Error al crear la cuenta de prueba",
@@ -79,25 +90,21 @@ export const RegisterForm = () => {
   const prepareRegistration = useMutation({
     mutationFn: prepareRegistrationForPayment,
     onSuccess: (data) => {
-      if (data.success && "tempRegistrationId" in data) {
+      if (data.success && data.data?.tempRegistrationId) {
         setSuccess(true);
         setSuccessMessage(
           "¡Registro preparado correctamente! Redirigiendo al pago..."
         );
         setFormError(null);
-
-        // Pequeña pausa antes de redirigir
-        setTimeout(() => {
-          router.push(`/auth/register-payment/${data.tempRegistrationId}`);
-        }, 1500);
+        setTimeout(
+          () =>
+            router.push(
+              `/auth/register-payment/${data.data!.tempRegistrationId}`
+            ),
+          1500
+        );
       } else if (data.error) {
         setFormError({ message: data.error });
-        if (data.error) {
-          setError(data.error as keyof RegisterFormData, {
-            type: "manual",
-            message: data.error,
-          });
-        }
       }
     },
     onError: (error: any) => {
@@ -110,7 +117,6 @@ export const RegisterForm = () => {
   const onSubmit = async (data: RegisterFormData) => {
     setFormError(null);
     setSuccess(false);
-    clearErrors();
 
     // Validación de confirmación de contraseña
     if (data.password !== data.confirm_password) {
@@ -121,7 +127,7 @@ export const RegisterForm = () => {
       return;
     }
 
-    // Si hay código promocional válido, crear cuenta de prueba
+    // Si hay código promocional válido → cuenta de prueba
     if (validPromoCode) {
       const trialData = {
         nombre: data.nombre,
@@ -132,31 +138,26 @@ export const RegisterForm = () => {
         telefono: data.telefono,
         codigoPromocional: validPromoCode,
       };
-      //@ts-ignore
       await createTrialAccount.mutateAsync(trialData);
       return;
     }
 
+    // Selección de plan
     const selectedPlan = plans.find((p) => p.id === selectedPlanId);
     if (!selectedPlan) {
       setFormError({ message: "Plan no seleccionado o inválido" });
       return;
     }
 
-    let planTipoToSend: TipoPlanEmpresa;
-    let frecuenciaPagoToSend: FrecuenciaPago;
+    const planTipoToSend: TipoPlanEmpresa = selectedPlanId.startsWith("basico")
+      ? TipoPlanEmpresa.BASICO
+      : TipoPlanEmpresa.PRO;
 
-    if (selectedPlanId.startsWith("basico")) {
-      planTipoToSend = TipoPlanEmpresa.BASICO;
-    } else {
-      planTipoToSend = TipoPlanEmpresa.PRO;
-    }
-
-    if (selectedPlanId.endsWith("mensual")) {
-      frecuenciaPagoToSend = FrecuenciaPago.MENSUAL;
-    } else {
-      frecuenciaPagoToSend = FrecuenciaPago.ANUAL;
-    }
+    const frecuenciaPagoToSend: FrecuenciaPago = selectedPlanId.endsWith(
+      "mensual"
+    )
+      ? FrecuenciaPago.MENSUAL
+      : FrecuenciaPago.ANUAL;
 
     const contentToPrepare = {
       nombre: data.nombre,
@@ -172,24 +173,45 @@ export const RegisterForm = () => {
     await prepareRegistration.mutateAsync(contentToPrepare);
   };
 
-  const handlePlanSelect = (planId: PlanOption["id"]) => {
+  // --- Handlers ---
+  const handlePlanSelect = (planId: PlanOption["id"]) =>
     setSelectedPlanId(planId);
-  };
-
-  const handleValidPromoCode = (codigo: string) => {
-    setValidPromoCode(codigo);
-  };
-
-  const handleInvalidPromoCode = () => {
-    setValidPromoCode(null);
-  };
+  const handleValidPromoCode = (codigo: string) => setValidPromoCode(codigo);
+  const handleInvalidPromoCode = () => setValidPromoCode(null);
 
   const isLoading =
     prepareRegistration.isPending || createTrialAccount.isPending;
 
+  // --- Cargar datos de registro temporal ---
+  useEffect(() => {
+    if (!tempId) return;
+    let mounted = true;
+
+    fetch(`/api/temp-registration/${tempId}`)
+      .then((res) => {
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        return res.json();
+      })
+      .then((data) => {
+        if (!mounted || data?.error) return;
+        setValue("nombre", data.nombre ?? "");
+        setValue("documento", data.documento ?? "");
+        setValue("email", data.email ?? "");
+        setValue("nombreEmpresa", data.nombreEmpresa ?? "");
+        setValue("telefono", data.telefono ?? "");
+      })
+      .catch((err) =>
+        console.error("[RegisterForm] Error fetching temp registration:", err)
+      );
+
+    return () => {
+      mounted = false;
+    };
+  }, [tempId, setValue]);
+
+  // --- Render ---
   return (
     <div className="space-y-8">
-      {/* Alerta de éxito */}
       {success && (
         <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-start animate-in slide-in-from-top-2">
           <CheckCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
@@ -209,7 +231,6 @@ export const RegisterForm = () => {
           register={register}
           errors={errors}
           watch={watch}
-          //@ts-ignore
           disabled={isLoading || success}
         />
 
@@ -224,8 +245,6 @@ export const RegisterForm = () => {
             plans={plans}
             selectedPlanId={selectedPlanId}
             onSelectPlan={handlePlanSelect}
-            //@ts-ignore
-            disabled={isLoading || success}
           />
         )}
 
@@ -241,9 +260,8 @@ export const RegisterForm = () => {
           </div>
         )}
 
-        {/* Alerta de error general */}
+        {/* Errores */}
         <div className="space-y-2">
-          {/* Error general (como antes) */}
           {formError && !formError.field && (
             <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start">
               <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
@@ -251,14 +269,13 @@ export const RegisterForm = () => {
             </div>
           )}
 
-          {/* Errores de campo (nuevo) */}
           {Object.entries(errors).length > 0 && (
             <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl">
               <ul className="space-y-1">
                 {Object.entries(errors).map(([field, error]) => (
                   <li key={field} className="flex items-start">
                     <AlertCircle className="w-4 h-4 mr-2 mt-0.5 flex-shrink-0" />
-                    <span className="text-sm">{error.message}</span>
+                    <span className="text-sm">{error?.message}</span>
                   </li>
                 ))}
               </ul>
@@ -294,7 +311,7 @@ export const RegisterForm = () => {
               {validPromoCode
                 ? "Crear Cuenta de Prueba Gratis"
                 : `Continuar al Pago - ${
-                    plans.find((p: any) => p.id === selectedPlanId)?.name
+                    plans.find((p) => p.id === selectedPlanId)?.name || ""
                   }`}
             </>
           )}
@@ -322,4 +339,4 @@ export const RegisterForm = () => {
       </form>
     </div>
   );
-};
+}

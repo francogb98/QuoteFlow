@@ -1,13 +1,14 @@
 import { Store } from "lucide-react";
-import { RegisterForm } from "./ui/RegisterForm";
 import { Metadata } from "next";
+import { Suspense } from "react";
+import RegisterForm from "./ui/RegisterForm";
 
 export const metadata: Metadata = {
   title: "Crea Tu Empresa",
   description: "Crea tu cuenta y elige el plan perfecto para tu negocio",
 };
 
-export default function RegisterPage() {
+function RegisterPageContent() {
   return (
     <div className="w-full max-w-4xl mx-auto">
       <div className="bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl p-6 md:p-8 border border-purple-100">
@@ -27,5 +28,23 @@ export default function RegisterPage() {
         <RegisterForm />
       </div>
     </div>
+  );
+}
+
+function LoadingFallback() {
+  return (
+    <div className="w-full max-w-4xl mx-auto">
+      <div className="bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl p-6 md:p-8 border border-purple-100 text-center">
+        <p className="text-gray-600">Cargando...</p>
+      </div>
+    </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<LoadingFallback />}>
+      <RegisterPageContent />
+    </Suspense>
   );
 }

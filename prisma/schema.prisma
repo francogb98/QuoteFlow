@@ -68,6 +68,10 @@ model Administrador {
   // ⭐️ NUEVOS CAMPOS para la configuración de permisos
   permitirModificarTarifa Boolean @default(true)
   permitirModificarCobro  Boolean @default(true)
+
+  // --- Campos para recuperación de contraseña ---
+  resetPasswordTokenHash String? // almacenar el hash del token
+  resetPasswordExpires   DateTime? // fecha de expiración del token
 }
 
 model Notificacion {

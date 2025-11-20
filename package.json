@@ -63,7 +63,7 @@
     "@eslint/eslintrc": "^3",
     "@faker-js/faker": "^9.8.0",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20.19.1",
+    "@types/node": "^20.19.24",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
@@ -72,6 +72,6 @@
     "ts-node": "^10.9.2",
     "tsx": "^4.20.3",
     "tw-animate-css": "^1.3.5",
-    "typescript": "^5.9.2"
+    "typescript": "^5.9.3"
   }
 }

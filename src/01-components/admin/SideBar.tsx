@@ -148,11 +148,7 @@ export const Sidebar = ({ user }: any) => {
       icon: <CreditCard size={20} />,
       label: "Conexión Mercado Pago",
     },
-    {
-      href: "/admin/suscripcion",
-      icon: <DollarSign size={20} />,
-      label: "Suscripcion",
-    },
+    // Suscripción se muestra en el dashboard principal; no aparece en el sidebar
     {
       href: "/admin/logs",
       icon: <Logs size={20} />,
@@ -179,7 +175,8 @@ export const Sidebar = ({ user }: any) => {
       return user?.rol === "SUPER_ADMIN";
     }
     if (item.label === "Suscripcion") {
-      return user?.rol === "SUPER_ADMIN";
+      // Mostrar la opción de Suscripción a administradores y super admins, ocultar a profesores
+      return user?.rol !== "PROFESOR";
     }
     if (item.label === "Cuentas") {
       return user?.rol !== "PROFESOR";
