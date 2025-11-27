@@ -185,7 +185,7 @@ export const LoginForm = () => {
         </div>
       </div>
 
-      <ForgotPasswordButton />
+      {/* <ForgotPasswordButton /> */}
 
       <Button
         variant="outline"
