@@ -1,3 +1,4 @@
+"use server";
 import prisma from "@/lib/prisma";
 import { calculateNextPaymentDate } from "./calculations";
 import { logger } from "./logger";

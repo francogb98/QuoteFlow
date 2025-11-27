@@ -1,3 +1,4 @@
+"use server";
 import prisma from "@/lib/prisma";
 import { findTarifaRangeForDate, logger } from "../lib";
 
