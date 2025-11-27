@@ -1,6 +1,6 @@
 "use server";
 import { auth } from "@/*";
-import prisma from "@/prisma";
+import prisma from "@/lib/prisma";
 import { sendPaymentStatusEmail } from "../emails/sendPaymentStatusEmail";
 import { revalidatePath } from "next/cache";
 

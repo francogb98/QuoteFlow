@@ -2,7 +2,6 @@
 "use server";
 
 import { auth } from "@/auth";
-import prisma from "@/prisma";
 import { TipoConfiguracionTarifa, type Estado } from "@prisma/client";
 import { revalidatePath } from "next/cache";
 import {
@@ -10,6 +9,7 @@ import {
   handleActionError,
 } from "@/lib/utils/action-errors";
 import { z } from "zod";
+import prisma from "@/lib/prisma";
 
 const editUserSchema = z.object({
   id: z.string().min(1, "ID de usuario es obligatorio"),

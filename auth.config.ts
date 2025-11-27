@@ -100,6 +100,9 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         const { documento, password } = parsedCredentials.data;
 
         // Buscar al administrador por documento con todas las relaciones necesarias
+
+        console.log("DATABASE_URL:", process.env.DATABASE_URL);
+
         const user = await prisma.administrador.findUnique({
           where: { documento: String(documento) },
           include: {

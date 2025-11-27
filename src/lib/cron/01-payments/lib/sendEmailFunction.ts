@@ -2,7 +2,7 @@
 
 import { sendEmail } from "@/01-actions/admin/emails/sendEmail";
 import { logger } from "../lib";
-import prisma from "@/prisma";
+import prisma from "@/lib/prisma";
 import { format } from "date-fns";
 import { es } from "date-fns/locale";
 

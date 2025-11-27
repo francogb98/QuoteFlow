@@ -8,10 +8,8 @@ datasource db {
 }
 
 model Empresa {
-  id              String          @id @default(uuid())
-  nombre          String          @unique
-  administradores Administrador[]
-
+  id                       String             @id @default(uuid())
+  nombre                   String             @unique
   fechaCreacion            DateTime           @default(now())
   fechaActualizacion       DateTime           @updatedAt
   planTipo                 TipoPlanEmpresa    @default(BASICO)
@@ -22,86 +20,62 @@ model Empresa {
   fechaProximoVencimiento  DateTime?
   estaActiva               Boolean            @default(true)
   esCuentaPrueba           Boolean            @default(false)
-  codigoPromocional        CodigoPromocional? @relation("EmpresaCodigoPromocional", fields: [codigoPromocionalId], references: [id])
   codigoPromocionalId      String?
   fechaFinPrueba           DateTime?
+  administradores          Administrador[]
+  codigoPromocional        CodigoPromocional? @relation("EmpresaCodigoPromocional", fields: [codigoPromocionalId], references: [id])
 }
 
 model Administrador {
-  id        String @id @default(uuid())
-  nombre    String
-  documento String @unique
-  email     String @unique
-  password  String
-  telefono  String
-
-  rol                Rol      @default(PROFESOR)
-  estaActivo         Boolean  @default(true)
-  fechaCreacion      DateTime @default(now())
-  fechaActualizacion DateTime @updatedAt
-
-  empresa   Empresa @relation(fields: [empresaId], references: [id])
-  empresaId String
-
-  claveMercadoPago          String?
-  tokenMercadoPagoExpiresAt DateTime?
-  mercadoPagoRefreshToken   String?
-
-  usuarios Usuario[]
-
-  configuracionTarifa   ConfiguracionTarifa? @relation(fields: [configuracionTarifaId], references: [id])
-  configuracionTarifaId String?
-
-  logs AuditLog[]
-
-  modeloDeCobro ModeloDeCobro @default(COMPROBANTE)
-
-  // NUEVO: Relaciones para notificaciones
-  notificacionesEnviadas  Notificacion[] @relation("NotificacionRemitente")
-  notificacionesRecibidas Notificacion[] @relation("NotificacionDestinatario")
-
-  // NUEVO: Configuración de notificaciones
-  recibirNotificacionesPago        Boolean @default(true)
-  recibirNotificacionesComprobante Boolean @default(true)
-  emailNotificaciones              Boolean @default(true)
-
-  // ⭐️ NUEVOS CAMPOS para la configuración de permisos
-  permitirModificarTarifa Boolean @default(true)
-  permitirModificarCobro  Boolean @default(true)
-
-  // --- Campos para recuperación de contraseña ---
-  resetPasswordTokenHash String? // almacenar el hash del token
-  resetPasswordExpires   DateTime? // fecha de expiración del token
+  id                               String               @id @default(uuid())
+  nombre                           String
+  documento                        String               @unique
+  email                            String               @unique
+  password                         String
+  telefono                         String
+  rol                              Rol                  @default(PROFESOR)
+  estaActivo                       Boolean              @default(true)
+  fechaCreacion                    DateTime             @default(now())
+  fechaActualizacion               DateTime             @updatedAt
+  empresaId                        String
+  claveMercadoPago                 String?
+  tokenMercadoPagoExpiresAt        DateTime?
+  mercadoPagoRefreshToken          String?
+  configuracionTarifaId            String?
+  modeloDeCobro                    ModeloDeCobro        @default(COMPROBANTE)
+  recibirNotificacionesPago        Boolean              @default(true)
+  recibirNotificacionesComprobante Boolean              @default(true)
+  emailNotificaciones              Boolean              @default(true)
+  permitirModificarTarifa          Boolean              @default(true)
+  permitirModificarCobro           Boolean              @default(true)
+  resetPasswordTokenHash           String?
+  resetPasswordExpires             DateTime?
+  configuracionTarifa              ConfiguracionTarifa? @relation(fields: [configuracionTarifaId], references: [id])
+  empresa                          Empresa              @relation(fields: [empresaId], references: [id])
+  logs                             AuditLog[]
+  notificacionesRecibidas          Notificacion[]       @relation("NotificacionDestinatario")
+  notificacionesEnviadas           Notificacion[]       @relation("NotificacionRemitente")
+  usuarios                         Usuario[]
 }
 
 model Notificacion {
-  id      String           @id @default(uuid())
-  tipo    TipoNotificacion
-  titulo  String
-  mensaje String           @db.Text
-
-  // Destinatarios (puede ser para administrador o usuario final)
-  administrador   Administrador? @relation("NotificacionDestinatario", fields: [administradorId], references: [id])
+  id              String           @id @default(uuid())
+  tipo            TipoNotificacion
+  titulo          String
+  mensaje         String
   administradorId String?
-  usuario         Usuario?       @relation("NotificacionUsuario", fields: [usuarioId], references: [id])
   usuarioId       String?
-
-  // Remitente (sistema o administrador)
-  remitente   Administrador? @relation("NotificacionRemitente", fields: [remitenteId], references: [id])
-  remitenteId String?
-
-  // Estado y metadatos
-  leida         Boolean   @default(false)
-  fechaCreacion DateTime  @default(now())
-  fechaLeida    DateTime?
-
-  // Datos relacionados (para poder navegar al elemento relacionado)
-  entidadTipo String? // "PAGO", "COMPROBANTE", "USUARIO"
-  entidadId   String? // ID de la entidad relacionada
-
-  // Configuración de entrega
-  enviadaPorEmail Boolean   @default(false)
+  remitenteId     String?
+  leida           Boolean          @default(false)
+  fechaCreacion   DateTime         @default(now())
+  fechaLeida      DateTime?
+  entidadTipo     String?
+  entidadId       String?
+  enviadaPorEmail Boolean          @default(false)
   fechaEnvioEmail DateTime?
+  administrador   Administrador?   @relation("NotificacionDestinatario", fields: [administradorId], references: [id])
+  remitente       Administrador?   @relation("NotificacionRemitente", fields: [remitenteId], references: [id])
+  usuario         Usuario?         @relation("NotificacionUsuario", fields: [usuarioId], references: [id])
 
   @@index([administradorId])
   @@index([usuarioId])
@@ -112,12 +86,11 @@ model Notificacion {
 
 model CodigoPromocional {
   id              String    @id @default(uuid())
-  codigo          String    @unique // El código que ingresará el usuario (ej: "PRUEBA2024")
-  duracionMeses   Int       @default(2) // Duración en meses (por defecto 2)
+  codigo          String    @unique
+  duracionMeses   Int       @default(2)
   estaActivo      Boolean   @default(true)
   fechaCreacion   DateTime  @default(now())
-  fechaExpiracion DateTime? // Fecha de expiración del código (opcional)
-  // Relación con las empresas que usaron este código
+  fechaExpiracion DateTime?
   empresasCreadas Empresa[] @relation("EmpresaCodigoPromocional")
 
   @@index([codigo])
@@ -126,15 +99,15 @@ model CodigoPromocional {
 
 model AuditLog {
   id              String         @id @default(uuid())
-  action          String         @db.VarChar(64) // Ej: "UPDATE_MERCADOPAGO_TOKEN"
-  entityType      String         @db.VarChar(32) // Ej: "USER", "PAYMENT"
-  entityId        String // ID del recurso afectado
-  details         String?        @db.VarChar(1024) // Cambios específicos
-  ipAddress       String?        @db.VarChar(45) // IPv4 o IPv6
-  userAgent       String?        @db.VarChar(512) // Dispositivo/navegador
-  administrador   Administrador? @relation(fields: [administradorId], references: [id])
+  action          String         @db.VarChar(64)
+  entityType      String         @db.VarChar(32)
+  entityId        String
+  details         String?        @db.VarChar(1024)
+  ipAddress       String?        @db.VarChar(45)
+  userAgent       String?        @db.VarChar(512)
   administradorId String?
   createdAt       DateTime       @default(now())
+  administrador   Administrador? @relation(fields: [administradorId], references: [id])
 
   @@index([action])
   @@index([entityType, entityId])
@@ -143,32 +116,26 @@ model AuditLog {
 }
 
 model Usuario {
-  id                   String        @id @default(uuid())
+  id                   String                       @id @default(uuid())
   nombre               String
   apellido             String
   documento            String
   telefono             String?
   email                String?
   edad                 Int?
-  estado               Estado        @default(ACTIVO)
-  pagos                Pago[]
-  administrador        Administrador @relation(fields: [administradorId], references: [id])
+  estado               Estado                       @default(ACTIVO)
   administradorId      String
-  estaActivo           Boolean       @default(true)
-  fechaCreacion        DateTime      @default(now())
-  fechaInicioMembresia DateTime? // NEW: To store the start date for dynamic billing
-
-  // 🔹 Relación con un rango específico (si aplica FIJA_MENSUAL)
-  rangoTarifa   RangoTarifa? @relation(fields: [rangoTarifaId], references: [id])
-  rangoTarifaId String?
-
-  // 🔹 Relación con una configuración dinámica específica (si aplica DINAMICA_POR_FECHA_INGRESO)
-  dinamicaTarifa   ConfiguracionDinamicaTarifa? @relation(fields: [dinamicaTarifaId], references: [id])
-  dinamicaTarifaId String?
-
-  // 🔹 Guardás el nombre asignado (opcional, para congelar la config en ese momento)
+  estaActivo           Boolean                      @default(true)
+  fechaCreacion        DateTime                     @default(now())
+  fechaInicioMembresia DateTime?
+  rangoTarifaId        String?
+  dinamicaTarifaId     String?
   nombreTarifaAsignada String?
-  notificaciones       Notificacion[] @relation("NotificacionUsuario")
+  notificaciones       Notificacion[]               @relation("NotificacionUsuario")
+  pagos                Pago[]
+  administrador        Administrador                @relation(fields: [administradorId], references: [id])
+  dinamicaTarifa       ConfiguracionDinamicaTarifa? @relation(fields: [dinamicaTarifaId], references: [id])
+  rangoTarifa          RangoTarifa?                 @relation(fields: [rangoTarifaId], references: [id])
 
   @@index([documento])
   @@index([administradorId])
@@ -180,38 +147,32 @@ model Pago {
   id               String     @id @default(uuid())
   monto            Float
   fecha            DateTime   @default(now())
-  mes              Int // 1-12 representando el mes
-  año             Int // Año completo (ej. 2023)
-  comprobante      String? // URL o ID de MP
-  usuario          Usuario    @relation(fields: [usuarioId], references: [id])
+  mes              Int
+  año             Int
+  comprobante      String?
   usuarioId        String
   estaVencido      Boolean    @default(false)
   estado           EstadoPago @default(PENDIENTE)
   metodo           MetodoPago @default(EFECTIVO)
-  periodo          String // Formato "YYYY-MM" para fácil búsqueda
-  fechaVencimiento DateTime? // NEW: The specific due date for this payment
+  periodo          String
+  fechaVencimiento DateTime?
   motivo           String?
+  usuario          Usuario    @relation(fields: [usuarioId], references: [id])
 
   @@index([usuarioId])
-  @@index([fecha]) // Para búsquedas por rango de fechas
-  @@index([periodo]) // Si buscas frecuentemente por periodo
-  @@index([fechaVencimiento]) // NEW: For querying payments by due date
+  @@index([fecha])
+  @@index([periodo])
+  @@index([fechaVencimiento])
 }
 
 model ConfiguracionTarifa {
-  id                String                  @id @default(uuid())
-  tipoConfiguracion TipoConfiguracionTarifa @default(FIJA_MENSUAL)
-
-  // Relación con rangos (si FIJA_MENSUAL)
-  rangos RangoTarifa[]
-
-  // Relación con dinámicas (si DINAMICA_POR_FECHA_INGRESO)
-  dinamicas ConfiguracionDinamicaTarifa[]
-
-  administradores Administrador[]
-
-  fechaCreacion DateTime @default(now())
-  estaActiva    Boolean  @default(true)
+  id                String                        @id @default(uuid())
+  tipoConfiguracion TipoConfiguracionTarifa       @default(FIJA_MENSUAL)
+  fechaCreacion     DateTime                      @default(now())
+  estaActiva        Boolean                       @default(true)
+  administradores   Administrador[]
+  dinamicas         ConfiguracionDinamicaTarifa[]
+  rangos            RangoTarifa[]
 }
 
 model RangoTarifa {
@@ -220,11 +181,9 @@ model RangoTarifa {
   diaInicio             Int
   diaFin                Int
   monto                 Float
-  configuracionTarifa   ConfiguracionTarifa @relation(fields: [configuracionTarifaId], references: [id])
   configuracionTarifaId String
-
-  // 🔹 Relación inversa: usuarios que tienen este rango
-  usuarios Usuario[]
+  configuracionTarifa   ConfiguracionTarifa @relation(fields: [configuracionTarifaId], references: [id])
+  usuarios              Usuario[]
 
   @@index([configuracionTarifaId])
 }
@@ -235,28 +194,25 @@ model ConfiguracionDinamicaTarifa {
   montoBase             Float
   diasGracia            Int
   montoRecargo          Float
-  configuracionTarifa   ConfiguracionTarifa @relation(fields: [configuracionTarifaId], references: [id])
   configuracionTarifaId String
-
-  // 🔹 Relación inversa: usuarios que tienen esta config dinámica
-  usuarios Usuario[]
+  configuracionTarifa   ConfiguracionTarifa @relation(fields: [configuracionTarifaId], references: [id])
+  usuarios              Usuario[]
 
   @@index([configuracionTarifaId])
 }
 
-// Nuevo modelo para almacenar temporalmente los datos de registro
 model TempRegistration {
   id             String          @id @default(uuid())
   nombre         String
-  documento      String          @unique // Para evitar duplicados temporales
-  email          String          @unique // NUEVO: Campo de email para el registro temporal
+  documento      String          @unique
+  email          String          @unique
   nombreEmpresa  String
-  password       String // Contraseña ya hasheada
+  password       String
   telefono       String
   planTipo       TipoPlanEmpresa
   frecuenciaPago FrecuenciaPago
   createdAt      DateTime        @default(now())
-  expiresAt      DateTime // Para limpiar entradas antiguas (ej. 24 horas)
+  expiresAt      DateTime
 }
 
 enum Estado {
@@ -284,16 +240,15 @@ enum Rol {
   SUPER_ADMIN
 }
 
-// Nuevas enumeraciones para la gestión de la empresa
 enum TipoPlanEmpresa {
-  BASICO // Permite 1 administrador
-  PRO // Permite múltiples administradores
+  BASICO
+  PRO
 }
 
 enum EstadoEmpresa {
   ACTIVO
-  INACTIVO_POR_FALTA_DE_PAGO // La empresa está inactiva porque no pagó
-  SUSPENDIDO_MANUALMENTE // La empresa fue suspendida por un administrador del sistema (no por falta de pago)
+  INACTIVO_POR_FALTA_DE_PAGO
+  SUSPENDIDO_MANUALMENTE
 }
 
 enum FrecuenciaPago {
@@ -301,21 +256,20 @@ enum FrecuenciaPago {
   ANUAL
 }
 
-// NEW ENUM: Tipo de configuración de tarifa
 enum TipoConfiguracionTarifa {
   FIJA_MENSUAL
   DINAMICA_POR_FECHA_INGRESO
 }
 
 enum TipoNotificacion {
-  PAGO_VENCIDO // Pago vencido
-  PAGO_PROXIMO_VENCER // Pago próximo a vencer
-  COMPROBANTE_SUBIDO // Nuevo comprobante subido
-  COMPROBANTE_APROBADO // Comprobante aprobado
-  COMPROBANTE_RECHAZADO // Comprobante rechazado
-  PAGO_CONFIRMADO // Pago confirmado
-  RECORDATORIO_PAGO // Recordatorio de pago
-  SISTEMA // Notificaciones del sistema
+  PAGO_VENCIDO
+  PAGO_PROXIMO_VENCER
+  COMPROBANTE_SUBIDO
+  COMPROBANTE_APROBADO
+  COMPROBANTE_RECHAZADO
+  PAGO_CONFIRMADO
+  RECORDATORIO_PAGO
+  SISTEMA
 }
 
 enum ModeloDeCobro {

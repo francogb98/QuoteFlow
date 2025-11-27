@@ -1,7 +1,5 @@
 import { PrismaClient } from "@prisma/client";
 
-// Extiende el objeto global de Node.js para incluir 'prisma'
-// Esto es necesario para que el cliente de Prisma sea singleton en desarrollo
 declare global {
   var prismaGlobal: PrismaClient | undefined;
 }
