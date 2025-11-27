@@ -1,12 +1,13 @@
-import { NextResponse } from "next/server";
+"use server";
 import prisma from "@/lib/prisma";
 
-export async function GET(req: Request) {
+export async function getUsersReport(input?: {
+  adminId?: string;
+  year?: number;
+}) {
   try {
-    const url = new URL(req.url);
-    const adminId = url.searchParams.get("adminId");
-    const yearParam = url.searchParams.get("year");
-    const year = yearParam ? parseInt(yearParam, 10) : new Date().getFullYear();
+    const adminId = input?.adminId ?? undefined;
+    const year = input?.year ?? new Date().getFullYear();
     const months = [9, 10, 11, 12];
 
     const admins = await prisma.administrador.findMany({
@@ -25,10 +26,7 @@ export async function GET(req: Request) {
         nombre: true,
         fechaInicioMembresia: true,
         administrador: {
-          select: {
-            id: true,
-            nombre: true,
-          },
+          select: { id: true, nombre: true },
         },
         pagos: {
           where: {
@@ -56,10 +54,12 @@ export async function GET(req: Request) {
         string,
         { estado: string; monto: number } | null
       > = {};
+
       months.forEach((m) => {
         const p = (u.pagos as any[]).find(
           (x) => Number(x.mes) === m && Number(x.año) === year
         );
+
         pagosByMonth[String(m)] = p
           ? { estado: String(p.estado), monto: Number(p.monto ?? 0) }
           : null;
@@ -76,18 +76,15 @@ export async function GET(req: Request) {
       };
     });
 
-    return NextResponse.json({
+    return {
       ok: true,
       year,
       months,
       admins,
       usuarios: usuariosMapped,
-    });
+    };
   } catch (err) {
-    console.error("[api/admin/users-report] Error:", err);
-    return NextResponse.json(
-      { ok: false, error: String(err) },
-      { status: 500 }
-    );
+    console.error("[getUsersReport] Error:", err);
+    return { ok: false, error: String(err) };
   }
 }

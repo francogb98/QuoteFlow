@@ -1,11 +1,12 @@
 "use client";
+import { runFixIncorrectPayments } from "@/01-actions/admin/test/admin/fix-payments/fix-payments";
 import React, { useState } from "react";
 
 export default function FixPaymentsPage() {
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [monthsText, setMonthsText] = useState<string>(
     String(new Date().getMonth() + 1)
-  ); // "9,10,11,12" ejemplo
+  );
   const [adminId, setAdminId] = useState<string>("");
   const [onlyPending, setOnlyPending] = useState<boolean>(true);
   const [running, setRunning] = useState(false);
@@ -16,6 +17,7 @@ export default function FixPaymentsPage() {
     setRunning(true);
     setResult(null);
     setError(null);
+
     try {
       const months = monthsText
         .split(",")
@@ -24,15 +26,18 @@ export default function FixPaymentsPage() {
         .map(Number)
         .filter((n) => Number.isFinite(n) && n >= 1 && n <= 12);
 
-      const body = { year, months, adminId: adminId || undefined, onlyPending };
-      const res = await fetch("/api/admin/fix-payments", {
-        method: "POST",
-        body: JSON.stringify(body),
-        headers: { "Content-Type": "application/json" },
-      });
-      const json = await res.json();
-      if (!res.ok) throw new Error(json?.error ?? "Error ejecutando fix");
-      setResult(json.result);
+      const body = {
+        year,
+        months,
+        adminId: adminId || undefined,
+        onlyPending,
+      };
+
+      const res = await runFixIncorrectPayments(body);
+
+      if (!res.ok) throw new Error(res.error ?? "Error ejecutando fix");
+
+      setResult(res.result);
     } catch (err: any) {
       setError(String(err?.message ?? err));
     } finally {
