@@ -22,6 +22,8 @@ export default function UsersReportPage() {
   const [selectedUser, setSelectedUser] = useState<UsuarioDetail | null>(null);
   const [loadingUser, setLoadingUser] = useState(false);
 
+  const [tarifa, setTarifa] = useState<any | null>(null);
+
   const months = [
     { m: 9, label: "Sep" },
     { m: 10, label: "Oct" },
@@ -39,6 +41,7 @@ export default function UsersReportPage() {
       const json = await res.json();
       if (!res.ok) throw new Error(json?.error ?? "Error fetching report");
       setAdmins(json.admins ?? []);
+      setTarifa(json.tarifa ?? null);
       setUsuarios(json.usuarios ?? []);
     } catch (err) {
       console.error("Error fetching report:", err);
@@ -124,6 +127,85 @@ export default function UsersReportPage() {
           Actualizar
         </button>
       </div>
+
+      {selectedAdmin && tarifa && (
+        <div className="border rounded mb-6 p-4 bg-white">
+          <h2 className="text-lg font-semibold mb-3">
+            Tarifa del Administrador
+          </h2>
+
+          <div className="text-sm mb-2">
+            <strong>Tipo de configuración:</strong>{" "}
+            {tarifa.tipoConfiguracion ?? "-"}
+          </div>
+
+          {/* RANGOS */}
+          {tarifa.rangos?.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-medium mb-2">Rangos de Tarifa</h3>
+              <table className="min-w-full table-auto text-xs border">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-2 py-1 text-left">Nombre</th>
+                    <th className="px-2 py-1 text-left">Día Inicio</th>
+                    <th className="px-2 py-1 text-left">Día Fin</th>
+                    <th className="px-2 py-1 text-left">Monto</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tarifa.rangos.map((r: any) => (
+                    <tr key={r.id} className="even:bg-white odd:bg-gray-50">
+                      <td className="px-2 py-1">{r.nombre}</td>
+                      <td className="px-2 py-1">{r.diaInicio}</td>
+                      <td className="px-2 py-1">{r.diaFin}</td>
+                      <td className="px-2 py-1">${r.monto.toFixed(2)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* DINÁMICAS */}
+          {tarifa.dinamicas?.length > 0 && (
+            <div className="mb-4">
+              <h3 className="font-medium mb-2">Dinámicas de Tarifa</h3>
+              <table className="min-w-full table-auto text-xs border">
+                <thead className="bg-gray-100">
+                  <tr>
+                    <th className="px-2 py-1 text-left">Nombre</th>
+                    <th className="px-2 py-1 text-left">Monto base</th>
+                    <th className="px-2 py-1 text-left">Días gracia</th>
+                    <th className="px-2 py-1 text-left">Recargo</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {tarifa.dinamicas.map((d: any) => (
+                    <tr key={d.id} className="even:bg-white odd:bg-gray-50">
+                      <td className="px-2 py-1">{d.nombre}</td>
+                      <td className="px-2 py-1">${d.montoBase.toFixed(2)}</td>
+                      <td className="px-2 py-1">{d.diasGracia}</td>
+                      <td className="px-2 py-1">
+                        ${d.montoRecargo.toFixed(2)}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {/* RAW JSON opcional */}
+          <details>
+            <summary className="cursor-pointer text-xs text-gray-600">
+              Mostrar JSON tarifa
+            </summary>
+            <pre className="text-xs mt-2 bg-gray-50 p-2 rounded overflow-auto">
+              {JSON.stringify(tarifa, null, 2)}
+            </pre>
+          </details>
+        </div>
+      )}
 
       <div className="overflow-auto border rounded">
         <table className="min-w-full table-auto">

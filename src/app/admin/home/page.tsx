@@ -1,8 +1,9 @@
 import { auth } from "@/auth";
 import { redirect } from "next/navigation";
-import PruebaTour from "./PruebaTour";
+import Bienvenida from "./Bienvenida";
 
 import type { Metadata } from "next";
+import AdminStats from "./AdminStats";
 
 export async function generateMetadata(): Promise<Metadata> {
   return {
@@ -25,7 +26,8 @@ export default async function DashboardPage() {
 
   return (
     <>
-      <PruebaTour user={user} link={url} />
+      <Bienvenida user={user} link={url} />
+      <AdminStats />
     </>
   );
 }

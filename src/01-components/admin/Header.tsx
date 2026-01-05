@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Bell, Search } from "lucide-react";
+import { Bell, Search, Menu } from "lucide-react";
 import Link from "next/link";
 import { UserSearchModal } from "./ui/user-search-modal";
+import { useSidebarStore } from "@/lib/store/useSideBarStore";
 
 interface User {
   id: string;
@@ -28,6 +29,7 @@ interface HeaderProps {
 
 export function Header({ user }: HeaderProps) {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const toggleSidebar = useSidebarStore((state) => state.toggle);
 
   const companyName = user?.empresa?.nombre || "Mi Empresa";
   const notificacionesNoLeidas = user?.notificacionesRecibidas.length || 0;
@@ -35,16 +37,28 @@ export function Header({ user }: HeaderProps) {
 
   return (
     <>
-      <header className="border-b bg-card" data-tour="header">
+      <header
+        className="border-b h-14 flex items-center bg-white border-gray-200"
+        data-tour="header"
+      >
         <div className="container mx-auto px-2 sm:px-14 py-4">
           <div className="flex items-center justify-between">
+            {/* BOTÓN HAMBURGUESA SOLO EN MOBILE */}
+            <button
+              className="md:hidden p-2 rounded-lg hover:bg-gray-100 transition"
+              onClick={toggleSidebar}
+            >
+              <Menu className="w-6 h-6 text-gray-700" />
+            </button>
+
             <div className="flex items-center gap-4">
               <Link href={`/admin/home`}>
-                <h1 className="text-3xl font-bold bg-gradient-to-r from-emerald-600 to-purple-600 bg-clip-text text-transparent capitalize">
+                <h1 className="text-xl font-semibold capitalize bg-gradient-to-r from-emerald-600 to-purple-600 bg-clip-text text-transparent">
                   {companyName}
                 </h1>
               </Link>
             </div>
+
             <div className="flex items-center gap-2">
               <Button
                 variant="outline"
@@ -56,6 +70,7 @@ export function Header({ user }: HeaderProps) {
                 <Search className="w-4 h-4 mr-2" />
                 <span className="hidden sm:inline">Buscar usuario</span>
               </Button>
+
               <Link href="/admin/notificaciones">
                 <div className="relative" data-tour="notifications">
                   <Bell className="w-6 h-6 text-black-600 hover:text-black-700 transition-colors" />

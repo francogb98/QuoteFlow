@@ -86,13 +86,13 @@ export async function actualizarConfiguracionTarifa(data: any) {
   try {
     const { id, tipoConfiguracion, rangos, dinamicas } = data;
 
-    // Actualiza la configuración principal
-    const tarifaUpdate = await prisma.configuracionTarifa.update({
+    // 1. Actualizar configuración principal
+    await prisma.configuracionTarifa.update({
       where: { id },
       data: { tipoConfiguracion },
     });
 
-    // Actualiza rangos y dinámicas usando funciones auxiliares
+    // 2. Actualizar rangos y dinamicas
     if (Array.isArray(rangos)) {
       await upsertRangos(id, rangos);
     }
@@ -100,16 +100,63 @@ export async function actualizarConfiguracionTarifa(data: any) {
       await upsertDinamicas(id, dinamicas);
     }
 
-    // Devuelve la configuración actualizada con relaciones
-    const configActualizada = await prisma.configuracionTarifa.findUnique({
+    // 3. Obtener configuración actualizada (con rangos/dinamicas)
+    const config = await prisma.configuracionTarifa.findUnique({
       where: { id },
       include: { rangos: true, dinamicas: true },
     });
 
+    if (!config) {
+      return { ok: false, error: "Tarifa no encontrada" };
+    }
+
+    // 4. Obtener usuarios asociados a esa tarifa
+    const usuarios = await prisma.usuario.findMany({
+      where: {
+        OR: [
+          { rangoTarifa: { configuracionTarifaId: id } },
+          { dinamicaTarifa: { configuracionTarifaId: id } },
+        ],
+      },
+      include: {
+        rangoTarifa: true,
+        dinamicaTarifa: true,
+      },
+    });
+
+    // 5. Procesar usuarios → calcular monto correcto → actualizar pagos pendientes
+    for (const usuario of usuarios) {
+      let nuevoMonto = 0;
+
+      if (tipoConfiguracion === "FIJA_MENSUAL") {
+        if (!usuario.rangoTarifa) continue;
+        nuevoMonto = usuario.rangoTarifa.monto;
+      }
+
+      if (tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO") {
+        if (!usuario.dinamicaTarifa) continue;
+        const d = usuario.dinamicaTarifa;
+        nuevoMonto = d.montoBase;
+      }
+
+      // 6. Actualizar TODOS los pagos pendientes del usuario
+      await prisma.pago.updateMany({
+        where: {
+          usuarioId: usuario.id,
+          estado: "PENDIENTE",
+        },
+        data: { monto: nuevoMonto },
+      });
+    }
+
     revalidatePath(`/admin/settings`);
     revalidatePath(`/admin/users`);
     revalidatePath(`/admin/home`);
-    return { ok: true, configActualizada };
+
+    return {
+      ok: true,
+      configActualizada: config,
+    };
   } catch (error) {
     console.error(error);
     return {

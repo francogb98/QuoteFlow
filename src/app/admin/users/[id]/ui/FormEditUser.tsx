@@ -20,7 +20,7 @@ export const FormEditUser = ({ id, tarifasDisponibles }: any) => {
   const [formData, setFormData] = useState<any>({});
   const queryClient = useQueryClient();
 
-  const { data, isLoading, isError, error } = useQuery({
+  const { data, isLoading, isError, error, isFetching } = useQuery({
     queryKey: ["user", id],
     queryFn: async () => {
       const userData = await getUser(id);
@@ -29,20 +29,22 @@ export const FormEditUser = ({ id, tarifasDisponibles }: any) => {
     enabled: !!id,
   });
 
-  // Sincronizar formData cuando cambia el data (por cambio de id o refetch)
   useEffect(() => {
     if (!data) return;
-    // Clonar y normalizar fechas a ISO (yyyy-mm-dd) para inputs tipo date si existen
+
     const clone = JSON.parse(JSON.stringify(data));
+
     if (clone.fechaInicioMembresia) {
       try {
         clone.fechaInicioMembresia = new Date(clone.fechaInicioMembresia)
           .toISOString()
           .slice(0, 10);
-      } catch {
-        // dejar tal cual si no es convertible
-      }
+      } catch {}
     }
+
+    // SINCRONIZAR TARIFA SELECCIONADA
+    clone.tarifa = clone.dinamicaTarifaId || clone.rangoTarifaId || "";
+
     setFormData(clone);
   }, [data, id]);
 
@@ -64,33 +66,36 @@ export const FormEditUser = ({ id, tarifasDisponibles }: any) => {
     if (type === "checkbox") parsedValue = checked;
     else if (type === "number") parsedValue = value === "" ? "" : Number(value);
 
-    // Manejo especial para la selección de tarifa
     if (name === "tarifa") {
-      // Se asume que el value trae el id de la tarifa seleccionada
-      if (
+      const selected = parsedValue || null;
+
+      const isDynamic =
         data?.configuracionTarifa?.tipoConfiguracion ===
-        TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO
-      ) {
+        TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
+
+      if (isDynamic) {
         setFormData((prev: any) => ({
           ...prev,
-          dinamicaTarifaId: parsedValue || null,
+          tarifa: selected, // NECESARIO PARA EL BACKEND
+          dinamicaTarifaId: selected,
           rangoTarifaId: null,
           nombreTarifaAsignada:
-            tarifasDisponibles?.find((t: any) => t.id === parsedValue)
-              ?.nombre || null,
+            tarifasDisponibles?.find((t: any) => t.id === selected)?.nombre ||
+            null,
         }));
-        return;
       } else {
         setFormData((prev: any) => ({
           ...prev,
-          rangoTarifaId: parsedValue || null,
+          tarifa: selected, // NECESARIO PARA EL BACKEND
+          rangoTarifaId: selected,
           dinamicaTarifaId: null,
           nombreTarifaAsignada:
-            tarifasDisponibles?.find((t: any) => t.id === parsedValue)
-              ?.nombre || null,
+            tarifasDisponibles?.find((t: any) => t.id === selected)?.nombre ||
+            null,
         }));
-        return;
       }
+
+      return;
     }
 
     setFormData((prevData: any) => ({
@@ -119,12 +124,10 @@ export const FormEditUser = ({ id, tarifasDisponibles }: any) => {
     data?.configuracionTarifa?.tipoConfiguracion ===
     TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
 
-  if (isLoading) return <LoadingState />;
+  if (isLoading || isFetching) return <LoadingState />;
   if (isError) return <ErrorState error={error} />;
 
   const tarifaActual = data?.dinamicaTarifa?.id || data?.rangoTarifa?.id;
-
-  console.log({ data });
 
   return (
     <div className="space-y-6">

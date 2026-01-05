@@ -99,6 +99,8 @@ export const editUser = async (
       edad: validatedContent.edad,
       fechaInicioMembresia: fechaInicioMembresia ?? null,
     };
+    console.log({ validatedContent });
+    console.log({ dataToEdit });
 
     // Verificar documento único (excluyendo al usuario actual)
     const existingUser = await prisma.usuario.findFirst({

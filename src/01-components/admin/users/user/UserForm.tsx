@@ -212,7 +212,7 @@ export function UserForm({
             </label>
             <select
               name="tarifa"
-              value={formData?.tarifa || tarifaActual || ""}
+              value={formData?.tarifa ?? tarifaActual ?? ""}
               onChange={handleChange}
               className="w-full h-11 px-4 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 bg-purple-50/50"
             >
