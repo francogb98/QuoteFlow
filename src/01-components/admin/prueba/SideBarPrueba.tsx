@@ -82,7 +82,7 @@ export function SidebarSimple() {
         {/* SIDEBAR HEADER */}
         <div className="h-14 px-4 flex items-center border-b border-gray-200 justify-between">
           {isOpen && (
-            <h2 className="font-bold text-lg bg-grad ient-to-r from-emerald-600 to-purple-600 bg-clip-text text-transparent">
+            <h2 className="font-bold text-lg bg-gradient-to-r from-emerald-700 to-purple-800 bg-clip-text text-transparent">
               Menú
             </h2>
           )}

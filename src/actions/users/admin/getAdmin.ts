@@ -5,7 +5,7 @@ import prisma from "@/lib/prisma";
 export async function getAdmin(id: string) {
   try {
     const admin = await prisma.administrador.findUnique({
-      where: { id },
+      where: { id: "6b67b1d7-4685-4667-be34-6dc971b11802" },
       include: {
         empresa: true,
         usuarios: {

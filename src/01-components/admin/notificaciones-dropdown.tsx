@@ -27,6 +27,7 @@ import {
 } from "@/01-actions/admin/notificaciones/notificaciones";
 import { ModalComprobante } from "./ui/ModalComprobante";
 import { getPagoUser } from "@/01-actions/admin/pago/getPagoUser";
+import Link from "next/link";
 
 interface Notificacion {
   id: string;
@@ -259,12 +260,13 @@ export function NotificationsDropdown({
               )}
             </div>
             <div className="border-t p-3 text-center bg-gray-50">
-              <a
+              <Link
                 href="/admin/notificaciones"
-                className="text-sm text-emerald-600 font-medium hover:underline"
+                onClick={() => setIsOpen(false)} // <--- Esto cierra el dropdown al hacer clic
+                className="text-sm text-emerald-600 font-medium hover:underline block w-full h-full"
               >
                 Ver todas las notificaciones
-              </a>
+              </Link>
             </div>
           </div>
         )}
