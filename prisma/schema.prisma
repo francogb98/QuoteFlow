@@ -76,6 +76,8 @@ model Notificacion {
   administrador   Administrador?   @relation("NotificacionDestinatario", fields: [administradorId], references: [id])
   remitente       Administrador?   @relation("NotificacionRemitente", fields: [remitenteId], references: [id])
   usuario         Usuario?         @relation("NotificacionUsuario", fields: [usuarioId], references: [id])
+  pago            Pago?            @relation(fields: [pagoId], references: [id])
+  pagoId          String?
 
   @@index([administradorId])
   @@index([usuarioId])
@@ -144,20 +146,21 @@ model Usuario {
 }
 
 model Pago {
-  id               String     @id @default(uuid())
+  id               String         @id @default(uuid())
   monto            Float
-  fecha            DateTime   @default(now())
+  fecha            DateTime       @default(now())
   mes              Int
   año             Int
   comprobante      String?
   usuarioId        String
-  estaVencido      Boolean    @default(false)
-  estado           EstadoPago @default(PENDIENTE)
-  metodo           MetodoPago @default(EFECTIVO)
+  estaVencido      Boolean        @default(false)
+  estado           EstadoPago     @default(PENDIENTE)
+  metodo           MetodoPago     @default(EFECTIVO)
   periodo          String
   fechaVencimiento DateTime?
   motivo           String?
-  usuario          Usuario    @relation(fields: [usuarioId], references: [id])
+  usuario          Usuario        @relation(fields: [usuarioId], references: [id])
+  notificacions    Notificacion[]
 
   @@index([usuarioId])
   @@index([fecha])

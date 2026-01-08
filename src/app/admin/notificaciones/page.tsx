@@ -1,5 +1,3 @@
-// src/app/admin/notificaciones/page.tsx
-
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
@@ -10,13 +8,14 @@ import {
   Bell,
   CheckCircle,
   Trash2,
-  BookMarkedIcon as MarkAsUnread,
   Calendar,
   User,
   Info,
   CheckCircle2,
   XCircle,
   Clock,
+  FileText,
+  Loader2,
 } from "lucide-react";
 
 import { formatDistanceToNow } from "date-fns";
@@ -28,7 +27,10 @@ import {
   marcarNotificacionComoLeida,
 } from "@/01-actions/admin/notificaciones/notificaciones";
 import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { toast } from "sonner";
+import { ModalComprobante } from "@/01-components/admin/ui/ModalComprobante";
+import { getPagoUser } from "@/01-actions/admin/pago/getPagoUser";
+
 interface Notificacion {
   id: string;
   tipo: string;
@@ -37,6 +39,8 @@ interface Notificacion {
   leida: boolean;
   fechaCreacion: Date;
   fechaLeida?: Date;
+  entidadId?: string | null; // Asegúrate de incluir estos campos
+  entidadTipo?: string | null;
   remitente?: {
     nombre: string;
     email: string;
@@ -104,17 +108,20 @@ export default function NotificacionesPage() {
   const [page, setPage] = useState(1);
   const [pagination, setPagination] = useState<any>(null);
 
-  const searchParams = useSearchParams();
-  const id = searchParams.get("id");
+  // Estados para el Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [selectedComprobante, setSelectedComprobante] = useState<string | null>(
+    null
+  );
+  const [selectedPagoId, setSelectedPagoId] = useState<string | null>(null);
+  const [loadingPagoId, setLoadingPagoId] = useState<string | null>(null);
 
-  // Solución: Usar useCallback para memorizar la función
   const cargarNotificaciones = useCallback(async () => {
     setCargando(true);
     try {
       const resultado = await obtenerNotificaciones(page, 20);
       if (resultado.success) {
-        //@ts-ignore
-        setNotificaciones(resultado.notificaciones);
+        setNotificaciones(resultado.notificaciones as any);
         setPagination(resultado.pagination);
       }
     } catch (error) {
@@ -122,11 +129,36 @@ export default function NotificacionesPage() {
     } finally {
       setCargando(false);
     }
-  }, [page]); // Dependencia: page
+  }, [page]);
 
   useEffect(() => {
     cargarNotificaciones();
-  }, [page, cargarNotificaciones]);
+  }, [cargarNotificaciones]);
+
+  const handleVerPago = async (notificacion: Notificacion) => {
+    if (!notificacion.entidadId) return;
+
+    setLoadingPagoId(notificacion.id);
+    try {
+      const result = await getPagoUser(notificacion.entidadId);
+      if (result.ok && result.pago) {
+        setSelectedComprobante(result.pago.comprobante);
+        setSelectedPagoId(notificacion.entidadId);
+        setIsModalOpen(true);
+
+        // Si no está leída, marcarla al abrir
+        if (!notificacion.leida) {
+          handleMarcarComoLeida(notificacion.id);
+        }
+      } else {
+        toast.error("No se encontró el comprobante para este pago.");
+      }
+    } catch (error) {
+      toast.error("Error al obtener los datos del pago.");
+    } finally {
+      setLoadingPagoId(null);
+    }
+  };
 
   const handleMarcarComoLeida = async (id: string) => {
     const resultado = await marcarNotificacionComoLeida(id);
@@ -152,6 +184,7 @@ export default function NotificacionesPage() {
     const resultado = await eliminarNotificacion(id);
     if (resultado.success) {
       setNotificaciones((prev) => prev.filter((n) => n.id !== id));
+      toast.success("Notificación eliminada");
     }
   };
 
@@ -195,70 +228,54 @@ export default function NotificacionesPage() {
           <CardContent className="p-4">
             <div className="flex flex-col md:flex-row gap-4">
               <div className="flex gap-2">
-                <Button
-                  variant={filtro === "todas" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFiltro("todas")}
-                >
-                  Todas
-                </Button>
-                <Button
-                  variant={filtro === "no_leidas" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFiltro("no_leidas")}
-                  className="relative"
-                >
-                  No leídas
-                  {noLeidasCount > 0 && (
-                    <Badge className="ml-2 bg-red-500 text-white">
-                      {noLeidasCount}
-                    </Badge>
-                  )}
-                </Button>
-                <Button
-                  variant={filtro === "leidas" ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => setFiltro("leidas")}
-                >
-                  Leídas
-                </Button>
+                {(["todas", "no_leidas", "leidas"] as const).map((f) => (
+                  <Button
+                    key={f}
+                    variant={filtro === f ? "default" : "outline"}
+                    size="sm"
+                    onClick={() => setFiltro(f)}
+                    className="capitalize relative"
+                  >
+                    {f.replace("_", " ")}
+                    {f === "no_leidas" && noLeidasCount > 0 && (
+                      <Badge className="ml-2 bg-red-500 text-white">
+                        {noLeidasCount}
+                      </Badge>
+                    )}
+                  </Button>
+                ))}
               </div>
 
               <select
                 value={tipoFiltro}
                 onChange={(e) => setTipoFiltro(e.target.value)}
-                className="px-3 py-1 border border-gray-300 rounded-md text-sm"
+                className="px-3 py-1 border border-gray-300 rounded-md text-sm outline-none focus:ring-2 focus:ring-blue-500"
               >
                 <option value="todos">Todos los tipos</option>
-                <option value="PAGO_VENCIDO">Pagos vencidos</option>
-                <option value="PAGO_PROXIMO_VENCER">Próximos a vencer</option>
-                <option value="COMPROBANTE_SUBIDO">Comprobantes subidos</option>
-                <option value="COMPROBANTE_APROBADO">
-                  Comprobantes aprobados
-                </option>
-                <option value="PAGO_CONFIRMADO">Pagos confirmados</option>
-                <option value="SISTEMA">Sistema</option>
+                {Object.keys(tiposNotificacion).map((tipo) => (
+                  <option key={tipo} value={tipo}>
+                    {tipo.replace(/_/g, " ")}
+                  </option>
+                ))}
               </select>
             </div>
           </CardContent>
         </Card>
 
-        {/* Lista de notificaciones */}
+        {/* Lista */}
         {cargando ? (
-          <div className="flex justify-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600"></div>
+          <div className="flex justify-center py-20">
+            <Loader2 className="animate-spin h-10 w-10 text-blue-600" />
           </div>
         ) : notificacionesFiltradas.length === 0 ? (
-          <Card>
-            <CardContent className="p-8 text-center">
-              <Bell className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-              <h3 className="text-lg font-semibold text-gray-900 mb-2">
-                No hay notificaciones
+          <Card className="border-dashed border-2">
+            <CardContent className="p-12 text-center">
+              <Bell className="w-16 h-16 text-gray-300 mx-auto mb-4" />
+              <h3 className="text-lg font-semibold text-gray-900">
+                Sin notificaciones
               </h3>
-              <p className="text-gray-600">
-                {filtro === "no_leidas"
-                  ? "No tienes notificaciones sin leer"
-                  : "No se encontraron notificaciones con los filtros seleccionados"}
+              <p className="text-gray-500">
+                No hay nada que mostrar con estos filtros.
               </p>
             </CardContent>
           </Card>
@@ -271,18 +288,24 @@ export default function NotificacionesPage() {
                 ] || tiposNotificacion.SISTEMA;
               const IconoTipo = tipoConfig.icon;
 
+              // Lógica para mostrar botón "Ver Pago"
+              const esComprobante =
+                notificacion.entidadTipo === "PAGO" ||
+                notificacion.tipo.includes("COMPROBANTE");
+              const isLoadingThis = loadingPagoId === notificacion.id;
+
               return (
                 <Card
                   key={notificacion.id}
                   className={`transition-all duration-200 hover:shadow-md ${
                     !notificacion.leida
-                      ? `${tipoConfig.bg} ${tipoConfig.border} border-l-4`
+                      ? `${tipoConfig.bg} ${tipoConfig.border} border-l-4 border-l-blue-600`
                       : "bg-white border-gray-200"
                   }`}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-start gap-4">
-                      <div className={`p-2 rounded-full ${tipoConfig.bg}`}>
+                      <div className={`p-2 rounded-xl ${tipoConfig.bg}`}>
                         <IconoTipo className={`w-5 h-5 ${tipoConfig.color}`} />
                       </div>
 
@@ -290,39 +313,27 @@ export default function NotificacionesPage() {
                         <div className="flex items-start justify-between gap-2">
                           <div className="flex-1">
                             <h3
-                              className={`font-semibold ${!notificacion.leida ? "text-gray-900" : "text-gray-700"}`}
+                              className={`font-bold ${!notificacion.leida ? "text-gray-900" : "text-gray-700"}`}
                             >
                               {notificacion.titulo}
                             </h3>
                             <p
-                              className={`text-sm mt-1 ${!notificacion.leida ? "text-gray-800" : "text-gray-600"}`}
+                              className={`text-sm mt-1 leading-relaxed ${!notificacion.leida ? "text-gray-800" : "text-gray-600"}`}
                             >
                               {notificacion.mensaje}
                             </p>
 
-                            {notificacion.tipo === "COMPROBANTE_SUBIDO" && (
-                              <Link
-                                href={`/admin/pagos`}
-                                className="text-blue-600 hover:underline text-sm"
-                              >
-                                Ver pago
-                              </Link>
-                            )}
-
-                            <div className="flex items-center gap-4 mt-2 text-xs text-gray-500">
-                              <span className="flex items-center gap-1">
+                            <div className="flex flex-wrap items-center gap-4 mt-3 text-[11px] font-medium text-gray-500">
+                              <span className="flex items-center gap-1.5 px-2 py-0.5 bg-white/50 rounded-full border">
                                 <Calendar className="w-3 h-3" />
                                 {formatDistanceToNow(
                                   new Date(notificacion.fechaCreacion),
-                                  {
-                                    addSuffix: true,
-                                    locale: es,
-                                  }
+                                  { addSuffix: true, locale: es }
                                 )}
                               </span>
 
                               {notificacion.remitente && (
-                                <span className="flex items-center gap-1">
+                                <span className="flex items-center gap-1.5 px-2 py-0.5 bg-white/50 rounded-full border">
                                   <User className="w-3 h-3" />
                                   {notificacion.remitente.nombre}
                                 </span>
@@ -330,34 +341,45 @@ export default function NotificacionesPage() {
                             </div>
                           </div>
 
-                          <div className="flex items-center gap-2">
-                            {!notificacion.leida && (
-                              <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
+                          <div className="flex items-center gap-1">
+                            {esComprobante && (
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                disabled={!!loadingPagoId}
+                                onClick={() => handleVerPago(notificacion)}
+                                className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 hover:text-emerald-800"
+                              >
+                                {isLoadingThis ? (
+                                  <Loader2 className="w-3 h-3 animate-spin mr-2" />
+                                ) : (
+                                  <FileText className="w-3 h-3 mr-2" />
+                                )}
+                                Ver pago
+                              </Button>
                             )}
 
-                            <div className="flex gap-1">
-                              {!notificacion.leida && (
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  onClick={() =>
-                                    handleMarcarComoLeida(notificacion.id)
-                                  }
-                                  className="h-8 w-8 p-0"
-                                >
-                                  <CheckCircle className="w-4 h-4" />
-                                </Button>
-                              )}
-
+                            {!notificacion.leida && (
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                onClick={() => handleEliminar(notificacion.id)}
-                                className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
+                                onClick={() =>
+                                  handleMarcarComoLeida(notificacion.id)
+                                }
+                                className="h-8 w-8 p-0 text-blue-600 hover:bg-blue-50"
                               >
-                                <Trash2 className="w-4 h-4" />
+                                <CheckCircle className="w-4 h-4" />
                               </Button>
-                            </div>
+                            )}
+
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => handleEliminar(notificacion.id)}
+                              className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </Button>
                           </div>
                         </div>
                       </div>
@@ -371,7 +393,7 @@ export default function NotificacionesPage() {
 
         {/* Paginación */}
         {pagination && pagination.pages > 1 && (
-          <div className="flex justify-center gap-2">
+          <div className="flex justify-center items-center gap-4 pt-4">
             <Button
               variant="outline"
               disabled={page === 1}
@@ -379,11 +401,9 @@ export default function NotificacionesPage() {
             >
               Anterior
             </Button>
-
-            <span className="flex items-center px-4 text-sm text-gray-600">
+            <span className="text-sm font-medium">
               Página {page} de {pagination.pages}
             </span>
-
             <Button
               variant="outline"
               disabled={page === pagination.pages}
@@ -394,6 +414,19 @@ export default function NotificacionesPage() {
           </div>
         )}
       </div>
+
+      {/* Modal de Comprobante */}
+      <ModalComprobante
+        isOpen={isModalOpen}
+        imageUrl={selectedComprobante}
+        pagoId={selectedPagoId}
+        onClose={() => {
+          setIsModalOpen(false);
+          setSelectedComprobante(null);
+          setSelectedPagoId(null);
+        }}
+        onUpdate={cargarNotificaciones} // Recarga la lista tras aprobar/rechazar
+      />
     </div>
   );
 }

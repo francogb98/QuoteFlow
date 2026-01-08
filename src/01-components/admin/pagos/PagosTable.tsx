@@ -9,6 +9,7 @@ interface Props {
 }
 
 export function PagosTable({ pagos, onViewVoucher, onEditStatus }: Props) {
+  console.log({ pagos });
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
       <table className="w-full text-sm">

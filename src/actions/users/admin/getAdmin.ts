@@ -26,13 +26,8 @@ export async function getAdmin(id: string) {
         },
         // NUEVO: Incluir notificaciones recientes
         notificacionesRecibidas: {
-          where: {
-            leida: false,
-          },
-          take: 5,
-          orderBy: {
-            fechaCreacion: "desc",
-          },
+          take: 8,
+          orderBy: [{ leida: "asc" }, { fechaCreacion: "desc" }],
         },
       },
     });

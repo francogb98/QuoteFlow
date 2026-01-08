@@ -100,7 +100,6 @@ export const PagosGrid = ({
                 key={pago.id}
                 pago={pago}
                 handleEditPayment={handleEditPayment}
-                isDynamicTariff={isDynamicTariff}
               />
             ))}
           </div>

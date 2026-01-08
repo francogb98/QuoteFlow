@@ -2,11 +2,11 @@
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
-import { Bell, Search, Menu } from "lucide-react";
+import { Search, Menu } from "lucide-react";
 import Link from "next/link";
 import { UserSearchModal } from "./ui/user-search-modal";
 import { useSidebarStore } from "@/lib/store/useSideBarStore";
+import { NotificationsDropdown } from "./notificaciones-dropdown";
 
 interface User {
   id: string;
@@ -23,22 +23,23 @@ interface HeaderProps {
       nombre?: string;
     };
     usuarios?: User[];
-    notificacionesRecibidas?: any;
+    notificacionesRecibidas?: any[];
   };
+  onNotificationsUpdate?: () => void;
 }
 
-export function Header({ user }: HeaderProps) {
+export function Header({ user, onNotificationsUpdate }: HeaderProps) {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const toggleSidebar = useSidebarStore((state) => state.toggle);
 
   const companyName = user?.empresa?.nombre || "Mi Empresa";
-  const notificacionesNoLeidas = user?.notificacionesRecibidas.length || 0;
+  const notificaciones = user?.notificacionesRecibidas || [];
   const users = user?.usuarios || [];
 
   return (
     <>
       <header
-        className="border-b h-14 flex items-center bg-white border-gray-200"
+        className="border-b h-14 flex items-center bg-white border-gray-200 sticky top-0 z-40"
         data-tour="header"
       >
         <div className="container mx-auto px-2 sm:px-14 py-4">
@@ -53,7 +54,7 @@ export function Header({ user }: HeaderProps) {
 
             <div className="flex items-center gap-4">
               <Link href={`/admin/home`}>
-                <h1 className="text-xl font-semibold capitalize bg-gradient-to-r from-emerald-600 to-purple-600 bg-clip-text text-transparent">
+                <h1 className="text-xl font-semibold capitalize bg-gradient-to-r from-emerald-600 to-purple-600 bg-clip-text text-transparent hover:opacity-80 transition-opacity">
                   {companyName}
                 </h1>
               </Link>
@@ -71,16 +72,10 @@ export function Header({ user }: HeaderProps) {
                 <span className="hidden sm:inline">Buscar usuario</span>
               </Button>
 
-              <Link href="/admin/notificaciones">
-                <div className="relative" data-tour="notifications">
-                  <Bell className="w-6 h-6 text-black-600 hover:text-black-700 transition-colors" />
-                  {notificacionesNoLeidas > 0 && (
-                    <Badge className="absolute -top-2 -right-2 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-gradient-to-r from-red-500 to-red-600 text-white">
-                      {notificacionesNoLeidas}
-                    </Badge>
-                  )}
-                </div>
-              </Link>
+              <NotificationsDropdown
+                notificaciones={notificaciones}
+                onUpdate={onNotificationsUpdate || (() => {})}
+              />
             </div>
           </div>
         </div>
