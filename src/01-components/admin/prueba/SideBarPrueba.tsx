@@ -12,6 +12,7 @@ import {
   DollarSign,
   LogOut,
   Users,
+  PersonStanding,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { signOut } from "next-auth/react";
@@ -44,9 +45,19 @@ const navLinks = [
     icon: DollarSign,
   },
   {
+    label: "Cuentas",
+    href: "/admin/account",
+    icon: PersonStanding,
+  },
+  {
     label: "Configuracion",
     href: "/admin/settings",
     icon: Settings,
+  },
+  {
+    label: "Suscripcion",
+    href: "/admin/suscripcion",
+    icon: DollarSign,
   },
 ];
 
