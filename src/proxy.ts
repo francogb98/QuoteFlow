@@ -9,7 +9,7 @@ export async function proxy(req: NextRequest) {
   const session = await auth();
 
   if (!session?.user) {
-    redirect("/auth/login");
+    return NextResponse.redirect(new URL("/auth/login", req.url));
   }
 
   //@ts-ignore
