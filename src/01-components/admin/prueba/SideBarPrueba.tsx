@@ -16,7 +16,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useSidebarStore } from "@/lib/store/useSideBarStore";
-import { signOut } from "@/*";
+import { signOut } from "next-auth/react";
 
 const navLinks = [
   {
