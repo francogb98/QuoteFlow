@@ -135,7 +135,14 @@ export function BulkUserForm({
 
   const uniqueTarifas = isDynamicTariff
     ? [...(configuracionTarifa.dinamicas || [])]
-    : [...(configuracionTarifa.rangos || [])];
+    : Object.values(
+        (configuracionTarifa.rangos || []).reduce((acc: any, tarifa: any) => {
+          if (!acc[tarifa.nombre]) {
+            acc[tarifa.nombre] = tarifa;
+          }
+          return acc;
+        }, {}),
+      );
 
   return (
     <Card className="max-w-7xl mx-auto">
