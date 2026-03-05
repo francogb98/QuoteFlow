@@ -276,7 +276,16 @@ export async function getDashboardData(
         email: true,
         estado: true,
         fechaCreacion: true,
-        rangoTarifa: { select: { nombre: true } },
+
+        pagos: {
+          select: {
+            mes: true,
+            año: true,
+            estado: true,
+          },
+          orderBy: [{ año: "desc" }, { mes: "desc" }],
+          take: 3, // últimos 3 meses
+        },
       },
       orderBy: { fechaCreacion: "desc" },
     }),
@@ -460,6 +469,11 @@ export async function getDashboardData(
     email: user.email,
     estado: user.estado,
     fechaCreacion: user.fechaCreacion.toISOString(),
+
+    pagos: user.pagos.map((p) => ({
+      mes: MESES_CORTOS[p.mes - 1],
+      estado: p.estado,
+    })),
   }));
 
   // ---- NUEVOS: Map details for modals ----

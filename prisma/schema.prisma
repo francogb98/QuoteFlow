@@ -82,6 +82,7 @@ model Administrador {
   notificacionesRecibidas          Notificacion[]       @relation("NotificacionDestinatario")
   notificacionesEnviadas           Notificacion[]       @relation("NotificacionRemitente")
   usuarios                         Usuario[]
+  passwordResetTokens              PasswordResetToken[]
 }
 
 model Notificacion {
@@ -221,6 +222,16 @@ model RangoTarifa {
   usuarios              Usuario[]
 
   @@index([configuracionTarifaId])
+}
+
+model PasswordResetToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  adminId   String
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  administrador Administrador @relation(fields: [adminId], references: [id], onDelete: Cascade)
 }
 
 model ConfiguracionDinamicaTarifa {

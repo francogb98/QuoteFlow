@@ -20,9 +20,9 @@ export default async function AdminHomePage() {
 
   // Saludo dinamico segun la hora
   const hora = new Date().getHours();
-  let saludo = "Buen dia";
-  if (hora >= 12 && hora < 19) saludo = "Buenas tardes";
-  if (hora >= 19) saludo = "Buenas noches";
+  let saludo = "¡Buen dia!";
+  if (hora >= 12 && hora < 19) saludo = "¡Buenas tardes!";
+  if (hora >= 19) saludo = "¡Buenas noches!";
 
   // Fecha actual formateada
   const fechaHoy = new Date().toLocaleDateString("es-AR", {
@@ -38,7 +38,7 @@ export default async function AdminHomePage() {
         {/* Header */}
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-foreground">
-            {saludo},{" "}
+            {saludo}{" "}
             <span className="bg-gradient-to-r from-emerald-600 to-purple-600 bg-clip-text text-transparent">
               {data.adminNombre}
             </span>
