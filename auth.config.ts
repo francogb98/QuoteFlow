@@ -43,6 +43,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         const admin = await getAdminForAuth(session.user.id);
         if (admin) {
           // Verificar si la configuración está completa
+          //@ts-ignore
           const configuracionCompleta = !!admin.configuracionTarifa;
 
           session.user = {
