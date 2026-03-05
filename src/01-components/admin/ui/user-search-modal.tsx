@@ -10,7 +10,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Search, User } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { useAdminPanelStore } from "@/lib/store/useAdminPanelStore"; // 1. Importar el store
 
 interface UserData {
   id: string;
@@ -25,27 +25,35 @@ interface UserSearchModalProps {
   isOpen: boolean;
   onClose: () => void;
   users: UserData[];
+  onUserSelect?: (userId: string) => void; // Prop opcional
 }
 
 export function UserSearchModal({
   isOpen,
   onClose,
   users,
+  onUserSelect, // 2. Recibimos la prop
 }: UserSearchModalProps) {
   const [searchTerm, setSearchTerm] = useState("");
-  const router = useRouter();
+  const openUser = useAdminPanelStore((s) => s.openUser); // 3. Obtenemos la acción del store
 
   const filteredUsers = users.filter(
     (user) =>
       user.apellido.toLowerCase().includes(searchTerm.toLowerCase()) ||
       user.nombre.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      user.documento.includes(searchTerm)
+      user.documento.includes(searchTerm),
   );
 
   const handleUserClick = (userId: string) => {
-    router.push(`/admin/users/${userId}`);
-    onClose();
-    setSearchTerm("");
+    // 4. Si hay una prop específica, la usamos.
+    // Si no, usamos el comportamiento global de abrir el panel.
+    if (onUserSelect) {
+      onUserSelect(userId);
+    } else {
+      openUser(userId);
+    }
+
+    handleClose(); // Reseteamos y cerramos
   };
 
   const handleClose = () => {

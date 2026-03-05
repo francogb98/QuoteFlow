@@ -9,67 +9,63 @@ export const getUsersList = async (
 ) => {
   const session = await auth();
   const userId = session?.user?.id;
-  if (!userId) {
-    throw new Error("Usuario no autenticado");
-  }
+  if (!userId) throw new Error("Usuario no autenticado");
 
   try {
     const admin = await prisma.administrador.findUnique({
       where: { id: userId },
-      select: {
-        empresaId: true,
-        rol: true,
-        configuracionTarifa: true,
-      },
+      select: { empresaId: true, configuracionTarifa: true },
     });
 
-    if (!admin?.empresaId) {
-      throw new Error("Empresa no encontrada");
-    }
+    if (!admin?.empresaId) throw new Error("Empresa no encontrada");
 
-    let whereClause: any = {};
-    if (profesorId) {
-      whereClause = { administradorId: profesorId };
-    } else {
-      whereClause = { administradorId: userId };
-    }
-    let pagosWhere: any = {};
-    const filterByMonth =
-      selectedMonth !== undefined && selectedYear !== undefined;
-
-    // 🔹 Sistema fijo mensual → usar mes y año o periodo
-    pagosWhere.mes = selectedMonth;
-    pagosWhere.año = selectedYear;
-
-    const [usuarios, totalUsuarios] = await prisma.$transaction([
-      prisma.usuario.findMany({
-        where: {
-          administradorId: profesorId || userId,
-          ...(filterByMonth && { pagos: { some: pagosWhere } }),
-        },
-        include: {
-          pagos: {
-            where: pagosWhere,
-            orderBy: { fechaVencimiento: "asc" },
+    const usuariosRaw = await prisma.usuario.findMany({
+      where: { administradorId: profesorId || userId },
+      include: {
+        // Traemos:
+        // 1. El pago del mes seleccionado (para el semáforo)
+        // 2. O cualquier pago que esté PENDIENTE o VENCIDO (para la terminal de cobro)
+        pagos: {
+          where: {
+            OR: [
+              { mes: selectedMonth, año: selectedYear },
+              { estado: { in: ["PENDIENTE", "VENCIDO"] } },
+            ],
           },
+          orderBy: [{ año: "desc" }, { mes: "desc" }],
         },
-        orderBy: { nombre: "asc" },
-      }),
-      prisma.usuario.count({
-        where: {
-          administradorId: profesorId || userId,
-          ...(filterByMonth && { pagos: { some: pagosWhere } }),
-        },
-      }),
-    ]);
+      },
+      orderBy: { apellido: "asc" },
+    });
+
+    // Enriquecemos con el último pago exitoso
+    const usuarios = await Promise.all(
+      usuariosRaw.map(async (u) => {
+        const ultimoPagoRealizado = await prisma.pago.findFirst({
+          where: { usuarioId: u.id, estado: "PAGADO" },
+          orderBy: [{ año: "desc" }, { mes: "desc" }],
+          select: { mes: true, año: true },
+        });
+
+        // Separamos el pago del mes actual de la lista general para facilitar el uso en el frontend
+        const pagoMesSeleccionado = u.pagos.find(
+          (p) => p.mes === selectedMonth && p.año === selectedYear
+        );
+
+        return {
+          ...u,
+          ultimoPagoRealizado,
+          pagoMesSeleccionado, // Esto ayuda al semáforo de la tabla
+        };
+      })
+    );
 
     return {
       usuarios,
-      totalUsuarios,
       tipoConfiguracion: admin.configuracionTarifa?.tipoConfiguracion || null,
     };
   } catch (error) {
     console.error("Error al obtener usuarios:", error);
-    throw new Error("No se pudo obtener la lista de usuarios");
+    throw new Error("No se pudo obtener la lista");
   }
 };

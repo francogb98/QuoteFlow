@@ -217,7 +217,7 @@ export function UserForm({
               className="w-full h-11 px-4 text-base border-2 border-purple-200 rounded-lg focus:border-purple-500 focus:ring-2 focus:ring-purple-100 outline-none transition-all duration-300 bg-purple-50/50"
             >
               <option value="">Seleccionar tarifa</option>
-              {tarifasDisponibles.map((tarifa: any) => (
+              {tarifasDisponibles?.map((tarifa: any) => (
                 <option key={tarifa.id} value={tarifa.id}>
                   {tarifa.nombre}
                 </option>

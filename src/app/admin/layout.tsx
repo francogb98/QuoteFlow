@@ -3,6 +3,9 @@ import type React from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/*";
 import AdminClientLayout from "./AdminClientLayout";
+import { AppStoreInitializer } from "@/components/AppStoreInitializer";
+import prisma from "@/lib/prisma";
+// import { tieneAcceso } from "@/lib/subscriptions/subscriptions";
 
 export default async function AdminLayout({
   children,
@@ -15,5 +18,19 @@ export default async function AdminLayout({
     redirect("/auth/login");
   }
 
-  return <AdminClientLayout user={session.user}>{children}</AdminClientLayout>;
+  const empresa = await prisma.empresa.findUnique({
+    where: { id: session.user.empresaId },
+    include: { suscripcion: true },
+  });
+
+  // if (!empresa || !tieneAcceso(empresa.suscripcion)) {
+  //   redirect("/suscripcion");
+  // }
+
+  return (
+    <AdminClientLayout user={session.user}>
+      <AppStoreInitializer />
+      {children}
+    </AdminClientLayout>
+  );
 }

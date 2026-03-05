@@ -1,4 +1,3 @@
-// app/admin/AdminClientLayout.tsx
 "use client";
 
 import type React from "react";
@@ -6,6 +5,7 @@ import { Toaster } from "sonner";
 import { Header } from "@/01-components/admin/Header";
 import { SidebarSimple } from "@/01-components/admin/prueba/SideBarPrueba";
 import { useSidebarStore } from "@/lib/store/useSideBarStore";
+import { AdminPanelManager } from "@/01-components/admin/prueba/AdminPanelManager";
 
 interface Props {
   children: React.ReactNode;
@@ -30,6 +30,9 @@ export default function AdminClientLayout({ children, user }: Props) {
           {children}
         </main>
       </div>
+
+      {/* 👇 Overlay global */}
+      <AdminPanelManager />
 
       <Toaster position="top-right" richColors />
     </div>

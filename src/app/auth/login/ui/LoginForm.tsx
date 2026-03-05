@@ -40,20 +40,21 @@ export const LoginForm = () => {
         // Mostrar estado de éxito
         setSuccess(true);
 
-        // Redirigir después de mostrar el éxito
+        // Redirigir después de mostrar el éxito usando recarga completa de página
+        // Esto asegura que la sesión esté establecida antes de la redirección
         setTimeout(() => {
-          router.push("/admin/home");
+          window.location.href = response.url || "/admin/home";
         }, 1500);
       } else {
         setError(
           response.error ||
-            "Credenciales incorrectas. Por favor, inténtalo de nuevo."
+            "Credenciales incorrectas. Por favor, inténtalo de nuevo.",
         );
       }
     } catch (err) {
       console.error("Error inesperado durante el inicio de sesión:", err);
       setError(
-        "Ocurrió un error al iniciar sesión. Por favor, inténtalo más tarde."
+        "Ocurrió un error al iniciar sesión. Por favor, inténtalo más tarde.",
       );
     } finally {
       setLoading(false);

@@ -31,16 +31,17 @@ export const PagosGrid = () => {
     },
   });
 
-  /** Normalizamos pagos */
+  /** Normalizamos pagos incluyendo el ID del usuario para el Panel Global */
   const allPayments = useMemo(() => {
     if (!pagosQuery.data?.adminUsers?.usuarios) return [];
 
     return pagosQuery.data.adminUsers.usuarios.flatMap((user: any) =>
       user.pagos.map((pago: any) => ({
         ...pago,
+        usuarioId: user.id, // <--- IMPORTANTE: Agregamos el ID para el store global
         userName: `${user.nombre} ${user.apellido}`,
         userDni: user.documento,
-      }))
+      })),
     );
   }, [pagosQuery.data]);
 
@@ -52,7 +53,7 @@ export const PagosGrid = () => {
     return allPayments.filter(
       (pago: any) =>
         pago.userName.toLowerCase().includes(term) ||
-        pago.userDni.includes(term)
+        pago.userDni.includes(term),
     );
   }, [allPayments, searchTerm]);
 
@@ -112,14 +113,13 @@ export const PagosGrid = () => {
         )}
       </h2>
 
-      {/* TABLA */}
+      {/* TABLA: Ahora recibe los pagos con el campo usuarioId */}
       <PagosTable
         pagos={filteredPayments}
         onViewVoucher={(pago) => setVoucherPago(pago)}
         onEditStatus={(pago) => setSelectedPago(pago)}
       />
 
-      {/* MODAL COMPROBANTE */}
       <ComprobanteModal
         pago={voucherPago}
         onClose={() => setVoucherPago(null)}
@@ -129,7 +129,6 @@ export const PagosGrid = () => {
         }}
       />
 
-      {/* MODAL EDITAR ESTADO */}
       <EditPaymentStatusModal
         isOpen={!!selectedPago}
         onOpenChange={() => setSelectedPago(null)}

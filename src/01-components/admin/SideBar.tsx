@@ -20,6 +20,7 @@ import {
   X,
   User2,
   TestTube,
+  Heart,
 } from "lucide-react";
 import { logout } from "@/01-actions/auth/logout";
 import { QuoteFlowLogo } from "@/lib/Logo";
@@ -148,7 +149,6 @@ export const Sidebar = ({ user }: any) => {
       icon: <CreditCard size={20} />,
       label: "Conexión Mercado Pago",
     },
-    // Suscripción se muestra en el dashboard principal; no aparece en el sidebar
     {
       href: "/admin/logs",
       icon: <Logs size={20} />,
@@ -174,7 +174,7 @@ export const Sidebar = ({ user }: any) => {
     if (item.label === "Codigos") {
       return user?.rol === "SUPER_ADMIN";
     }
-    if (item.label === "Suscripcion") {
+    if (item.label === "Mi Suscripción") {
       // Mostrar la opción de Suscripción a administradores y super admins, ocultar a profesores
       return user?.rol !== "PROFESOR";
     }

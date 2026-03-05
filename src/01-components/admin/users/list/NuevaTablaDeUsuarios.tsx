@@ -115,7 +115,7 @@ export function NuevaTablaDeUsuarios({ profesorId }: Props) {
 
   const getUserStatus = (user: Usuario) => {
     const pago = user.pagos.find(
-      (p) => p.mes === filterMonth && p.año === filterYear
+      (p) => p.mes === filterMonth && p.año === filterYear,
     );
     if (!pago) return "INACTIVO";
     return pago.estado;
@@ -160,7 +160,7 @@ export function NuevaTablaDeUsuarios({ profesorId }: Props) {
   // Paginación
   const paginatedUsers = sortedUsers.slice(
     pageIndex * pageSize,
-    (pageIndex + 1) * pageSize
+    (pageIndex + 1) * pageSize,
   );
   const pageCount = Math.ceil(sortedUsers.length / pageSize);
 
@@ -305,9 +305,9 @@ export function NuevaTablaDeUsuarios({ profesorId }: Props) {
                                 new Date(
                                   filterYear,
                                   filterMonth - 1,
-                                  new Date(user.fechaInicioMembresia).getDate()
+                                  new Date(user.fechaInicioMembresia).getDate(),
                                 ),
-                                "d/MM/yyyy"
+                                "d/MM/yyyy",
                               )
                             : "-"}
                         </td>

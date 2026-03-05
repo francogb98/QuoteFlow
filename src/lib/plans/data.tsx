@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { Star, Crown, Package, Gift } from "lucide-react";
+import { Gift } from "lucide-react";
 
 // Define la interfaz para las opciones de plan
 export interface PlanOption {
@@ -15,6 +15,8 @@ export interface PlanOption {
   features: string[];
   badge?: string;
   color: string;
+  base: "basico" | "pro";
+  frecuencia: "mensual" | "anual";
 }
 
 // Define los planes disponibles
@@ -32,11 +34,13 @@ export const plans: PlanOption[] = [
       "Reportes básicos",
     ],
     color: "from-blue-500 to-indigo-600",
+    base: "basico",
+    frecuencia: "mensual",
   },
   {
     id: "basico_anual",
     name: "Plan Básico Anual",
-    price: "$100.000", // 10.000 * 12 = 120.000. Descuento de 2 meses: 100.000
+    price: "$100.000",
     originalPrice: "$120.000",
     period: "por año",
     icon: <Gift className="w-6 h-6" />,
@@ -49,5 +53,7 @@ export const plans: PlanOption[] = [
     ],
     badge: "Ahorra 17%",
     color: "from-purple-500 to-violet-600",
+    base: "basico",
+    frecuencia: "anual",
   },
 ];

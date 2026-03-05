@@ -1,143 +1,138 @@
 "use client";
 
-import { CreditCard, Plus, Info } from "lucide-react";
+import { DollarSign, Edit, Eye } from "lucide-react";
 import { useState } from "react";
-
 import { TipoConfiguracionTarifa } from "@prisma/client";
 import type { SerializedPago } from "@/types/usuarios";
 import { ModalCreatePayment } from "./ModalCreatePayment";
 import { ModalEditPayment } from "./ModalEditPayment";
-import { PagosCard } from "./PagosCard";
-
-interface PagosGridProps {
-  pagos: SerializedPago[];
-  id: string;
-  configuracionTarifa?: any;
-  fechaInicioMembresia?: Date;
-}
+import { ModalComprobante } from "@/01-components/admin/ui/ModalComprobante";
 
 export const PagosGrid = ({
   pagos,
   id,
   configuracionTarifa,
   fechaInicioMembresia,
-}: PagosGridProps) => {
-  const [isModalOpen, setIsModalOpen] = useState(false);
+}: any) => {
+  const [isEditOpen, setIsEditOpen] = useState(false);
+  const [isCreateOpen, setIsCreateOpen] = useState(false);
+  const [isComprobanteOpen, setIsComprobanteOpen] = useState(false);
+
   const [selectedPayment, setSelectedPayment] = useState<SerializedPago | null>(
-    null
+    null,
   );
-  const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
 
-  const isDynamicTariff =
-    configuracionTarifa?.tipoConfiguracion ===
-    TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
-
-  const handleEditPayment = (pago: SerializedPago) => {
+  // Abrir Modal de Edición (Formulario)
+  const handleEdit = (pago: SerializedPago) => {
     setSelectedPayment(pago);
-    setIsModalOpen(true);
+    setIsEditOpen(true);
   };
 
-  const handleCloseModal = () => {
-    setIsModalOpen(false);
-    setSelectedPayment(null);
-  };
-
-  const handleCreatePayment = () => {
-    setIsCreateModalOpen(true);
-  };
-
-  const handleCloseCreateModal = () => {
-    setIsCreateModalOpen(false);
+  // Abrir Modal de Comprobante (Tu componente de revisión)
+  const handleViewComprobante = (pago: SerializedPago) => {
+    setSelectedPayment(pago);
+    setIsComprobanteOpen(true);
   };
 
   return (
-    <div className="bg-white rounded-2xl shadow-lg border border-purple-100 overflow-hidden">
-      <div className="bg-gradient-to-r from-emerald-50 to-green-50 p-6 border-b border-emerald-100">
-        <div className="flex items-center justify-between">
-          <div>
-            <h2 className="text-xl font-semibold text-gray-900 flex items-center">
-              <CreditCard className="w-5 h-5 mr-2 text-emerald-600" />
-              Historial de Pagos
-            </h2>
-            <p className="text-gray-600 text-sm mt-1">
-              {pagos?.length
-                ? `${pagos.length} pagos registrados`
-                : "Sin registros de pago"}
-              {isDynamicTariff && " (Sistema dinámico)"}
-            </p>
-          </div>
-          <button
-            onClick={handleCreatePayment}
-            className="flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-300"
-          >
-            <Plus className="w-4 h-4" />
-            Crear Pago
-          </button>
-        </div>
+    <div className="space-y-4">
+      <div className="flex items-center justify-between px-2">
+        <h3 className="text-sm font-bold text-gray-500 uppercase tracking-wider">
+          Historial
+        </h3>
+        <button
+          onClick={() => setIsCreateOpen(true)}
+          className="text-xs bg-purple-600 text-white px-3 py-1.5 rounded-md hover:bg-purple-700 font-bold"
+        >
+          + Nuevo Pago
+        </button>
       </div>
 
-      {/* Información del sistema dinámico */}
-      {isDynamicTariff && (
-        <div className="bg-blue-50 border-b border-blue-200 p-4">
-          <div className="flex items-start gap-3">
-            <Info className="w-4 h-4 text-blue-600 mt-0.5 flex-shrink-0" />
-            <div className="text-sm text-blue-800">
-              <p className="font-medium mb-1">Sistema dinámico activo</p>
-              <p>
-                Los pagos muestran fechas de vencimiento específicas basadas en
-                la fecha de inicio de membresía.
-              </p>
-            </div>
-          </div>
-        </div>
-      )}
-
-      <div className="p-6">
-        {pagos?.length ? (
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-            {pagos.map((pago) => (
-              <PagosCard
+      <div className="bg-white border border-gray-100 rounded-xl overflow-hidden shadow-sm">
+        {pagos?.length > 0 ? (
+          <div className="divide-y divide-gray-50">
+            {pagos.map((pago: any) => (
+              <div
                 key={pago.id}
-                pago={pago}
-                handleEditPayment={handleEditPayment}
-              />
+                className="p-4 flex items-center justify-between hover:bg-gray-50 group"
+              >
+                <div className="flex items-center gap-4">
+                  <div
+                    className={`w-10 h-10 rounded-full flex items-center justify-center ${
+                      pago.estado === "PAGADO"
+                        ? "bg-green-100 text-green-600"
+                        : "bg-amber-100 text-amber-600"
+                    }`}
+                  >
+                    <DollarSign className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <p className="font-bold text-gray-900">
+                        ${pago.monto.toFixed(2)}
+                      </p>
+                      <span className="text-[10px] text-gray-400 uppercase">
+                        {pago.metodo}
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-500">
+                      Mes {pago.mes}/{pago.año}
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-1 ml-2">
+                  {pago.comprobante && (
+                    <button
+                      onClick={() => handleViewComprobante(pago)}
+                      className="p-2 sm:p-2.5 bg-blue-50 sm:bg-transparent text-blue-600 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                    >
+                      <Eye className="w-4 h-4 sm:w-5 sm:h-5" />
+                    </button>
+                  )}
+                  <button
+                    onClick={() => handleEdit(pago)}
+                    className="p-2 sm:p-2.5 bg-purple-50 sm:bg-transparent text-purple-600 rounded-lg sm:opacity-0 sm:group-hover:opacity-100 transition-all"
+                  >
+                    <Edit className="w-4 h-4 sm:w-5 sm:h-5" />
+                  </button>
+                </div>
+              </div>
             ))}
           </div>
         ) : (
-          <div className="text-center py-12">
-            <div className="w-16 h-16 bg-gradient-to-r from-gray-100 to-gray-200 rounded-full flex items-center justify-center mx-auto mb-4">
-              <CreditCard className="w-8 h-8 text-gray-400" />
-            </div>
-            <h3 className="text-lg font-semibold text-gray-900 mb-2">
-              Sin registros de pago
-            </h3>
-            <p className="text-gray-600 text-sm">
-              Este usuario aún no tiene pagos registrados en el sistema.
-            </p>
-            <button
-              onClick={handleCreatePayment}
-              className="mt-4 flex items-center gap-2 px-4 py-2 bg-gradient-to-r from-purple-500 to-purple-600 hover:from-purple-600 hover:to-purple-700 text-white font-medium rounded-lg shadow-md hover:shadow-lg transform hover:scale-[1.02] transition-all duration-300 mx-auto"
-            >
-              <Plus className="w-4 h-4" />
-              Crear Primer Pago
-            </button>
+          <div className="p-10 text-center text-gray-400 text-sm">
+            Sin pagos registrados.
           </div>
         )}
       </div>
 
-      {/* Modales */}
+      {/* 1. MODAL COMPROBANTE (Tu componente) */}
+      <ModalComprobante
+        isOpen={isComprobanteOpen}
+        pagoId={selectedPayment?.id || null}
+        imageUrl={selectedPayment?.comprobante || null}
+        onClose={() => setIsComprobanteOpen(false)}
+        onUpdate={() => {
+          // Aquí podrías refrescar la query si es necesario
+          setIsComprobanteOpen(false);
+        }}
+      />
+
+      {/* 2. MODAL EDITAR (Formulario de monto/metodo) */}
       <ModalEditPayment
         pago={selectedPayment}
-        isOpen={isModalOpen}
-        onClose={handleCloseModal}
+        isOpen={isEditOpen}
+        onClose={() => setIsEditOpen(false)}
         userId={id}
       />
+
+      {/* 3. MODAL CREAR */}
       <ModalCreatePayment
-        isOpen={isCreateModalOpen}
-        onClose={handleCloseCreateModal}
+        isOpen={isCreateOpen}
+        onClose={() => setIsCreateOpen(false)}
         userId={id}
         configuracionTarifa={configuracionTarifa}
-        fechaInicioMembresia={fechaInicioMembresia}
       />
     </div>
   );

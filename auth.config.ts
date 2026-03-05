@@ -3,7 +3,7 @@ import Credentials from "next-auth/providers/credentials";
 import { z } from "zod";
 import prisma from "@/lib/prisma";
 import bcryptjs from "bcryptjs";
-import { getAdmin } from "@/actions/users/admin/getAdmin";
+import { getAdminForAuth } from "@/lib/auth/get-admin";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   pages: {
@@ -16,7 +16,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     signIn: async ({ user }) => {
       // Verificar si necesita configuración inicial
       if (user?.id) {
-        const admin = await getAdmin(user.id);
+        const admin = await getAdminForAuth(user.id);
         if (admin) {
           // Podrías agregar lógica adicional aquí si es necesario
           console.log("Usuario necesita completar configuración inicial");
@@ -27,17 +27,20 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   },
   callbacks: {
     async session({ session, token }) {
+      // Casteamos token.data para evitar errores de TypeScript
+      const tokenData = token.data as any;
+
       // Asignamos los datos básicos del token primero
-      if (token?.data) {
+      if (tokenData) {
         session.user = {
           ...session.user,
-          ...token.data,
+          ...tokenData,
         };
       }
 
       // Si tenemos ID de usuario, obtenemos los datos completos del admin
       if (session.user?.id) {
-        const admin = await getAdmin(session.user.id);
+        const admin = await getAdminForAuth(session.user.id);
         if (admin) {
           // Verificar si la configuración está completa
           const configuracionCompleta = !!admin.configuracionTarifa;
@@ -51,13 +54,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             email: admin.email,
             claveMercadoPago: admin.claveMercadoPago || null,
             empresa: admin.empresa,
-            empresaId: admin.empresaId,
+            empresaId: admin.empresaId || tokenData?.empresaId, // Usar empresaId del token como fallback
             configuracionTarifa: admin.configuracionTarifa,
             // NUEVO: Campos para configuración inicial
             configuracionCompleta,
             // NUEVO: Configuración de comprobantes si existe
             modeloDeCobro: admin.modeloDeCobro || null,
           };
+        } else if (tokenData?.empresaId) {
+          // Si no podemos obtener el admin pero tenemos empresaId en el token, usarlo
+          session.user.empresaId = tokenData.empresaId;
         }
       }
       return session;
@@ -69,6 +75,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           name: (user as any).nombre,
           email: (user as any).email,
           documento: (user as any).documento,
+          empresaId: (user as any).empresaId,
         };
       }
       return token;
@@ -123,7 +130,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
         const passwordMatch = bcryptjs.compareSync(
           String(password),
-          user.password
+          user.password,
         );
 
         if (!passwordMatch) {

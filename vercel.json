@@ -8,6 +8,10 @@
     {
       "path": "/api/cron/mensual",
       "schedule": "0 4 20 * *"
+    },
+    {
+      "path": "/api/cron/subscriptions",
+      "schedule": "0 0 * * *"
     }
   ]
 }

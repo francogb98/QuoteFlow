@@ -1,9 +1,5 @@
-import { SubscriptionPage } from "@/01-components/admin/suscripcion/SuscripcionPage";
+import SuscripcionView from "@/01-components/admin/subscription/SuscripcionView";
 
-export default function NamePage() {
-  return (
-    <div>
-      <SubscriptionPage />
-    </div>
-  );
+export default function Page() {
+  return <SuscripcionView fromAdmin />;
 }

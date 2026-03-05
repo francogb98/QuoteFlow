@@ -70,12 +70,6 @@ export default async function UsersListPage({ searchParams }: Props) {
                 Administra los usuarios de tu sistema
               </p>
             </div>
-            <CreateUserButton
-              administradorId={user.id}
-              configuracionTarifa={user.configuracionTarifa}
-              tarifasDisponibles={tarifasDisponibles}
-              isDynamicTariff={isDynamicTariff}
-            />
           </div>
         )
       )}

@@ -10,7 +10,7 @@ interface CreateCompanyAndAdminResult {
 
 export async function createCompanyAndAdmin(
   tempRegistrationId: string,
-  preapprovalId: string // Aceptamos el preapprovalId como un argumento separado
+  preapprovalId: string, // Aceptamos el preapprovalId como un argumento separado
 ): Promise<CreateCompanyAndAdminResult> {
   try {
     const tempRegistration = await prisma.tempRegistration.findUnique({
@@ -62,7 +62,7 @@ export async function createCompanyAndAdmin(
       fechaProximoVencimiento.setMonth(fechaProximoVencimiento.getMonth() + 1);
     } else if (tempRegistration.frecuenciaPago === FrecuenciaPago.ANUAL) {
       fechaProximoVencimiento.setFullYear(
-        fechaProximoVencimiento.getFullYear() + 1
+        fechaProximoVencimiento.getFullYear() + 1,
       );
     }
 
@@ -102,7 +102,7 @@ export async function createCompanyAndAdmin(
   } catch (error: any) {
     console.error(
       "Error al crear empresa y administrador después del pago:",
-      error
+      error,
     );
     return {
       ok: false,

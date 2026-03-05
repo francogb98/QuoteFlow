@@ -4,3 +4,4 @@ export * from "./tabla-components/SearchBarProps";
 export * from "./tabla-components/TableGrid";
 
 export * from "./planes/Planes";
+export * from "./suscripcion-tecnica/SuscripcionTecnicaPanel";

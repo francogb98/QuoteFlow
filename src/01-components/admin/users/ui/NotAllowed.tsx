@@ -51,21 +51,11 @@ export function NotAllowed({
         <div className="flex flex-col sm:flex-row gap-4 justify-center">
           {(missingTariff || (!missingTariff && !missingMercadoPago)) && (
             <Link
-              href="/configuraciones"
+              href="/admin/tarifas"
               className="inline-flex items-center gap-2 px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors font-medium"
             >
               <Settings className="w-5 h-5" />
               Configurar Tarifas
-            </Link>
-          )}
-
-          {(missingMercadoPago || (!missingTariff && !missingMercadoPago)) && (
-            <Link
-              href="/configuraciones/mercadopago"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-green-600 text-white rounded-lg hover:bg-green-700 transition-colors font-medium"
-            >
-              <CreditCard className="w-5 h-5" />
-              Conectar MercadoPago
             </Link>
           )}
         </div>

@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, X, Eye } from "lucide-react";
+import { useAdminPanelStore } from "@/lib/store/useAdminPanelStore"; // 1. Importamos el store
 
 interface Props {
   pagos: any[];
@@ -9,7 +10,9 @@ interface Props {
 }
 
 export function PagosTable({ pagos, onViewVoucher, onEditStatus }: Props) {
-  console.log({ pagos });
+  // 2. Obtenemos la función para abrir el panel
+  const openUser = useAdminPanelStore((s) => s.openUser);
+
   return (
     <div className="overflow-x-auto rounded-lg border border-gray-200 bg-white">
       <table className="w-full text-sm">
@@ -28,8 +31,16 @@ export function PagosTable({ pagos, onViewVoucher, onEditStatus }: Props) {
           {pagos.map((pago) => (
             <tr key={pago.id} className="border-t hover:bg-gray-50">
               <td className="p-3">
-                <div className="font-medium">{pago.userName}</div>
-                <div className="text-xs text-gray-500">{pago.userDni}</div>
+                {/* 3. El contenedor del nombre ahora abre el panel global */}
+                <div
+                  className="group cursor-pointer"
+                  onClick={() => pago.usuarioId && openUser(pago.usuarioId)}
+                >
+                  <div className="font-medium group-hover:text-purple-600 transition-colors">
+                    {pago.userName}
+                  </div>
+                  <div className="text-xs text-gray-500">{pago.userDni}</div>
+                </div>
               </td>
 
               <td className="p-3 font-semibold">

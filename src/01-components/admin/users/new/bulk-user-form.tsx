@@ -5,7 +5,7 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useRouter } from "next/navigation";
 import { useForm, useFieldArray } from "react-hook-form";
 import { Button } from "@/components/ui/button";
-import { Loader2, PlusCircle, Trash2 } from "lucide-react";
+import { Loader2, PlusCircle, Trash2, ClipboardPaste } from "lucide-react";
 import {
   Card,
   CardContent,
@@ -13,11 +13,23 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card";
+import { HelpCircle } from "lucide-react";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { addBulkUsersToAdmin } from "@/actions/admin/users/lib/bulk.users";
 
-export function BulkUserForm({ empresaId, configuracionTarifa }: any) {
+export function BulkUserForm({
+  empresaId,
+  configuracionTarifa,
+  onSuccess,
+}: any) {
   const router = useRouter();
   const queryClient = useQueryClient();
+
   const isDynamicTariff =
     configuracionTarifa.tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO";
 
@@ -25,6 +37,7 @@ export function BulkUserForm({ empresaId, configuracionTarifa }: any) {
     register,
     control,
     handleSubmit,
+    getValues,
     formState: { errors, isSubmitting },
   } = useForm({
     defaultValues: {
@@ -51,16 +64,30 @@ export function BulkUserForm({ empresaId, configuracionTarifa }: any) {
     mutationFn: addBulkUsersToAdmin,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["usuarios"] });
-      toast.success("Usuarios cargados exitosamente.");
-      router.push(`/admin/users`);
+      toast.success("Usuarios cargados correctamente");
+      onSuccess?.();
+      router.refresh();
     },
     onError: () => {
-      toast.error("Error al cargar los usuarios.");
+      toast.error("Error al cargar los usuarios");
     },
   });
 
   const onSubmit = (data: any) => {
-    mutation.mutate(data);
+    const docs = data.users.map((u: any) => u.documento);
+    const duplicates = docs.filter(
+      (d: string, i: number) => docs.indexOf(d) !== i,
+    );
+
+    if (duplicates.length > 0) {
+      toast.error("Hay documentos duplicados en la carga");
+      return;
+    }
+    mutation.mutate({
+      //@ts-ignore
+      empresaId,
+      users: data.users,
+    });
   };
 
   const addUser = () => {
@@ -75,8 +102,35 @@ export function BulkUserForm({ empresaId, configuracionTarifa }: any) {
     });
   };
 
-  const removeUser = (index: number) => {
-    remove(index);
+  const addManyUsers = (count = 10) => {
+    for (let i = 0; i < count; i++) addUser();
+  };
+
+  const pasteFromClipboard = async () => {
+    try {
+      const text = await navigator.clipboard.readText();
+      const rows = text.split("\n");
+
+      rows.forEach((row) => {
+        const [nombre, apellido, documento] = row.split("\t");
+
+        if (!nombre || !apellido) return;
+
+        append({
+          nombre: nombre.trim(),
+          apellido: apellido.trim(),
+          documento: documento?.trim() || "",
+          rangoTarifaId: "",
+          dinamicaTarifaId: "",
+          fechaInicioMembresia: "",
+          primerPagoMesSiguiente: false,
+        });
+      });
+
+      toast.success("Usuarios pegados desde Excel");
+    } catch {
+      toast.error("No se pudo leer el portapapeles");
+    }
   };
 
   const uniqueTarifas = isDynamicTariff
@@ -87,158 +141,137 @@ export function BulkUserForm({ empresaId, configuracionTarifa }: any) {
     <Card className="max-w-7xl mx-auto">
       <CardHeader>
         <CardTitle>Cargar múltiples usuarios</CardTitle>
-        <CardDescription>
-          Complete la información de los usuarios y asigne sus tarifas
-          correspondientes.
-        </CardDescription>
       </CardHeader>
+
       <CardContent>
         <form onSubmit={handleSubmit(onSubmit)}>
-          {/* Tabla de usuarios */}
-          <div className="overflow-x-auto">
-            <table className="min-w-full border border-gray-200 divide-y divide-gray-200">
+          {/* BOTONES SUPERIORES */}
+          <div className="flex flex-wrap gap-2 mb-4">
+            <Button
+              type="button"
+              onClick={addUser}
+              variant="outline"
+              className="flex gap-2"
+            >
+              <PlusCircle className="w-4 h-4" />
+              Agregar fila
+            </Button>
+
+            <Button
+              type="button"
+              onClick={() => addManyUsers(10)}
+              variant="outline"
+            >
+              +10 filas
+            </Button>
+          </div>
+
+          {/* TABLA */}
+          <div className="overflow-x-auto border rounded-lg">
+            <table className="min-w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Nombre
+                  <th className="p-2 text-left">Nombre</th>
+                  <th className="p-2 text-left">Apellido</th>
+                  <th className="p-2 text-left">Documento</th>
+                  <th className="p-2 text-left">Tarifa</th>
+                  <th className="p-2 text-left">Inicio</th>
+                  <th className="p-2 text-center">
+                    <div className="flex items-center justify-center gap-1">
+                      Mes sig.
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-4 h-4 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+
+                          <TooltipContent className="max-w-xs text-center">
+                            Clickea si deseas que el primer pago del usuario sea
+                            correspondiente al mes siguiente.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
                   </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Apellido
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Documento
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Tarifa
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Fecha Inicio
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Pago mes sig.
-                  </th>
-                  <th className="px-4 py-2 text-left text-xs font-medium text-gray-500 uppercase">
-                    Acción
-                  </th>
+                  <th className="p-2"></th>
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200">
+
+              <tbody>
                 {fields.map((field, index) => (
-                  <tr key={field.id} className="hover:bg-gray-50">
-                    <td className="px-4 py-3">
+                  <tr key={field.id} className="border-t">
+                    <td className="p-2">
                       <input
                         {...register(`users.${index}.nombre`, {
-                          required: "El nombre es requerido",
+                          required: true,
                         })}
-                        type="text"
-                        className="w-full px-3 py-2 border rounded-md"
-                        placeholder="Nombre"
+                        className="w-full border rounded px-2 py-1"
                       />
-                      {errors.users?.[index]?.nombre && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.users[index].nombre.message as string}
-                        </p>
-                      )}
                     </td>
 
-                    <td className="px-4 py-3">
+                    <td className="p-2">
                       <input
                         {...register(`users.${index}.apellido`, {
-                          required: "El apellido es requerido",
+                          required: true,
                         })}
-                        type="text"
-                        className="w-full px-3 py-2 border rounded-md"
-                        placeholder="Apellido"
+                        className="w-full border rounded px-2 py-1"
                       />
-                      {errors.users?.[index]?.apellido && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.users[index].apellido.message as string}
-                        </p>
-                      )}
                     </td>
 
-                    <td className="px-4 py-3">
+                    <td className="p-2">
                       <input
                         {...register(`users.${index}.documento`, {
-                          required: "El documento es requerido",
+                          required: true,
                         })}
-                        type="text"
-                        className="w-full px-3 py-2 border rounded-md"
-                        placeholder="12345678"
+                        className="w-full border rounded px-2 py-1"
                       />
-                      {errors.users?.[index]?.documento && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {errors.users[index].documento.message as string}
-                        </p>
-                      )}
                     </td>
 
-                    {/* Selección de tarifa */}
-                    <td className="px-4 py-3">
+                    <td className="p-2">
                       <select
                         {...register(
                           isDynamicTariff
                             ? `users.${index}.dinamicaTarifaId`
                             : `users.${index}.rangoTarifaId`,
-                          { required: "Debe seleccionar una tarifa" }
+                          { required: true },
                         )}
-                        className="w-full px-3 py-2 border rounded-md"
+                        className="w-full border rounded px-2 py-1"
                       >
-                        <option value="">Seleccionar tarifa</option>
+                        <option value="">Seleccionar</option>
+
                         {uniqueTarifas.map((tarifa: any) => (
                           <option key={tarifa.id} value={tarifa.id}>
-                            {isDynamicTariff
-                              ? `${tarifa.nombre} - $${tarifa.montoBase}`
-                              : `${tarifa.nombre} - $${tarifa.monto}`}
+                            {tarifa.nombre}
                           </option>
                         ))}
                       </select>
-                      {errors.users?.[index] &&
-                        (errors.users[index].dinamicaTarifaId ||
-                          errors.users[index].rangoTarifaId) && (
-                          <p className="text-red-500 text-xs mt-1">
-                            Debe seleccionar una tarifa
-                          </p>
-                        )}
                     </td>
 
-                    {/* Fecha de inicio */}
-                    <td className="px-4 py-3">
+                    <td className="p-2">
                       <input
-                        {...register(`users.${index}.fechaInicioMembresia`, {
-                          required: "La fecha es requerida",
-                        })}
                         type="date"
-                        className="w-full px-3 py-2 border rounded-md"
+                        {...register(`users.${index}.fechaInicioMembresia`, {
+                          required: true,
+                        })}
+                        className="border rounded px-2 py-1"
                       />
-                      {errors.users?.[index]?.fechaInicioMembresia && (
-                        <p className="text-red-500 text-xs mt-1">
-                          {
-                            errors.users[index].fechaInicioMembresia
-                              .message as string
-                          }
-                        </p>
-                      )}
                     </td>
 
-                    {/* Primer pago mes siguiente */}
-                    <td className="px-4 py-3 text-center">
+                    <td className="p-2 text-center">
                       <input
-                        {...register(`users.${index}.primerPagoMesSiguiente`)}
                         type="checkbox"
-                        className="w-5 h-5 text-purple-600 border-gray-300 rounded"
+                        {...register(`users.${index}.primerPagoMesSiguiente`)}
                       />
                     </td>
 
-                    <td className="px-4 py-3">
+                    <td className="p-2">
                       <Button
                         type="button"
-                        onClick={() => removeUser(index)}
-                        variant="outline"
                         size="sm"
-                        className="text-red-500 hover:text-red-700"
+                        variant="outline"
+                        onClick={() => remove(index)}
                       >
-                        <Trash2 className="w-4 h-4" />
+                        <Trash2 className="w-4 h-4 text-red-500" />
                       </Button>
                     </td>
                   </tr>
@@ -247,23 +280,16 @@ export function BulkUserForm({ empresaId, configuracionTarifa }: any) {
             </table>
           </div>
 
-          {/* Botón para agregar usuario */}
-          <div className="mt-4 flex justify-between items-center">
-            <Button
-              type="button"
-              onClick={addUser}
-              variant="outline"
-              className="flex items-center gap-2"
-            >
-              <PlusCircle className="w-4 h-4" />
-              Agregar usuario
-            </Button>
-
-            <Button type="submit" disabled={isSubmitting || mutation.isPending}>
-              {isSubmitting || mutation.isPending ? (
-                <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+          {/* BOTON FINAL */}
+          <div className="flex justify-end mt-6">
+            <Button type="submit" disabled={mutation.isPending || isSubmitting}>
+              {mutation.isPending ? (
+                <>
+                  <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                  Cargando
+                </>
               ) : (
-                "Cargar usuarios"
+                "Crear usuarios"
               )}
             </Button>
           </div>

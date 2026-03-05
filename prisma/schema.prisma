@@ -4,26 +4,52 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  url      = env("DATABASE_URL")
+
+  url = env("DATABASE_URL")
 }
 
 model Empresa {
-  id                       String             @id @default(uuid())
-  nombre                   String             @unique
-  fechaCreacion            DateTime           @default(now())
-  fechaActualizacion       DateTime           @updatedAt
-  planTipo                 TipoPlanEmpresa    @default(BASICO)
+  id                       String                   @id @default(uuid())
+  nombre                   String                   @unique
+  fechaCreacion            DateTime                 @default(now())
+  fechaActualizacion       DateTime                 @updatedAt
+  planTipo                 TipoPlanEmpresa          @default(BASICO)
   mercadoPagoPreApprovalId String?
-  estadoPago               EstadoEmpresa      @default(ACTIVO)
-  frecuenciaPago           FrecuenciaPago     @default(MENSUAL)
+  estadoPago               EstadoEmpresa            @default(ACTIVO)
+  frecuenciaPago           FrecuenciaPago           @default(MENSUAL)
   fechaUltimoPago          DateTime?
   fechaProximoVencimiento  DateTime?
-  estaActiva               Boolean            @default(true)
-  esCuentaPrueba           Boolean            @default(false)
+  estaActiva               Boolean                  @default(true)
+  esCuentaPrueba           Boolean                  @default(false)
   codigoPromocionalId      String?
   fechaFinPrueba           DateTime?
   administradores          Administrador[]
-  codigoPromocional        CodigoPromocional? @relation("EmpresaCodigoPromocional", fields: [codigoPromocionalId], references: [id])
+  codigoPromocional        CodigoPromocional?       @relation("EmpresaCodigoPromocional", fields: [codigoPromocionalId], references: [id])
+  suscripcion              SuscripcionEmpresa?
+  pagoSuscripcionEmpresas  PagoSuscripcionEmpresa[]
+}
+
+model SuscripcionEmpresa {
+  id        String  @id @default(uuid())
+  empresaId String  @unique
+  empresa   Empresa @relation(fields: [empresaId], references: [id])
+
+  planTipo       TipoPlanEmpresa
+  frecuenciaPago FrecuenciaPago
+
+  mercadoPagoPreApprovalId String?                @unique
+  estadoSuscripcion        EstadoSuscripcion      @default(TRIAL)
+  estadoPagoMercadoPago    EstadoPagoMercadoPago?
+
+  fechaInicio           DateTime  @default(now())
+  fechaFinPeriodoActual DateTime?
+
+  manualOverrideEstado EstadoSuscripcion? // Permite a los administradores anular el estado de la suscripción manualmente
+  manualOverrideHasta  DateTime? // Fecha hasta la cual se aplica la anulación manual
+
+  createdAt               DateTime                 @default(now())
+  updatedAt               DateTime                 @updatedAt
+  pagoSuscripcionEmpresas PagoSuscripcionEmpresa[]
 }
 
 model Administrador {
@@ -134,10 +160,12 @@ model Usuario {
   dinamicaTarifaId     String?
   nombreTarifaAsignada String?
   notificaciones       Notificacion[]               @relation("NotificacionUsuario")
+  pushSubscriptions    PushSubscription[]
   pagos                Pago[]
   administrador        Administrador                @relation(fields: [administradorId], references: [id])
   dinamicaTarifa       ConfiguracionDinamicaTarifa? @relation(fields: [dinamicaTarifaId], references: [id])
   rangoTarifa          RangoTarifa?                 @relation(fields: [rangoTarifaId], references: [id])
+  fcmTokens            FcmToken[]
 
   @@index([documento])
   @@index([administradorId])
@@ -161,6 +189,10 @@ model Pago {
   motivo           String?
   usuario          Usuario        @relation(fields: [usuarioId], references: [id])
   notificacions    Notificacion[]
+  updatedAt        DateTime       @default(now()) @updatedAt
+
+  ultimaNotificacionWhatsApp DateTime?
+  notificado                 Boolean   @default(false)
 
   @@index([usuarioId])
   @@index([fecha])
@@ -218,6 +250,35 @@ model TempRegistration {
   expiresAt      DateTime
 }
 
+model WebhookEvent {
+  id          String    @id @default(uuid())
+  providerId  String    @unique
+  topic       String
+  rawPayload  String
+  processedAt DateTime?
+  createdAt   DateTime  @default(now())
+
+  @@index([providerId])
+}
+
+model PagoSuscripcionEmpresa {
+  id                       String                @id @default(uuid())
+  empresaId                String
+  suscripcionId            String
+  mercadoPagoPaymentId     String                @unique
+  mercadoPagoPreApprovalId String
+  monto                    Float
+  estadoMercadoPago        EstadoPagoMercadoPago
+  fechaPago                DateTime              @default(now())
+  rawPayload               String?
+
+  empresa     Empresa            @relation(fields: [empresaId], references: [id])
+  suscripcion SuscripcionEmpresa @relation(fields: [suscripcionId], references: [id])
+
+  @@index([empresaId])
+  @@index([suscripcionId])
+}
+
 enum Estado {
   ACTIVO
   INACTIVO
@@ -254,6 +315,24 @@ enum EstadoEmpresa {
   SUSPENDIDO_MANUALMENTE
 }
 
+// Estado lógico de la suscripción (independiente del estado de pago de MercadoPago)
+enum EstadoSuscripcion {
+  TRIAL // Período de prueba activo
+  ACTIVA // Suscripción paga activa
+  CANCELADA // Cancelada por el usuario (pero aún tiene acceso hasta vencimiento)
+  VENCIDA // Período de pago vencido, sin acceso
+  PENDIENTE // Esperando activación (primer pago pendiente)
+}
+
+// Estado del pago en MercadoPago
+enum EstadoPagoMercadoPago {
+  PENDING // Esperando aprobación del usuario
+  AUTHORIZED // Pago autorizado
+  PAID // Pago realizado
+  CANCELLED // Cancelado por el usuario
+  REJECTED // Pago rechazado
+}
+
 enum FrecuenciaPago {
   MENSUAL
   ANUAL
@@ -278,4 +357,32 @@ enum TipoNotificacion {
 enum ModeloDeCobro {
   COMPROBANTE
   MERCADOPAGO
+}
+
+model PushSubscription {
+  id       String @id @default(uuid())
+  endpoint String @unique
+  p256dh   String
+  auth     String
+
+  usuarioId String
+  usuario   Usuario @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+
+  userAgent String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([usuarioId])
+}
+
+model FcmToken {
+  id        String   @id @default(uuid())
+  token     String   @unique
+  usuarioId String
+  usuario   Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  userAgent String?
+  createdAt DateTime @default(now())
+
+  @@index([usuarioId])
 }

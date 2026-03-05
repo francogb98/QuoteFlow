@@ -50,6 +50,9 @@ export function PaymentForm({
         throw new Error("Monto de transacción inválido.");
       }
 
+      // Guardar tempRegistrationId en sessionStorage antes de redirigir
+      sessionStorage.setItem("tempRegistrationId", tempRegistration.id);
+
       const suscriberResponse = await handleSuscriber({
         empresaId: tempRegistration.id,
         adminEmail: tempRegistration.email,

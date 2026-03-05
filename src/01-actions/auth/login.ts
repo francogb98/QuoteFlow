@@ -1,29 +1,35 @@
 "use server";
 
-import { signIn } from "@/auth";
+import { signIn, signOut } from "@/auth";
 import { AuthError } from "next-auth";
 
 export async function login(
   documento: string,
-  password: string
-): Promise<{ ok: boolean; error?: string }> {
+  password: string,
+): Promise<{ ok: boolean; error?: string; url?: string }> {
   try {
-    await signIn("credentials", {
+    // 🔴 Limpiar sesión anterior SI EXISTE
+    await signOut({ redirect: false });
+
+    const result = await signIn("credentials", {
       documento,
       password,
       redirect: false,
     });
 
-    return { ok: true };
+    if (result?.error) {
+      return { ok: false, error: "Credenciales inválidas" };
+    }
+
+    return { ok: true, url: "/admin/home" };
   } catch (error) {
     if (error instanceof AuthError) {
-      switch (error.type) {
-        case "CredentialsSignin":
-          return { ok: false, error: "Credenciales inválidas" };
-        default:
-          return { ok: false, error: "Error desconocido" };
+      if (error.type === "CredentialsSignin") {
+        return { ok: false, error: "Credenciales inválidas" };
       }
+      return { ok: false, error: "Error desconocido" };
     }
+
     return { ok: false, error: "Error al iniciar sesión" };
   }
 }

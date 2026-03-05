@@ -54,11 +54,6 @@ const navLinks = [
     href: "/admin/settings",
     icon: Settings,
   },
-  // {
-  //   label: "Suscripcion",
-  //   href: "/admin/suscripcion",
-  //   icon: DollarSign,
-  // },
 ];
 
 export function SidebarSimple() {
