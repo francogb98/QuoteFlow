@@ -40,7 +40,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
 
       // Si tenemos ID de usuario, obtenemos los datos completos del admin
       if (session.user?.id) {
-        const admin = await getAdminForAuth(session.user.id);
+        const admin = (await getAdminForAuth(session.user.id)) as any;
         if (admin) {
           // Verificar si la configuración está completa
           //@ts-ignore
