@@ -85,6 +85,7 @@ export const FormEditUser = ({ id }: any) => {
           dinamicaTarifaId: selected,
           rangoTarifaId: null,
           nombreTarifaAsignada:
+            //@ts-ignore
             tarifasDisponibles?.find((t: any) => t.id === selected)?.nombre ||
             null,
         }));
@@ -95,6 +96,7 @@ export const FormEditUser = ({ id }: any) => {
           rangoTarifaId: selected,
           dinamicaTarifaId: null,
           nombreTarifaAsignada:
+            //@ts-ignore
             tarifasDisponibles?.find((t: any) => t.id === selected)?.nombre ||
             null,
         }));
@@ -140,7 +142,14 @@ export const FormEditUser = ({ id }: any) => {
   const configuracion = tarifas?.nombreTarifa;
   const tarifasDisponibles =
     configuracion?.tipoConfiguracion === "FIJA_MENSUAL"
-      ? configuracion.rangos || []
+      ? Object.values(
+          (configuracion.rangos || []).reduce((acc: any, tarifa: any) => {
+            if (!acc[tarifa.nombre]) {
+              acc[tarifa.nombre] = tarifa;
+            }
+            return acc;
+          }, {}),
+        )
       : configuracion?.dinamicas || [];
 
   return (
