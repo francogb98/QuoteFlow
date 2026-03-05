@@ -15,8 +15,8 @@ import {
   PersonStanding,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { signOut } from "next-auth/react";
 import { useSidebarStore } from "@/lib/store/useSideBarStore";
+import { signOut } from "@/*";
 
 const navLinks = [
   {
