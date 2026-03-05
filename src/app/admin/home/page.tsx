@@ -3,6 +3,7 @@ import { auth } from "@/auth";
 import { KpiCards } from "@/01-components/admin/home/nuevo/kpis-cards";
 import { getDashboardData } from "@/lib/data/dashboardQueries";
 import { UsersTable } from "./ui/users-table";
+import { ShareCompanyLink } from "./ui/SharedCompanyLink";
 
 export default async function AdminHomePage() {
   const session = await auth();
@@ -10,6 +11,10 @@ export default async function AdminHomePage() {
   if (!session?.user?.id) {
     redirect("/auth/login");
   }
+
+  const empresaNombre = session.user.empresa?.nombre;
+  //el link tiene que ser el frontend url / nomre de la empresa
+  const empresaLink = `${process.env.FRONTEND_URL}`;
 
   const data = await getDashboardData(session.user.id);
 
@@ -28,6 +33,7 @@ export default async function AdminHomePage() {
 
   return (
     <main className="min-h-screen bg-background">
+      <ShareCompanyLink companyName={empresaNombre} link={empresaLink} />
       <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
         {/* Header */}
         <div className="mb-6">

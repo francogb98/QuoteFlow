@@ -34,11 +34,11 @@ const navLinks = [
     href: "/admin/pagos",
     icon: CreditCard,
   },
-  {
-    label: "Mis Usuarios",
-    href: "/admin/users",
-    icon: Users,
-  },
+  // {
+  //   label: "Mis Usuarios",
+  //   href: "/admin/users",
+  //   icon: Users,
+  // },
   {
     label: "Tarifas",
     href: "/admin/tarifas",
