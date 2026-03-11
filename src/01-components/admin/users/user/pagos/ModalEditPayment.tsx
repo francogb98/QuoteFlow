@@ -16,16 +16,28 @@ export const ModalEditPayment = ({
 }: any) => {
   // Filtramos deudas
   const pagosPendientes = todosLosPagosDelUsuario.filter(
-    (p: any) => p.estado !== "PAGADO"
+    (p: any) => p.estado !== "PAGADO",
   );
 
   // Inicializamos el estado directamente con el pago recibido
-  const [selectedPago, setSelectedPago] = useState<any>(pago);
+  const [selectedPago, setSelectedPago] = useState<any>(null);
+
   const [formData, setFormData] = useState({
-    monto: pago?.monto || 0,
+    monto: 0,
     estado: $Enums.EstadoPago.PAGADO,
     metodo: "EFECTIVO",
   });
+
+  useEffect(() => {
+    if (pago) {
+      setSelectedPago(pago);
+      setFormData({
+        monto: pago.monto,
+        estado: $Enums.EstadoPago.PAGADO,
+        metodo: "EFECTIVO",
+      });
+    }
+  }, [pago]);
 
   // Solo necesitamos UN efecto para sincronizar si el usuario cambia el pago en el select
   const handleSwitchPago = (pagoId: string) => {
@@ -144,7 +156,7 @@ export const ModalEditPayment = ({
                 >
                   {m}
                 </button>
-              )
+              ),
             )}
           </div>
 
