@@ -1,13 +1,11 @@
 "use server";
 
 import { sendReminderEmail } from "@/01-actions/admin/emails/sendReminderEmail";
+import { sendWhatsAppReminder } from "@/01-actions/twilio/twilio";
 import prisma from "@/lib/prisma";
-import { endOfDay, startOfDay } from "date-fns";
+import { TipoNotificacion } from "@prisma/client"; // Importamos el Enum
 
 export async function notificarVencimientosFijos(fechaActual: Date) {
-  console.log(
-    `[v0] Iniciando notificaciones fijas para fecha: ${fechaActual.toISOString()}`
-  );
   let notificacionesEnviadas = 0;
 
   const adminsFijos = await prisma.administrador.findMany({
@@ -19,16 +17,12 @@ export async function notificarVencimientosFijos(fechaActual: Date) {
       estaActivo: true,
     },
     include: {
-      configuracionTarifa: {
-        include: {
-          rangos: true,
-        },
-      },
+      configuracionTarifa: { include: { rangos: true } },
       usuarios: {
         include: {
           pagos: {
             where: {
-              estado: "PENDIENTE", // Solo pagos pendientes
+              estado: { in: ["PENDIENTE", "VENCIDO"] },
               mes: fechaActual.getMonth() + 1,
               año: fechaActual.getFullYear(),
             },
@@ -39,101 +33,105 @@ export async function notificarVencimientosFijos(fechaActual: Date) {
     },
   });
 
-  console.log(
-    `[v0] Encontrados ${adminsFijos.length} administradores con tarifa fija`
-  );
-
   for (const admin of adminsFijos) {
     const rangoTarifa = admin.configuracionTarifa?.rangos?.[0];
-    if (!rangoTarifa) {
-      console.log(
-        `[v0] Admin ${admin.nombre} no tiene rango de tarifa configurado`
-      );
-      continue;
-    }
+    if (!rangoTarifa) continue;
 
     const diaVencimiento = rangoTarifa.diaFin;
     const diaActual = fechaActual.getDate();
 
-    const esRecordatorio = diaActual === diaVencimiento - 3;
-    const esVencimiento = diaActual === diaVencimiento;
-
-    if (!esRecordatorio && !esVencimiento) {
-      console.log(
-        `[v0] Hoy (día ${diaActual}) no es día de notificación para admin ${admin.nombre} (vence día ${diaVencimiento})`
-      );
-      continue;
-    }
-
-    console.log(
-      `[v0] Procesando ${admin.usuarios.length} usuarios para admin ${admin.nombre}`
-    );
-
     for (const usuario of admin.usuarios) {
-      const pagoPendiente = usuario.pagos.find((p) => p.estado === "PENDIENTE");
+      const pago = usuario.pagos[0]; // Pago actual
+      if (!pago) continue;
 
-      if (!pagoPendiente) {
-        console.log(`[v0] Usuario ${usuario.nombre} no tiene pagos pendientes`);
-        continue;
+      let debeNotificar = false;
+      let tipoNotificacion: TipoNotificacion | null = null;
+      let tipoTwilio: "pendiente" | "vencido" = "pendiente";
+      let motivo = "";
+
+      // --- CASO 1: RECORDATORIO (Faltan 3 días) ---
+      if (pago.estado === "PENDIENTE" && diaActual === diaVencimiento - 3) {
+        // Verificamos si YA existe una notificación de "Proximo a vencer" para ESTE pago
+        const existeRecordatorio = await prisma.notificacion.findFirst({
+          where: {
+            pagoId: pago.id, // Buscamos por ID de Pago
+            tipo: TipoNotificacion.PAGO_PROXIMO_VENCER,
+          },
+        });
+
+        if (!existeRecordatorio) {
+          debeNotificar = true;
+          tipoNotificacion = TipoNotificacion.PAGO_PROXIMO_VENCER;
+          tipoTwilio = "pendiente";
+          motivo = "Tu pago vence en 3 días";
+        }
       }
 
-      const notificacionExistente = await prisma.notificacion.findFirst({
-        where: {
-          usuarioId: usuario.id,
-          entidadTipo: "PAGO",
-          entidadId: pagoPendiente.id,
-          tipo: esVencimiento ? "PAGO_VENCIDO" : "PAGO_PROXIMO_VENCER",
-          fechaCreacion: {
-            gte: startOfDay(fechaActual),
-            lte: endOfDay(fechaActual),
+      // --- CASO 2: VENCIDO ---
+      if (pago.estado === "VENCIDO") {
+        // Verificamos si YA existe una notificación de "Vencido" para ESTE pago
+        const existeVencido = await prisma.notificacion.findFirst({
+          where: {
+            pagoId: pago.id, // Buscamos por ID de Pago
+            tipo: TipoNotificacion.PAGO_VENCIDO,
           },
-        },
-      });
+        });
 
-      if (!notificacionExistente) {
-        const newStatus = esVencimiento ? "VENCE_HOY" : "FALTA_3_DIAS";
-        const motivo = esVencimiento
-          ? "Tu pago vence hoy"
-          : "Tu pago vence en 3 días";
+        if (!existeVencido) {
+          debeNotificar = true;
+          tipoNotificacion = TipoNotificacion.PAGO_VENCIDO;
+          tipoTwilio = "vencido";
+          motivo = "Tu pago está vencido";
+        }
+      }
 
-        console.log(
-          `[v0] Enviando email a ${usuario.email || admin.email} - ${motivo}`
-        );
-
+      // --- ENVÍO Y REGISTRO ---
+      if (debeNotificar && tipoNotificacion) {
+        // 1. Enviar Email
         await sendReminderEmail({
           nombre: usuario.nombre,
           apellido: usuario.apellido || "Sin apellido",
           empresa: admin.empresa?.nombre || "Sin empresa",
           documento: usuario.documento,
           to: usuario.email || admin.email,
-          newStatus,
+          newStatus:
+            tipoNotificacion === TipoNotificacion.PAGO_VENCIDO
+              ? "VENCIDO"
+              : "FALTA_3_DIAS",
           motivo,
         });
 
+        // 2. Enviar WhatsApp
+        if (admin.empresa?.whatsappHabilitado && usuario.telefono) {
+          await sendWhatsAppReminder({
+            telefono: usuario.telefono,
+            usuarioNombre: usuario.nombre,
+            fechaVencimiento: pago.fechaVencimiento?.toISOString() || null,
+            empresa: admin.empresa.nombre,
+            documento: usuario.documento,
+            linkPago: `${admin.empresa.nombre}/${usuario.documento}`,
+            tipo: tipoTwilio,
+          });
+        }
+
+        // 3. Crear Notificación en BD vinculada al Pago
         await prisma.notificacion.create({
           data: {
-            tipo: esVencimiento ? "PAGO_VENCIDO" : "PAGO_PROXIMO_VENCER",
+            tipo: tipoNotificacion,
             titulo: `Recordatorio de pago - ${admin.empresa?.nombre}`,
             mensaje: motivo,
             usuarioId: usuario.id,
-            administradorId: admin.id,
+            remitenteId: admin.id,
+            pagoId: pago.id, // IMPORTANTE: Vincular al pago
             enviadaPorEmail: true,
             fechaEnvioEmail: fechaActual,
-            entidadTipo: "PAGO",
-            entidadId: pagoPendiente.id,
           },
         });
 
         notificacionesEnviadas++;
-        console.log(`[v0] Notificación enviada a ${usuario.nombre}`);
-      } else {
-        console.log(`[v0] Ya existe notificación para ${usuario.nombre} hoy`);
       }
     }
   }
 
-  console.log(
-    `[v0] Total notificaciones fijas enviadas: ${notificacionesEnviadas}`
-  );
   return { notificacionesEnviadas };
 }

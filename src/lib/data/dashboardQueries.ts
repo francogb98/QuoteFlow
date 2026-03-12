@@ -9,11 +9,11 @@ import prisma from "@/lib/prisma";
 export interface KpiData {
   totalUsuarios: number;
   usuariosActivos: number;
+  usuariosSinTelefono: number;
   totalRecaudado: number;
   pagosPendientes: number;
   pagosVencidos: number;
 }
-
 export interface MonthlyChartData {
   mes: string;
   pagados: number;
@@ -48,6 +48,8 @@ export interface PaymentDetailRow {
   fechaVencimiento: string | null;
   fechaPago: string | null;
   estado: string;
+  telefono?: string | null;
+  documento?: string | null;
 }
 
 export interface NotificationRow {
@@ -91,6 +93,14 @@ export interface UserRow {
   fechaCreacion: string;
 }
 
+// NUEVO: Interfaz para usuarios sin teléfono
+export interface UsuarioSinTelefono {
+  id: string;
+  nombre: string;
+  apellido: string;
+  documento?: string | null;
+}
+
 export interface DashboardData {
   adminNombre: string;
   kpis: KpiData;
@@ -105,6 +115,8 @@ export interface DashboardData {
   pagosPagadosDetalles: PaymentDetailRow[];
   pagosPendientesDetalles: PaymentDetailRow[];
   pagosVencidosDetalles: PaymentDetailRow[];
+  // NUEVO: Campo para la lista de usuarios sin teléfono
+  usuariosSinTelefonoList: UsuarioSinTelefono[];
 }
 
 // ============================
@@ -161,6 +173,7 @@ export async function getDashboardData(
   const [
     totalUsuarios,
     usuariosActivos,
+    usuariosSinTelefono,
     pagosPagadosMes,
     pagosPendientesMes,
     pagosVencidosMes, // CORREGIDO: Ahora también filtramos por mes/año
@@ -180,6 +193,13 @@ export async function getDashboardData(
 
     // 2. Usuarios activos
     prisma.usuario.count({ where: { administradorId, estado: "ACTIVO" } }),
+
+    prisma.usuario.count({
+      where: {
+        administradorId,
+        OR: [{ telefono: null }, { telefono: "" }],
+      },
+    }),
 
     // 3. Monto recaudado (mes actual)
     prisma.pago.findMany({
@@ -216,7 +236,15 @@ export async function getDashboardData(
     prisma.pago.findMany({
       where: { usuario: { administradorId } },
       include: {
-        usuario: { select: { id: true, nombre: true, apellido: true } },
+        usuario: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            telefono: true,
+            documento: true,
+          },
+        },
       },
       orderBy: { fecha: "desc" },
       take: 7,
@@ -237,7 +265,15 @@ export async function getDashboardData(
         fechaVencimiento: { gte: now },
       },
       include: {
-        usuario: { select: { id: true, nombre: true, apellido: true } },
+        usuario: {
+          select: {
+            id: true,
+            nombre: true,
+            apellido: true,
+            documento: true,
+            telefono: true,
+          },
+        },
       },
       orderBy: { fechaVencimiento: "asc" },
       take: 5,
@@ -304,7 +340,14 @@ export async function getDashboardData(
         id: true,
         monto: true,
         fecha: true,
-        usuario: { select: { nombre: true, apellido: true } },
+        usuario: {
+          select: {
+            nombre: true,
+            apellido: true,
+            telefono: true,
+            documento: true,
+          },
+        },
       },
       orderBy: { fecha: "desc" },
     }),
@@ -321,7 +364,14 @@ export async function getDashboardData(
         id: true,
         monto: true,
         fechaVencimiento: true,
-        usuario: { select: { nombre: true, apellido: true } },
+        usuario: {
+          select: {
+            nombre: true,
+            apellido: true,
+            documento: true,
+            telefono: true,
+          },
+        },
       },
       orderBy: { fechaVencimiento: "asc" },
     }),
@@ -338,11 +388,32 @@ export async function getDashboardData(
         id: true,
         monto: true,
         fechaVencimiento: true,
-        usuario: { select: { nombre: true, apellido: true } },
+        usuario: {
+          select: {
+            nombre: true,
+            apellido: true,
+            documento: true,
+            telefono: true,
+          },
+        },
       },
       orderBy: { fechaVencimiento: "asc" },
     }),
   ]);
+
+  // NUEVA QUERY: Obtener lista de usuarios sin teléfono
+  const usuariosSinTelefonoData = await prisma.usuario.findMany({
+    where: {
+      administradorId,
+      OR: [{ telefono: null }, { telefono: "" }],
+    },
+    select: {
+      id: true,
+      nombre: true,
+      apellido: true,
+      documento: true,
+    },
+  });
 
   // ---- Compute KPIs ----
   const totalRecaudado = pagosPagadosMes.reduce((sum, p) => sum + p.monto, 0);
@@ -350,6 +421,7 @@ export async function getDashboardData(
   const kpis: KpiData = {
     totalUsuarios,
     usuariosActivos,
+    usuariosSinTelefono,
     totalRecaudado,
     pagosPendientes: pagosPendientesMes,
     pagosVencidos: pagosVencidosMes, // Ahora correctamente filtrado
@@ -485,6 +557,8 @@ export async function getDashboardData(
     fechaVencimiento: null,
     fechaPago: p.fecha ? p.fecha.toISOString() : null,
     estado: "PAGADO",
+    telefono: p.usuario.telefono,
+    documento: p.usuario.documento,
   }));
 
   const pagosPendientesDetalles: PaymentDetailRow[] = detallesPendientes.map(
@@ -498,6 +572,8 @@ export async function getDashboardData(
         : null,
       fechaPago: null,
       estado: "PENDIENTE",
+      telefono: p.usuario.telefono,
+      documento: p.usuario.documento,
     }),
   );
 
@@ -512,6 +588,8 @@ export async function getDashboardData(
         : null,
       fechaPago: null,
       estado: "VENCIDO",
+      telefono: p.usuario.telefono,
+      documento: p.usuario.documento,
     }),
   );
 
@@ -529,5 +607,7 @@ export async function getDashboardData(
     pagosPagadosDetalles,
     pagosPendientesDetalles,
     pagosVencidosDetalles,
+    // NUEVO: Preparar datos para retornar
+    usuariosSinTelefonoList: usuariosSinTelefonoData,
   };
 }

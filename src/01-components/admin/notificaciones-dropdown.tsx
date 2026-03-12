@@ -83,7 +83,7 @@ export function NotificationsDropdown({
   const [isOpen, setIsOpen] = useState(false);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedComprobante, setSelectedComprobante] = useState<string | null>(
-    null
+    null,
   );
   const [selectedPagoId, setSelectedPagoId] = useState<string | null>(null);
   const [loadingId, setLoadingId] = useState<string | null>(null);
@@ -91,7 +91,17 @@ export function NotificationsDropdown({
   const listRef = useRef<HTMLDivElement | null>(null);
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
 
-  const notificacionesNoLeidas = notificaciones.filter((n) => !n.leida).length;
+  /* =========================================
+     FILTRAR SOLO COMPROBANTE_SUBIDO
+  ========================================= */
+
+  const notificacionesFiltradas = notificaciones.filter(
+    (n) => n.tipo === "COMPROBANTE_SUBIDO",
+  );
+
+  const notificacionesNoLeidas = notificacionesFiltradas.filter(
+    (n) => !n.leida,
+  ).length;
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
@@ -108,12 +118,13 @@ export function NotificationsDropdown({
     if (!notificacion.entidadId) return;
 
     setLoadingId(notificacion.id);
+
     try {
       const result = await getPagoUser(notificacion.entidadId);
 
       if (result.ok && result.pago) {
         setSelectedComprobante(result.pago.comprobante);
-        setSelectedPagoId(notificacion.entidadId); // GUARDAMOS EL ID DEL PAGO
+        setSelectedPagoId(notificacion.entidadId);
         setIsModalOpen(true);
         setIsOpen(false);
       } else {
@@ -148,6 +159,7 @@ export function NotificationsDropdown({
           className="relative p-2 rounded-lg hover:bg-gray-100 transition"
         >
           <Bell className="w-6 h-6 text-gray-700" />
+
           {notificacionesNoLeidas > 0 && (
             <Badge className="absolute -top-1 -right-1 h-5 w-5 rounded-full p-0 flex items-center justify-center text-xs bg-red-600 text-white">
               {notificacionesNoLeidas}
@@ -162,10 +174,12 @@ export function NotificationsDropdown({
                 <h3 className="font-semibold flex items-center gap-2">
                   <Bell className="w-4 h-4" /> Notificaciones
                 </h3>
+
                 <button onClick={() => setIsOpen(false)}>
                   <X className="w-4 h-4" />
                 </button>
               </div>
+
               {notificacionesNoLeidas > 0 && (
                 <button
                   onClick={() => marcarTodasComoLeidas().then(onUpdate)}
@@ -180,20 +194,23 @@ export function NotificationsDropdown({
               ref={listRef}
               className="max-h-[360px] overflow-y-auto overscroll-contain divide-y"
             >
-              {notificaciones.length === 0 ? (
+              {notificacionesFiltradas.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 text-sm">
                   No tienes notificaciones
                 </div>
               ) : (
-                notificaciones.map((notificacion) => {
+                notificacionesFiltradas.map((notificacion) => {
                   const config =
                     tiposNotificacion[
                       notificacion.tipo as keyof typeof tiposNotificacion
                     ] || tiposNotificacion.SISTEMA;
+
                   const Icon = config.icon;
+
                   const esPago =
                     notificacion.entidadTipo === "PAGO" ||
                     notificacion.tipo.includes("COMPROBANTE");
+
                   const isLoading = loadingId === notificacion.id;
 
                   return (
@@ -201,7 +218,9 @@ export function NotificationsDropdown({
                       key={notificacion.id}
                       //@ts-ignore
                       ref={(el) => (itemRefs.current[notificacion.id] = el)}
-                      className={`p-4 hover:bg-gray-50 transition ${!notificacion.leida ? "bg-blue-50/50" : ""}`}
+                      className={`p-4 hover:bg-gray-50 transition ${
+                        !notificacion.leida ? "bg-blue-50/50" : ""
+                      }`}
                     >
                       <div className="flex gap-3">
                         <div className={`p-2 h-fit rounded-lg ${config.bg}`}>
@@ -212,6 +231,7 @@ export function NotificationsDropdown({
                           <h4 className="text-sm font-semibold">
                             {notificacion.titulo}
                           </h4>
+
                           <p className="text-xs text-gray-600 mt-1">
                             {notificacion.mensaje}
                           </p>
@@ -221,7 +241,7 @@ export function NotificationsDropdown({
                               <Calendar className="w-3 h-3" />
                               {formatDistanceToNow(
                                 new Date(notificacion.fechaCreacion),
-                                { addSuffix: true, locale: es }
+                                { addSuffix: true, locale: es },
                               )}
                             </span>
 
@@ -231,7 +251,11 @@ export function NotificationsDropdown({
                                 variant="ghost"
                                 disabled={!esPago || !!loadingId}
                                 onClick={() => handleVerPago(notificacion)}
-                                className={`h-7 px-2 text-xs ${esPago ? "text-emerald-600 hover:bg-emerald-50" : "opacity-0 pointer-events-none"}`}
+                                className={`h-7 px-2 text-xs ${
+                                  esPago
+                                    ? "text-emerald-600 hover:bg-emerald-50"
+                                    : "opacity-0 pointer-events-none"
+                                }`}
                               >
                                 {isLoading ? (
                                   <Loader2 className="w-3 h-3 mr-1 animate-spin" />
@@ -240,6 +264,7 @@ export function NotificationsDropdown({
                                 )}
                                 Ver pago
                               </Button>
+
                               <Button
                                 size="sm"
                                 variant="ghost"
@@ -259,10 +284,11 @@ export function NotificationsDropdown({
                 })
               )}
             </div>
+
             <div className="border-t p-3 text-center bg-gray-50">
               <Link
                 href="/admin/notificaciones"
-                onClick={() => setIsOpen(false)} // <--- Esto cierra el dropdown al hacer clic
+                onClick={() => setIsOpen(false)}
                 className="text-sm text-emerald-600 font-medium hover:underline block w-full h-full"
               >
                 Ver todas las notificaciones
@@ -275,13 +301,13 @@ export function NotificationsDropdown({
       <ModalComprobante
         isOpen={isModalOpen}
         imageUrl={selectedComprobante}
-        pagoId={selectedPagoId} // PASAMOS EL ID
+        pagoId={selectedPagoId}
         onClose={() => {
           setIsModalOpen(false);
           setSelectedComprobante(null);
           setSelectedPagoId(null);
         }}
-        onUpdate={onUpdate} // Recargamos las notificaciones si algo cambia
+        onUpdate={onUpdate}
       />
     </>
   );

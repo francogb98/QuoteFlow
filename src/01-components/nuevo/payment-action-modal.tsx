@@ -57,7 +57,6 @@ export function SubscriptionModal({
   const [isLoading, setIsLoading] = useState(false);
   const [isCanceling, setIsCanceling] = useState(false);
 
-  // --- Lógica de PlanSelector con corrección de tipos ---
   const handleConfirmarPlan = async () => {
     if (!selectedPlanId) {
       toast.error("Por favor selecciona un plan.");
@@ -89,8 +88,9 @@ export function SubscriptionModal({
         window.location.href = res.redirectUrl;
         return;
       }
-
+      //@ts-ignore
       if (res?.updated) {
+        //@ts-ignore
         toast.success(res.message || "Plan actualizado correctamente");
         onOpenChange(false);
         window.location.reload(); // Recargamos para ver cambios en el banner

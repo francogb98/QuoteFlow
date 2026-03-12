@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useEffect } from "react";
 import {
   Menu,
   X,
@@ -61,7 +62,26 @@ export function SidebarSimple() {
 
   const isOpen = useSidebarStore((state) => state.isOpen);
   const toggle = useSidebarStore((state) => state.toggle);
+  const open = useSidebarStore((state) => state.open);
   const close = useSidebarStore((state) => state.close);
+
+  // On desktop we want the sidebar open by default, but on mobile we keep it closed
+  // to avoid a full-screen backdrop blocking interaction after login.
+  useEffect(() => {
+    const mediaQuery = window.matchMedia("(min-width: 768px)");
+
+    const handle = (event: MediaQueryListEvent | MediaQueryList) => {
+      if (event.matches) {
+        open();
+      } else {
+        close();
+      }
+    };
+
+    handle(mediaQuery);
+    mediaQuery.addEventListener("change", handle);
+    return () => mediaQuery.removeEventListener("change", handle);
+  }, [open, close]);
 
   const isActive = (href: string) => pathname === href;
 

@@ -8,8 +8,6 @@ import { ShieldCheck, Sparkles, AlertTriangle, RefreshCw } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { EstadoSuscripcion } from "@prisma/client";
 import { SubscriptionModal } from "./payment-action-modal";
-// import { EstadoSuscripcion } from "@/lib/mock-data"; // Asumimos que importas el Enum de aquí
-// import { SubscriptionModal } from "@/components/subscription-modal";
 
 // Definimos la interfaz basada en lo que devuelve tu Prisma (con las fechas opcionales)
 interface SuscripcionReal {

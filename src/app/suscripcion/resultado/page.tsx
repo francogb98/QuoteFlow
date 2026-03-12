@@ -8,6 +8,7 @@ const config = new MercadoPagoConfig({
 });
 
 import { EstadoPagoMercadoPago } from "@prisma/client";
+import { syncSubscriptionAfterReturn } from "./syncSubscriptionAfterResult";
 
 function mapMercadoPagoStatus(status: string): EstadoPagoMercadoPago {
   switch (status) {
@@ -26,7 +27,16 @@ function mapMercadoPagoStatus(status: string): EstadoPagoMercadoPago {
   }
 }
 
-export default async function ResultadoSuscripcion() {
+export default async function ResultadoPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ preapproval_id?: string }>;
+}) {
+  const preapprovalId = (await searchParams)?.preapproval_id;
+
+  if (preapprovalId) {
+    await syncSubscriptionAfterReturn(preapprovalId);
+  }
   const session = await auth();
   if (!session?.user) return null;
 
@@ -99,12 +109,12 @@ export default async function ResultadoSuscripcion() {
     estadoColor = "text-red-600";
   }
 
-  const fechaInicio = suscripcion.fechaInicio
-    ? new Date(suscripcion.fechaInicio).toLocaleDateString("es-AR")
+  const fechaInicio = mpSubscription.date_created
+    ? new Date(mpSubscription.date_created).toLocaleDateString("es-AR")
     : "—";
 
-  const fechaVencimiento = suscripcion.fechaFinPeriodoActual
-    ? new Date(suscripcion.fechaFinPeriodoActual).toLocaleDateString("es-AR")
+  const fechaVencimiento = mpSubscription.next_payment_date
+    ? new Date(mpSubscription.next_payment_date).toLocaleDateString("es-AR")
     : "—";
 
   return (

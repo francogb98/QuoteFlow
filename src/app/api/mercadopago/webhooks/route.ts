@@ -213,10 +213,23 @@ async function handleSubscriptionEvent(body: any) {
       dataUpdate.fechaFinPeriodoActual = nuevaFechaFin;
     }
 
-    await prisma.suscripcionEmpresa.update({
-      where: { empresaId },
-      data: dataUpdate,
-    });
+    await prisma.$transaction([
+      prisma.suscripcionEmpresa.update({
+        where: { empresaId },
+        data: dataUpdate,
+      }),
+
+      ...(newStatus === "ACTIVA"
+        ? [
+            prisma.empresa.update({
+              where: { id: empresaId },
+              data: {
+                whatsappHabilitado: existing.planTipo === "PRO",
+              },
+            }),
+          ]
+        : []),
+    ]);
   }
 }
 
@@ -308,14 +321,23 @@ async function handlePaymentEvent(body: any) {
   const nuevaFechaFin = new Date(baseDate);
   nuevaFechaFin.setMonth(nuevaFechaFin.getMonth() + months);
 
-  await prisma.suscripcionEmpresa.update({
-    where: { id: subscription.id },
-    data: {
-      estadoSuscripcion: "ACTIVA",
-      estadoPagoMercadoPago: "AUTHORIZED",
-      fechaFinPeriodoActual: nuevaFechaFin,
-    },
-  });
+  await prisma.$transaction([
+    prisma.suscripcionEmpresa.update({
+      where: { id: subscription.id },
+      data: {
+        estadoSuscripcion: "ACTIVA",
+        estadoPagoMercadoPago: "AUTHORIZED",
+        fechaFinPeriodoActual: nuevaFechaFin,
+      },
+    }),
+
+    prisma.empresa.update({
+      where: { id: subscription.empresaId },
+      data: {
+        whatsappHabilitado: subscription.planTipo === "PRO",
+      },
+    }),
+  ]);
 
   console.log(
     `[handlePaymentEvent] ✅ Success! Sub active until ${nuevaFechaFin}`,

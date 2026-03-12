@@ -1,7 +1,5 @@
-export default function NamePage() {
-  return (
-    <div>
-      <h1>Admin Page</h1>
-    </div>
-  );
+import { redirect } from "next/navigation";
+
+export default function AdminPage() {
+  redirect("/admin/dashboard");
 }

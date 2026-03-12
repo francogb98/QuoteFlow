@@ -13,6 +13,7 @@ function obtenerMonto(plan: TipoPlanEmpresa, frecuencia: FrecuenciaPago) {
   if (plan === "BASICO" && frecuencia === "ANUAL") return 100000;
   if (plan === "PRO" && frecuencia === "MENSUAL") return 15000;
   if (plan === "PRO" && frecuencia === "ANUAL") return 150000;
+
   throw new Error("Combinación inválida");
 }
 
@@ -40,85 +41,12 @@ export async function iniciarSuscripcionEmpresa({
 
   const tienePreapproval = !!suscripcion.mercadoPagoPreApprovalId;
   const mismaFrecuencia = suscripcion.frecuenciaPago === frecuenciaPago;
-  const estaActiva = suscripcion.estadoSuscripcion === "ACTIVA";
 
-  // ==========================================================
-  // CASO 1: ACTIVA + MISMA FRECUENCIA → SOLO UPDATE
-  // ==========================================================
-  if (tienePreapproval && estaActiva && mismaFrecuencia) {
-    console.log("entre aqui 0");
-    await preApprovalClient.update({
-      id: suscripcion.mercadoPagoPreApprovalId!,
-      body: {
-        auto_recurring: {
-          transaction_amount: monto,
-          currency_id: "ARS",
-        },
-        reason: `Suscripción ${planTipo}`,
-      },
-    });
+  /* =========================================================
+     SI EXISTE Y CAMBIAN FRECUENCIA → CANCELAMOS
+  ========================================================= */
 
-    await prisma.suscripcionEmpresa.update({
-      where: { empresaId },
-      data: {
-        planTipo,
-      },
-    });
-
-    return {
-      updated: true,
-      message:
-        "Plan actualizado. El nuevo importe se aplicará en el próximo ciclo.",
-    };
-  }
-
-  // ==========================================================
-  // CASO 2: EXISTE PERO NO ESTA ACTIVA → CREAR NUEVA
-  // ==========================================================
-  if (tienePreapproval && !estaActiva) {
-    console.log("Creando nueva suscripción");
-
-    const response: any = await preApprovalClient.create({
-      body: {
-        payer_email: adminEmail,
-        auto_recurring: {
-          frequency,
-          frequency_type: "months",
-          transaction_amount: monto,
-          currency_id: "ARS",
-        },
-        external_reference: `empresa:${empresaId}`,
-        back_url: `${process.env.FRONTEND_URL}/suscripcion/resultado`,
-        reason: `Suscripción ${planTipo}`,
-      },
-    });
-
-    console.log("MercadoPago response:", response);
-
-    if (!response?.id || !response?.init_point) {
-      throw new Error("No se pudo crear la suscripción");
-    }
-
-    await prisma.suscripcionEmpresa.update({
-      where: { empresaId },
-      data: {
-        planTipo,
-        frecuenciaPago,
-        mercadoPagoPreApprovalId: response.id,
-        estadoSuscripcion: "PENDIENTE",
-      },
-    });
-
-    return {
-      redirectUrl: response.init_point,
-    };
-  }
-
-  // ==========================================================
-  // CASO 3: CAMBIO DE FRECUENCIA → CANCELAR Y CREAR NUEVA
-  // ==========================================================
   if (tienePreapproval && !mismaFrecuencia) {
-    console.log("entre aqui 0");
     await preApprovalClient.update({
       id: suscripcion.mercadoPagoPreApprovalId!,
       body: {
@@ -126,6 +54,10 @@ export async function iniciarSuscripcionEmpresa({
       },
     });
   }
+
+  /* =========================================================
+     CREAR NUEVA SUSCRIPCIÓN
+  ========================================================= */
 
   const response: any = await preApprovalClient.create({
     body: {
@@ -142,17 +74,14 @@ export async function iniciarSuscripcionEmpresa({
     },
   });
 
-  if (!response?.id) {
+  if (!response?.id || !response?.init_point) {
     throw new Error("No se pudo crear la suscripción");
   }
 
   await prisma.suscripcionEmpresa.update({
     where: { empresaId },
     data: {
-      planTipo,
-      frecuenciaPago,
       mercadoPagoPreApprovalId: response.id,
-      estadoSuscripcion: "PENDIENTE",
     },
   });
 

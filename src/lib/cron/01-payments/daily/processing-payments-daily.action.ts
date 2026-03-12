@@ -26,39 +26,39 @@ export async function processDailyComplete(/* params */) {
   // Ejecutar al inicio: asegurar pagos del mes siguiente para usuarios que pagaron el mes actual
   try {
     logger.info(
-      "[cron-daily] Iniciando ensureNextMonthPaymentsForPaidUsers (inicio del cron diario)"
+      "[cron-daily] Iniciando ensureNextMonthPaymentsForPaidUsers (inicio del cron diario)",
     );
     const result = await ensureNextMonthPaymentsForPaidUsers(
       new Date(),
-      "cron-daily-ensure-next"
+      "cron-daily-ensure-next",
     );
     // logs resumidos para testeo
     const rAny = result as any; // tipado flexible para ajustarnos a la forma real del retorno
     logger.info(
-      `[cron-daily] ensureNextMonthPaymentsForPaidUsers: usuariosProcesados=${rAny.checked ?? 0}, fallas=${rAny.failures?.length ?? 0}, pagosGenerados=${rAny.generados ?? rAny.checked ?? 0}`
+      `[cron-daily] ensureNextMonthPaymentsForPaidUsers: usuariosProcesados=${rAny.checked ?? 0}, fallas=${rAny.failures?.length ?? 0}, pagosGenerados=${rAny.generados ?? rAny.checked ?? 0}`,
     );
 
     if (rAny.generadosUsers && rAny.generadosUsers.length > 0) {
       // mostrar detalle usuario(admin) -> pagoId
       const resumen = rAny.generadosUsers.map(
         (g: any) =>
-          `${g.usuarioId} (admin: ${g.administradorId ?? "?"}:${g.administradorNombre ?? "?"}) -> pago:${g.pagoId ?? "?"}`
+          `${g.usuarioId} (admin: ${g.administradorId ?? "?"}:${g.administradorNombre ?? "?"}) -> pago:${g.pagoId ?? "?"}`,
       );
       logger.info(
-        `[cron-daily] Pagos generados para usuarios: ${resumen.join(", ")}`
+        `[cron-daily] Pagos generados para usuarios: ${resumen.join(", ")}`,
       );
     }
 
     if (rAny.errores && rAny.errores.length > 0) {
       logger.warn(
-        `[cron-daily] Errores al generar pagos para ${rAny.errores.length} usuarios. Revisar logs detallados.`
+        `[cron-daily] Errores al generar pagos para ${rAny.errores.length} usuarios. Revisar logs detallados.`,
       );
     }
   } catch (err) {
     // No abortar el cron: registramos y seguimos con el resto del procesamiento
     logger.error(
       "[cron-daily] Error en ensureNextMonthPaymentsForPaidUsers:",
-      err
+      err,
     );
   }
 
@@ -70,7 +70,7 @@ export async function processDailyComplete(/* params */) {
   const diaActual = fechaActual.getDate();
 
   logger.info(
-    `[${cronId}] 🌅 Iniciando procesamiento completo: ${fechaActual.toLocaleDateString("es-AR")}`
+    `[${cronId}] 🌅 Iniciando procesamiento completo: ${fechaActual.toLocaleDateString("es-AR")}`,
   );
 
   // 📊 Contadores
@@ -88,7 +88,7 @@ export async function processDailyComplete(/* params */) {
     resultadoNotificacionesFijas.notificacionesEnviadas;
 
   logger.info(
-    `[${cronId}] 📢 Notificando vencimientos de tarifas dinámicas...`
+    `[${cronId}] 📢 Notificando vencimientos de tarifas dinámicas...`,
   );
   const resultadoNotificacionesDinamicas =
     await notificarVencimientosDinamicos(fechaActual);
@@ -97,7 +97,7 @@ export async function processDailyComplete(/* params */) {
 
   // 🔥 PASO 2: Procesar vencimientos dinámicos
   logger.info(
-    `[${cronId}] 🔍 Procesando vencimientos de configuración dinámica...`
+    `[${cronId}] 🔍 Procesando vencimientos de configuración dinámica...`,
   );
   const resultadoVencimientos =
     await procesarVencimientosDinamicos(fechaActual);
@@ -111,19 +111,19 @@ export async function processDailyComplete(/* params */) {
     diaActual,
     mesActual,
     añoActual,
-    cronId
+    cronId,
   );
   totalTarifasActualizadas += resultadoTarifas.tarifasActualizadas;
 
   // 🔥 PASO 4: Generar pagos futuros
   logger.info(
-    `[${cronId}] 📅 Generando pagos futuros para usuarios que ya pagaron...`
+    `[${cronId}] 📅 Generando pagos futuros para usuarios que ya pagaron...`,
   );
   const resultadoFuturos = await generarPagosFuturos(
     fechaActual,
     mesActual,
     añoActual,
-    cronId
+    cronId,
   );
   totalPagosFuturosGenerados += resultadoFuturos.pagosGenerados;
 
@@ -131,7 +131,7 @@ export async function processDailyComplete(/* params */) {
 
   // 📊 RESUMEN
   logger.info(
-    `[${cronId}] ✅ Procesamiento completo finalizado en ${tiempoEjecucion}ms:`
+    `[${cronId}] ✅ Procesamiento completo finalizado en ${tiempoEjecucion}ms:`,
   );
   logger.info(`  • Recordatorios enviados: ${totalRecordatoriosEnviados}`);
   logger.info(`  • Pagos vencidos procesados: ${totalPagosVencidos}`);

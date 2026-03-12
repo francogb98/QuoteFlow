@@ -39,7 +39,9 @@ export default function PlanSelector({ planActual, frecuenciaActual }: Props) {
       }
 
       // 🔥 Caso update sin redirección
+      // @ts-ignore
       if (res?.updated) {
+        // @ts-ignore
         alert(res.message);
         window.location.reload(); // opcional pero recomendado
         return;

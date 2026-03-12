@@ -54,6 +54,10 @@ export default async function AdminHomePage() {
           pagosPagados={data.pagosPagadosDetalles}
           pagosPendientes={data.pagosPendientesDetalles}
           pagosVencidos={data.pagosVencidosDetalles}
+          usuariosSinTelefonoList={data.usuariosSinTelefonoList}
+          dominioLink={empresaLink}
+          empresaSlug={session.user.empresa?.nombre}
+          whatsappHabilitado={session.user.empresa?.whatsappHabilitado}
         />
 
         <div className="mt-6">

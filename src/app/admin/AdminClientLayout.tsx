@@ -32,7 +32,7 @@ export default function AdminClientLayout({ children, user }: Props) {
       </div>
 
       {/* 👇 Overlay global */}
-      <AdminPanelManager />
+      <AdminPanelManager user={user} />
 
       <Toaster position="top-right" richColors />
     </div>

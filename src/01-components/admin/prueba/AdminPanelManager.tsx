@@ -1,16 +1,22 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import { GlobalUserSidePanel } from "@/components/admin/GlobalUserSidePanel";
 import { useAdminPanelStore } from "@/lib/store/useAdminPanelStore";
 
-export function AdminPanelManager() {
+interface Props {
+  user: any;
+}
+
+export function AdminPanelManager({ user }: Props) {
   const { panel, entityId, close } = useAdminPanelStore();
 
-  console.log({ panel, entityId, close });
-
-  if (panel === "USER" && entityId) {
-    return <GlobalUserSidePanel userId={entityId} onClose={close} />;
-  }
-
-  return null;
+  return (
+    <>
+      {/* Side panels existentes */}
+      {panel === "USER" && entityId && (
+        <GlobalUserSidePanel userId={entityId} onClose={close} />
+      )}
+    </>
+  );
 }

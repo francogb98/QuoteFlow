@@ -11,28 +11,6 @@ import { NotificationsDropdown } from "./notificaciones-dropdown";
 import { SubscriptionStatusBanner } from "../nuevo/subscription-status-banner";
 import { NewUserDialog } from "../nuevo/new-user-dialog";
 
-// Interfaces (mantenemos la estructura que viene de tu server side props o session)
-interface User {
-  id: string;
-  nombre: string;
-  apellido: string;
-  documento: string;
-  estado: string;
-  estaActivo: boolean;
-}
-
-interface HeaderProps {
-  user?: {
-    empresa?: {
-      nombre?: string;
-      suscripcion?: any; // Aquí viene la info real de Prisma
-    };
-    usuarios?: User[];
-    notificacionesRecibidas?: any[];
-  } | null;
-  onNotificationsUpdate?: () => void;
-}
-
 export function Header({ user, onNotificationsUpdate }: any) {
   const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
   const [isNewUserOpen, setIsNewUserOpen] = useState(false);

@@ -11,7 +11,8 @@ interface ReminderEmailProps {
   empresa: string;
   documento: string;
   to: string;
-  newStatus: "VENCE_HOY" | "FALTA_3_DIAS";
+  // ACTUALIZADO: Agregamos "VENCIDO"
+  newStatus: "VENCE_HOY" | "FALTA_3_DIAS" | "VENCIDO";
   motivo: string;
 }
 
@@ -19,11 +20,17 @@ export async function sendReminderEmail(content: ReminderEmailProps) {
   const { nombre, apellido, empresa, documento, to, newStatus, motivo } =
     content;
 
-  const colorHeader = newStatus === "VENCE_HOY" ? "#e53935" : "#f9a825";
-  const titulo =
-    newStatus === "VENCE_HOY"
-      ? "¡Tu pago vence hoy!"
-      : "Tu pago está por vencer";
+  // Lógica de colores y títulos
+  let colorHeader = "#f9a825"; // Amarillo por defecto (Próximo a vencer)
+  let titulo = "Tu pago está por vencer";
+
+  if (newStatus === "VENCE_HOY") {
+    colorHeader = "#e53935"; // Rojo
+    titulo = "¡Tu pago vence hoy!";
+  } else if (newStatus === "VENCIDO") {
+    colorHeader = "#b71c1c"; // Rojo oscuro
+    titulo = "Tu pago está vencido"; // Mensaje diferenciado
+  }
 
   const emailHTML = `
     <div style="font-family: Arial, sans-serif; background-color: #f0f2f5; padding: 30px;">

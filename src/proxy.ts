@@ -1,6 +1,5 @@
 // proxy.ts
 import { auth } from "@/*";
-import { redirect } from "next/navigation";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
 import { tieneAccesoEmpresa } from "./lib/auth/tieneAcceso";

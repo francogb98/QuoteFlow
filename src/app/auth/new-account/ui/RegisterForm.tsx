@@ -16,7 +16,7 @@ import { PromoCodeField } from "./PromoCodeField";
 
 import { prepareRegistrationForPayment } from "@/01-actions/auth/registration/01-prepareRegistration";
 import { createTrialAccount as createTrialAccountAction } from "@/01-actions/auth/registration/05-createTrialAccount";
-import { plans, PlanOption } from "@/lib";
+import { PlanOption, plans } from "@/lib";
 
 interface RegisterFormData {
   nombre: string;
@@ -64,6 +64,27 @@ export default function RegisterForm() {
   const [success, setSuccess] = useState(false);
   const [successMessage, setSuccessMessage] = useState("");
 
+  useEffect(() => {
+    const planIdParam = searchParams?.get("planId");
+    const tipoPlanParam = searchParams?.get("tipoPlan"); // Por si usas este también
+
+    // 1. Prioridad: parámetro planId exacto (ej: ?planId=pro_anual)
+    if (planIdParam && plans.some((p) => p.id === planIdParam)) {
+      setSelectedPlanId(planIdParam as PlanOption["id"]);
+      return;
+    }
+
+    // 2. Alternativa: parámetro tipoPlan (ej: ?tipoPlan=pro)
+    // Si viene solo el tipo, seleccionamos la versión mensual por defecto
+    if (tipoPlanParam) {
+      if (tipoPlanParam === "pro" || tipoPlanParam === "PRO") {
+        setSelectedPlanId("pro_mensual");
+      } else if (tipoPlanParam === "basico" || tipoPlanParam === "BASICO") {
+        setSelectedPlanId("basico_mensual");
+      }
+    }
+  }, [searchParams]);
+
   // --- Mutations ---
   const createTrialAccount = useMutation({
     mutationFn: createTrialAccountAction,
@@ -93,15 +114,15 @@ export default function RegisterForm() {
       if (data.success && data.data?.tempRegistrationId) {
         setSuccess(true);
         setSuccessMessage(
-          "¡Registro preparado correctamente! Redirigiendo al pago..."
+          "¡Registro preparado correctamente! Redirigiendo al pago...",
         );
         setFormError(null);
         setTimeout(
           () =>
             router.push(
-              `/auth/register-payment/${data.data!.tempRegistrationId}`
+              `/auth/register-payment/${data.data!.tempRegistrationId}`,
             ),
-          1500
+          1500,
         );
       } else if (data.error) {
         setFormError({ message: data.error });
@@ -154,7 +175,7 @@ export default function RegisterForm() {
       : TipoPlanEmpresa.PRO;
 
     const frecuenciaPagoToSend: FrecuenciaPago = selectedPlanId.endsWith(
-      "mensual"
+      "mensual",
     )
       ? FrecuenciaPago.MENSUAL
       : FrecuenciaPago.ANUAL;
@@ -201,7 +222,7 @@ export default function RegisterForm() {
         setValue("telefono", data.telefono ?? "");
       })
       .catch((err) =>
-        console.error("[RegisterForm] Error fetching temp registration:", err)
+        console.error("[RegisterForm] Error fetching temp registration:", err),
       );
 
     return () => {

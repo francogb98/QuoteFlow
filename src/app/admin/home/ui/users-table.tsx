@@ -19,7 +19,6 @@ import {
 } from "@/components/ui/table";
 
 import { Badge } from "@/components/ui/badge";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
@@ -29,14 +28,7 @@ import {
   PopoverTrigger,
 } from "@/components/ui/popover";
 
-import {
-  Search,
-  Eye,
-  ChevronLeft,
-  ChevronRight,
-  Users,
-  CreditCard,
-} from "lucide-react";
+import { Search, Eye, ChevronLeft, ChevronRight, Users } from "lucide-react";
 
 import { useAdminPanelStore } from "@/lib/store/useAdminPanelStore";
 import { UserPaymentsModal } from "./user-payment-modal";

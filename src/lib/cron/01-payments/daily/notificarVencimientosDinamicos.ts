@@ -1,12 +1,14 @@
 "use server";
 
 import prisma from "@/lib/prisma";
-import { addMonths, differenceInCalendarDays } from "date-fns";
+import { differenceInCalendarDays } from "date-fns";
 import { sendReminderEmail } from "@/01-actions/admin/emails/sendReminderEmail";
+import { sendWhatsAppReminder } from "@/01-actions/twilio/twilio";
 import {
   getNormalizedBusinessDate,
   calculateDynamicDueDate,
 } from "../utils/dateUtils";
+import { TipoNotificacion } from "@prisma/client";
 
 export async function notificarVencimientosDinamicos(fecha?: Date) {
   const fechaActual = fecha || getNormalizedBusinessDate();
@@ -27,7 +29,7 @@ export async function notificarVencimientosDinamicos(fecha?: Date) {
         include: {
           pagos: {
             where: {
-              estado: "PENDIENTE",
+              estado: { in: ["PENDIENTE", "VENCIDO"] },
               mes: fechaActual.getMonth() + 1,
               año: fechaActual.getFullYear(),
             },
@@ -39,42 +41,95 @@ export async function notificarVencimientosDinamicos(fecha?: Date) {
   });
 
   for (const admin of admins) {
-    const configDinamica = admin.configuracionTarifa?.dinamicas?.[0];
-    if (!configDinamica) continue;
-
     for (const usuario of admin.usuarios) {
-      if (!usuario.fechaInicioMembresia) continue;
+      const pago = usuario.pagos[0];
+      if (!usuario.fechaInicioMembresia || !pago) continue;
 
-      // Calcular fecha de vencimiento de este mes
       const fechaVencimiento = calculateDynamicDueDate(
         usuario.fechaInicioMembresia,
-        fechaActual
+        fechaActual,
       );
-
-      // Días restantes
       const diasFaltantes = differenceInCalendarDays(
         fechaVencimiento,
-        fechaActual
+        fechaActual,
       );
 
-      if (diasFaltantes !== 3 && diasFaltantes !== 0) continue;
+      let debeNotificar = false;
+      let tipoNotificacion: TipoNotificacion | null = null;
+      let tipoTwilio: "pendiente" | "vencido" = "pendiente";
+      let motivo = "";
 
-      const newStatus = diasFaltantes === 0 ? "VENCE_HOY" : "FALTA_3_DIAS";
-      const motivo =
-        diasFaltantes === 0
-          ? "Tu pago vence hoy"
-          : `Tu pago vence en ${diasFaltantes} días`;
+      // --- CASO 1: Faltan 3 días ---
+      if (pago.estado === "PENDIENTE" && diasFaltantes === 3) {
+        const existeRecordatorio = await prisma.notificacion.findFirst({
+          where: {
+            pagoId: pago.id,
+            tipo: TipoNotificacion.PAGO_PROXIMO_VENCER,
+          },
+        });
 
-      // Enviar correo solo si hay pago pendiente
-      if (usuario.pagos.length > 0) {
+        if (!existeRecordatorio) {
+          debeNotificar = true;
+          tipoNotificacion = TipoNotificacion.PAGO_PROXIMO_VENCER;
+          tipoTwilio = "pendiente";
+          motivo = "Tu pago vence en 3 días";
+        }
+      }
+
+      // --- CASO 2: Vencido ---
+      if (pago.estado === "VENCIDO") {
+        const existeVencido = await prisma.notificacion.findFirst({
+          where: { pagoId: pago.id, tipo: TipoNotificacion.PAGO_VENCIDO },
+        });
+
+        if (!existeVencido) {
+          debeNotificar = true;
+          tipoNotificacion = TipoNotificacion.PAGO_VENCIDO;
+          tipoTwilio = "vencido";
+          motivo = "Tu pago está vencido";
+        }
+      }
+
+      // --- ENVÍO Y REGISTRO ---
+      if (debeNotificar && tipoNotificacion) {
+        // Email
         await sendReminderEmail({
           nombre: usuario.nombre,
           apellido: usuario.apellido || "Sin apellido",
           empresa: admin.empresa?.nombre || "Sin empresa",
           documento: usuario.documento,
           to: usuario.email || admin.email,
-          newStatus,
+          newStatus:
+            tipoNotificacion === TipoNotificacion.PAGO_VENCIDO
+              ? "VENCIDO"
+              : "FALTA_3_DIAS",
           motivo,
+        });
+
+        // WhatsApp
+        if (admin.empresa?.whatsappHabilitado && usuario.telefono) {
+          await sendWhatsAppReminder({
+            telefono: usuario.telefono,
+            usuarioNombre: usuario.nombre,
+            fechaVencimiento: pago.fechaVencimiento?.toISOString() || null,
+            empresa: admin.empresa.nombre,
+            documento: usuario.documento,
+            linkPago: `${admin.empresa.nombre}/${usuario.documento}`,
+            tipo: tipoTwilio,
+          });
+        }
+
+        // Crear Notificación
+        await prisma.notificacion.create({
+          data: {
+            tipo: tipoNotificacion,
+            titulo: `Recordatorio de pago - ${admin.empresa?.nombre}`,
+            mensaje: motivo,
+            usuarioId: usuario.id,
+            remitenteId: admin.id,
+            pagoId: pago.id, // Vinculación clave
+            fechaEnvioEmail: fechaActual,
+          },
         });
 
         notificacionesEnviadas++;
