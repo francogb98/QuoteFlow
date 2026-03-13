@@ -45,13 +45,15 @@ export async function sendWhatsAppReminder({
       ? process.env.TWILIO_CONTENT_SID_VENCIDO
       : process.env.TWILIO_CONTENT_SID_PENDIENTE;
 
+  console.log(contentSid);
+
   if (!accountSid || !authToken || !fromNumber || !contentSid) {
     return { success: false, error: "Faltan credenciales Twilio" };
   }
 
   const urlFrontend = process.env.FRONTEND_URL || "http://localhost:3000";
 
-  const linkPagoCompleto = `${urlFrontend}/${empresa}/${documento}`;
+  const linkPagoCompleto = `https://cuotafacil.com.ar/${empresa}/${documento}`;
 
   try {
     const client = twilio(accountSid, authToken);
@@ -81,10 +83,12 @@ export async function sendWhatsAppReminder({
 
     const message = await client.messages.create({
       from: fromNumber, // ej: whatsapp:+1555...
-      to: `whatsapp:${+543855956688}`, // ¡IMPORTANTE: El prefijo whatsapp:
+      to: `whatsapp:${+543853101640}`, // ¡IMPORTANTE: El prefijo whatsapp:
       contentSid: contentSid,
       contentVariables: contentVariables,
     });
+
+    console.log(message);
 
     return { success: true };
   } catch (error: any) {

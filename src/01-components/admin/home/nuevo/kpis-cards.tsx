@@ -29,6 +29,7 @@ import { startTransition, useState } from "react";
 
 import { toast } from "sonner";
 import { updateTelefonoUsuario } from "@/01-actions/admin/home/kpi/updateTelefonoUsuario";
+import { sendWhatsAppReminder } from "@/01-actions/twilio/twilio";
 
 // Interfaz para usuarios sin teléfono
 interface UsuarioSinTelefono {
@@ -218,46 +219,61 @@ export function KpiCards({
   };
 
   // // ACCIÓN: Enviar Twilio (Lógica del segundo código mejorada)
-  // const handleSendTwilio = (pago: PaymentDetailRow) => {
-  //   if (!pago.telefono) {
-  //     toast.error("El usuario no tiene teléfono.");
-  //     return;
-  //   }
+  const handleTestTwilio = (tipo: "pendiente" | "vencido") => {
+    startTransition(async () => {
+      setSendingId("test");
 
-  //   const fullName =
-  //     `${pago.usuarioNombre} ${pago.usuarioApellido || ""}`.trim();
-  //   // Construcción del link de pago
-  //   const linkPago = `${dominioLink}/${empresaSlug}/${pago.documento || ""}`;
+      const res = await sendWhatsAppReminder({
+        telefono: "3855956688", // tu número real SIN + ni 9
+        usuarioNombre: "Franco Test",
+        fechaVencimiento: new Date().toISOString(),
+        empresa: empresaSlug,
+        documento: "12345678",
+        linkPago: `${dominioLink}/${empresaSlug}/12345678`,
+        tipo: tipo,
+      });
 
-  //   startTransition(async () => {
-  //     setSendingId(pago.id);
+      if (res.success) {
+        toast.success(`Mensaje ${tipo} enviado`);
+      } else {
+        console.log(res.error);
+        toast.error(res.error || "Error al enviar");
+      }
 
-  //     const res = await sendWhatsAppReminder({
-  //       telefono: pago.telefono!,
-  //       usuarioNombre: fullName,
-  //       fechaVencimiento: pago.fechaVencimiento,
-  //       empresa: empresaSlug,
-  //       documento: pago.documento || "",
-  //       linkPago: linkPago,
-  //       // Diferenciar mensaje según estado
-  //       tipo: modalOpen === "vencidos" ? "vencido" : "pendiente",
-  //     });
-
-  //     if (res.success) {
-  //       toast.success("Mensaje enviado exitosamente");
-  //     } else {
-  //       console.log(res.error);
-  //       toast.error(res.error || "Error al enviar");
-  //     }
-
-  //     setSendingId(null);
-  //   });
-  // };
+      setSendingId(null);
+    });
+  };
 
   return (
     <>
       {/* KPI GRID */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="flex gap-2 mb-4">
+          <button
+            onClick={() => handleTestTwilio("pendiente")}
+            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700"
+          >
+            {sendingId === "test" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <MessageCircle size={16} />
+            )}
+            Test Pendiente
+          </button>
+
+          <button
+            onClick={() => handleTestTwilio("vencido")}
+            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700"
+          >
+            {sendingId === "test" ? (
+              <Loader2 className="h-4 w-4 animate-spin" />
+            ) : (
+              <MessageCircle size={16} />
+            )}
+            Test Vencido
+          </button>
+        </div>
+
         {kpiItems.map((kpi) => {
           const Icon = kpi.icon;
           const isClickable = kpi.key !== null;
