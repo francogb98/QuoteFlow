@@ -24,11 +24,11 @@ export function GlobalUserSidePanel({
   return (
     <>
       <div
-        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-100 transition-opacity"
+        className="fixed inset-0 bg-black/30 backdrop-blur-sm z-60 transition-opacity"
         onClick={onClose}
       ></div>
       {/* Panel Lateral */}
-      <aside className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-1000 flex flex-col animate-in slide-in-from-right duration-300 ease-in-out">
+      <aside className="fixed inset-y-0 right-0 w-full max-w-2xl bg-white shadow-2xl z-70 flex flex-col animate-in slide-in-from-right duration-300 ease-in-out">
         <div className="p-4 border-b flex justify-between items-center bg-gray-50/50">
           <div className="flex items-center gap-2">
             <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
