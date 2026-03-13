@@ -22,20 +22,17 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-
 import { Search, Eye, ChevronLeft, ChevronRight, Users } from "lucide-react";
 
 import { useAdminPanelStore } from "@/lib/store/useAdminPanelStore";
 import { UserPaymentsModal } from "./user-payment-modal";
 
 export interface PagoEstado {
+  id: string;
   mes: string;
+  monto: number;
   estado: "PAGADO" | "PENDIENTE" | "VENCIDO";
+  metodo: "EFECTIVO" | "MERCADOPAGO" | "TRANSFERENCIA" | "TARJETA";
 }
 
 export interface UsuarioRow {
@@ -65,24 +62,6 @@ const estadoLabels: Record<string, string> = {
   ACTIVO: "Activo",
   INACTIVO: "Inactivo",
 };
-
-const pagoStyles: Record<string, string> = {
-  PAGADO: "bg-emerald-100 text-emerald-700",
-  PENDIENTE: "bg-yellow-100 text-yellow-700",
-  VENCIDO: "bg-red-100 text-red-700",
-};
-
-function getInitials(nombre: string, apellido: string) {
-  return `${nombre[0] ?? ""}${apellido[0] ?? ""}`.toUpperCase();
-}
-
-function formatDate(dateStr: string) {
-  return new Date(dateStr).toLocaleDateString("es-AR", {
-    day: "2-digit",
-    month: "short",
-    year: "numeric",
-  });
-}
 
 export function UsersTable({ usuarios }: UsersTableProps) {
   const [selectedUser, setSelectedUser] = useState<UsuarioRow | null>(null);

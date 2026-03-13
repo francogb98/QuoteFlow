@@ -315,9 +315,12 @@ export async function getDashboardData(
 
         pagos: {
           select: {
+            id: true,
             mes: true,
             año: true,
             estado: true,
+            monto: true,
+            metodo: true,
           },
           orderBy: [{ año: "desc" }, { mes: "desc" }],
           take: 3, // últimos 3 meses
@@ -543,8 +546,11 @@ export async function getDashboardData(
     fechaCreacion: user.fechaCreacion.toISOString(),
 
     pagos: user.pagos.map((p) => ({
+      id: p.id,
       mes: MESES_CORTOS[p.mes - 1],
+      monto: p.monto,
       estado: p.estado,
+      metodo: p.metodo,
     })),
   }));
 
