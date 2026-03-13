@@ -85,7 +85,6 @@ export async function sendWhatsAppReminder({
       contentSid: contentSid,
       contentVariables: contentVariables,
     });
-    console.log(message);
 
     return { success: true };
   } catch (error: any) {

@@ -46,8 +46,6 @@ export async function updatePayment(data: any) {
     revalidatePath(`/admin/users/${updatedPayment.usuarioId}`);
     revalidatePath(`/admin/users`);
 
-    console.log("Payment updated successfully:", updatedPayment);
-
     return {
       ok: true,
       message: "Pago actualizado correctamente",

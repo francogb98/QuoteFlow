@@ -18,6 +18,7 @@ import { getNameTarifas } from "@/01-actions/admin/tarifas/get-name-tarifas";
 
 export const FormEditUser = ({ id }: any) => {
   const [formData, setFormData] = useState<any>({});
+  const [activeTab, setActiveTab] = useState("personal");
   const queryClient = useQueryClient();
 
   const { data, isLoading, isError, error, isFetching } = useQuery({
@@ -131,7 +132,7 @@ export const FormEditUser = ({ id }: any) => {
     data?.configuracionTarifa?.tipoConfiguracion ===
     TipoConfiguracionTarifa.DINAMICA_POR_FECHA_INGRESO;
 
-  if (isLoading || isFetching || isLoadingTarifas) return <LoadingState />;
+  if (isLoading || isLoadingTarifas) return <LoadingState />;
   if (isError) return <ErrorState error={error} />;
 
   const tarifaActual = data?.dinamicaTarifa?.id || data?.rangoTarifa?.id;
@@ -160,7 +161,7 @@ export const FormEditUser = ({ id }: any) => {
         tarifaActual={nombreTarifaActual}
       />
 
-      <Tabs defaultValue="personal" className="w-full">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-emerald-50 to-purple-50 border border-emerald-200">
           <TabsTrigger
             value="personal"

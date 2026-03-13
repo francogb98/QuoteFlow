@@ -1,6 +1,5 @@
 "use client";
 
-import { useEffect, useState } from "react";
 import { GlobalUserSidePanel } from "@/components/admin/GlobalUserSidePanel";
 import { useAdminPanelStore } from "@/lib/store/useAdminPanelStore";
 

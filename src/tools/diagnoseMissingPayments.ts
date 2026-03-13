@@ -146,7 +146,6 @@ async function diagnose(ids: string[]) {
     results.push(entry);
   }
 
-  console.log(JSON.stringify(results, null, 2));
   await prisma.$disconnect();
   process.exit(0);
 }

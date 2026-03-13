@@ -17,7 +17,7 @@ export default function AdminClientLayout({ children, user }: Props) {
 
   return (
     <div className="h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50">
-      <SidebarSimple />
+      <SidebarSimple user={user} />
 
       <div
         className={`flex flex-col min-h-screen transition-all duration-300

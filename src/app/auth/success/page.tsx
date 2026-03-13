@@ -62,9 +62,6 @@ export default function RegistrationSuccessPage() {
 
     const checkStatus = async () => {
       try {
-        console.log(
-          `[AUTH SUCCESS] Consultando estado para tempRegistrationId: ${tempRegistrationId}`,
-        );
         const response = await fetch(
           `/api/temp-registration/${tempRegistrationId}/status`,
         );
@@ -85,7 +82,6 @@ export default function RegistrationSuccessPage() {
         }
 
         const data: StatusResponse = await response.json();
-        console.log(`[AUTH SUCCESS] Status response:`, data);
 
         if (!isMounted) return;
 
@@ -109,9 +105,6 @@ export default function RegistrationSuccessPage() {
         } else {
           // Continuar polling
           setPollCount((prev) => prev + 1);
-          console.log(
-            `[AUTH SUCCESS] Continuando polling (${pollCount + 1}/${MAX_POLLS})`,
-          );
         }
       } catch (err) {
         console.error(

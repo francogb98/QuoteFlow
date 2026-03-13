@@ -33,8 +33,6 @@ export const getNameTarifas = async () => {
       };
     }
 
-    console.log(admin.configuracionTarifa);
-
     return { ok: true, nombreTarifa: admin.configuracionTarifa };
   } catch (error) {
     console.log(error);

@@ -35,11 +35,7 @@ const navLinks = [
     href: "/admin/pagos",
     icon: CreditCard,
   },
-  // {
-  //   label: "Mis Usuarios",
-  //   href: "/admin/users",
-  //   icon: Users,
-  // },
+
   {
     label: "Tarifas",
     href: "/admin/tarifas",
@@ -49,6 +45,7 @@ const navLinks = [
     label: "Cuentas",
     href: "/admin/account",
     icon: PersonStanding,
+    pro: true,
   },
   {
     label: "Configuracion",
@@ -57,8 +54,13 @@ const navLinks = [
   },
 ];
 
-export function SidebarSimple() {
+interface Props {
+  user: any;
+}
+
+export function SidebarSimple({ user }: Props) {
   const pathname = usePathname();
+  const plan = user?.empresa?.suscripcion?.planTipo;
 
   const isOpen = useSidebarStore((state) => state.isOpen);
   const toggle = useSidebarStore((state) => state.toggle);
@@ -125,31 +127,33 @@ export function SidebarSimple() {
 
         {/* NAVIGATION */}
         <nav className="p-3 space-y-2">
-          {navLinks.map((link) => {
-            const Icon = link.icon;
-            const active = isActive(link.href);
+          {navLinks
+            .filter((link) => !link.pro || plan === "PRO")
+            .map((link) => {
+              const Icon = link.icon;
+              const active = isActive(link.href);
 
-            return (
-              <Link
-                key={link.href}
-                href={link.href}
-                onClick={() => {
-                  if (window.innerWidth < 768) close();
-                }}
-                className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
-                  active
-                    ? "bg-gradient-to-r from-emerald-500 to-purple-500 text-white shadow-md"
-                    : "text-gray-700 hover:bg-white/50"
-                }`}
-                title={!isOpen ? link.label : ""}
-              >
-                <Icon className="h-5 w-5 flex-shrink-0" />
-                {isOpen && (
-                  <span className="text-sm font-medium">{link.label}</span>
-                )}
-              </Link>
-            );
-          })}
+              return (
+                <Link
+                  key={link.href}
+                  href={link.href}
+                  onClick={() => {
+                    if (window.innerWidth < 768) close();
+                  }}
+                  className={`flex items-center gap-3 px-3 py-2 rounded-lg transition-all duration-200 ${
+                    active
+                      ? "bg-gradient-to-r from-emerald-500 to-purple-500 text-white shadow-md"
+                      : "text-gray-700 hover:bg-white/50"
+                  }`}
+                  title={!isOpen ? link.label : ""}
+                >
+                  <Icon className="h-5 w-5 flex-shrink-0" />
+                  {isOpen && (
+                    <span className="text-sm font-medium">{link.label}</span>
+                  )}
+                </Link>
+              );
+            })}
         </nav>
 
         {/* SEPARADOR */}
