@@ -45,7 +45,7 @@ const navLinks = [
     label: "Cuentas",
     href: "/admin/account",
     icon: PersonStanding,
-    // pro: true,
+    pro: false,
   },
   {
     label: "Configuracion",
