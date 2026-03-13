@@ -16,13 +16,12 @@ export default function AdminClientLayout({ children, user }: Props) {
   const isOpen = useSidebarStore((state) => state.isOpen);
 
   return (
-    <div className="h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50">
+    <div className="h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50 overflow-hidden">
       <SidebarSimple user={user} />
 
       <div
         className={`flex flex-col min-h-screen transition-all duration-300
-          ${isOpen ? "md:pl-64" : "md:pl-20"}
-        `}
+        ${isOpen ? "md:pl-64" : "md:pl-20"}`}
       >
         <Header user={user} />
 
@@ -31,7 +30,7 @@ export default function AdminClientLayout({ children, user }: Props) {
         </main>
       </div>
 
-      {/* 👇 Overlay global */}
+      {/* Manager de paneles globales */}
       <AdminPanelManager user={user} />
 
       <Toaster position="top-right" richColors />

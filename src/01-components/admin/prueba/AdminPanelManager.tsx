@@ -10,9 +10,10 @@ interface Props {
 export function AdminPanelManager({ user }: Props) {
   const { panel, entityId, close } = useAdminPanelStore();
 
+  if (!panel) return null;
+
   return (
     <>
-      {/* Side panels existentes */}
       {panel === "USER" && entityId && (
         <GlobalUserSidePanel userId={entityId} onClose={close} />
       )}
