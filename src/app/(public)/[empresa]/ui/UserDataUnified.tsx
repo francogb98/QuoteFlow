@@ -1,20 +1,24 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Usuario, Pago } from "@prisma/client";
 import { fonts, fontVariables } from "@/lib/font/fonts";
 import {
   Calendar,
-  CreditCard,
   CheckCircle,
   Eye,
   EyeOff,
   AlertTriangle,
-  Upload,
+  Zap,
+  Clock,
+  AlertCircle,
 } from "lucide-react";
-import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { PaymentModal } from "../[documento]/comprobante/PaymentModal";
 import { PaymentButton } from "./PaymentButton";
+import {
+  getMembershipStatus,
+  formatDateLocal,
+} from "@/lib/membership/membershipUtils";
 
 interface Props {
   usuario: Usuario & { pagos: Pago[] };
@@ -49,6 +53,12 @@ export const UserDataUnified = ({
   const [selectedPago, setSelectedPago] = useState<Pago | null>(null);
   const router = useRouter();
 
+  // Calcular información de membresía
+  const membershipInfo = useMemo(
+    () => getMembershipStatus(usuario.fechaInicioMembresia, usuario.pagos),
+    [usuario.fechaInicioMembresia, usuario.pagos],
+  );
+
   // Función para abrir el modal (ahora pasada como prop a PaymentButton)
   const handleViewReceipt = (pago: Pago) => {
     setSelectedPago(pago);
@@ -76,7 +86,7 @@ export const UserDataUnified = ({
     (p) =>
       p.estado === "PENDIENTE" ||
       p.estado === "RECHAZADO" ||
-      p.estado === "VENCIDO"
+      p.estado === "VENCIDO",
   );
   const pagosAMostrar = mostrarTodos ? usuario.pagos : pagosPendientes;
   const totalPendiente = pagosPendientes.reduce((sum, p) => sum + p.monto, 0);
@@ -91,48 +101,87 @@ export const UserDataUnified = ({
       style={{ fontFamily: fonts.body }}
     >
       {/* User info header */}
-      <div className="bg-white/80 backdrop-blur-md rounded-xl shadow-md border border-purple-100 mb-8 p-4 sm:p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div className="text-center sm:text-left">
-          <h3 className="text-xl sm:text-2xl font-bold text-gray-900 capitalize mb-1">
-            {`${usuario.apellido} ${usuario.nombre}`}
-          </h3>
-          <p className="text-gray-600 text-sm sm:text-base">
-            DNI:{" "}
-            <span className="font-bold text-gray-800">{usuario.documento}</span>
-          </p>
-        </div>
-        <div
-          className={`flex items-center gap-3 p-3 rounded-lg border ${
-            totalPendiente > 0
-              ? "bg-orange-50 border-orange-200"
-              : "bg-green-50 border-green-200"
-          }`}
-        >
-          <div
-            className={`w-8 h-8 rounded-full flex items-center justify-center ${
-              totalPendiente > 0 ? "bg-orange-500" : "bg-green-500"
-            }`}
-          >
-            {totalPendiente > 0 ? (
-              <AlertTriangle className="w-4 h-4 text-white" />
-            ) : (
-              <CheckCircle className="w-4 h-4 text-white" />
-            )}
-          </div>
-          <div>
-            <p
-              className={`text-xs font-medium ${totalPendiente > 0 ? "text-orange-600" : "text-green-600"}`}
+      <div className="bg-white/80 backdrop-blur-md rounded-xl shadow-md border border-purple-100 mb-8 p-4 sm:p-6">
+        <div className="flex flex-col gap-6">
+          {/* Row 1: User info and Pending payments */}
+          <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+            <div className="text-center sm:text-left">
+              <h3 className="text-xl sm:text-2xl font-bold text-gray-900 capitalize mb-1">
+                {`${usuario.apellido} ${usuario.nombre}`}
+              </h3>
+              <p className="text-gray-600 text-sm sm:text-base">
+                DNI:{" "}
+                <span className="font-bold text-gray-800">
+                  {usuario.documento}
+                </span>
+              </p>
+            </div>
+            <div
+              className={`flex items-center gap-3 p-3 rounded-lg border ${
+                totalPendiente > 0
+                  ? "bg-orange-50 border-orange-200"
+                  : "bg-green-50 border-green-200"
+              }`}
             >
-              {totalPendiente > 0 ? "Total Pendiente" : "Estado de Cuenta"}
-            </p>
-            <p
-              className={`text-lg font-bold ${totalPendiente > 0 ? "text-orange-700" : "text-green-700"}`}
-            >
-              {totalPendiente > 0
-                ? formatCurrency(totalPendiente)
-                : "Todo Pagado"}
-            </p>
+              <div
+                className={`w-8 h-8 rounded-full flex items-center justify-center ${
+                  totalPendiente > 0 ? "bg-orange-500" : "bg-green-500"
+                }`}
+              >
+                {totalPendiente > 0 ? (
+                  <AlertTriangle className="w-4 h-4 text-white" />
+                ) : (
+                  <CheckCircle className="w-4 h-4 text-white" />
+                )}
+              </div>
+              <div>
+                <p
+                  className={`text-xs font-medium ${totalPendiente > 0 ? "text-orange-600" : "text-green-600"}`}
+                >
+                  {totalPendiente > 0 ? "Total Pendiente" : "Estado de Cuenta"}
+                </p>
+                <p
+                  className={`text-lg font-bold ${totalPendiente > 0 ? "text-orange-700" : "text-green-700"}`}
+                >
+                  {totalPendiente > 0
+                    ? formatCurrency(totalPendiente)
+                    : "Todo Pagado"}
+                </p>
+              </div>
+            </div>
           </div>
+
+          {/* Row 2: Membership dates */}
+          {membershipInfo.inicio && membershipInfo.vencimiento ? (
+            <div className="flex items-start gap-4 p-4 rounded-lg border-2 bg-blue-50 border-blue-200">
+              {/* Icon */}
+              <div className="shrink-0 w-12 h-12 rounded-lg flex items-center justify-center bg-blue-200">
+                <Calendar className="w-6 h-6 text-blue-700" />
+              </div>
+
+              {/* Content */}
+              <div className="flex-1 min-w-0">
+                <h4 className="text-lg font-bold text-gray-900 mb-3">
+                  Membresía
+                </h4>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">Inicio:</span>
+                    <span className="font-semibold text-gray-900">
+                      {formatDateLocal(membershipInfo.inicio)}
+                    </span>
+                  </div>
+                  <div className="flex items-center gap-2">
+                    <span className="text-gray-600">Proximo vencimiento:</span>
+                    <span className="font-semibold text-blue-700">
+                      {formatDateLocal(membershipInfo.vencimiento)}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          ) : null}
         </div>
       </div>
 
