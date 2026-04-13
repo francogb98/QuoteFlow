@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 
 export default function LogoutButton() {
   const handleLogout = async () => {
-    await signOut({ callbackUrl: "/auth/login" });
+    await signOut({ callbackUrl: "https://cuotafacil.com.ar" });
   };
 
   return (

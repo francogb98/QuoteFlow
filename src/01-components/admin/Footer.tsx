@@ -2,13 +2,12 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { usePathname, useRouter } from "next/navigation";
+import { usePathname } from "next/navigation";
 import { Users, DollarSign, CreditCard, LogOut, Menu } from "lucide-react";
 import { signOut } from "@/*";
 
 export const Footer = () => {
   const pathname = usePathname();
-  const router = useRouter();
   const [isOpen, setIsOpen] = useState(false);
 
   const getLinkClasses = (href: string) => {
@@ -23,8 +22,7 @@ export const Footer = () => {
   };
 
   const logout = () => {
-    signOut();
-    router.push("/auth/login");
+    signOut({ callbackUrl: "https://cuotafacil.com.ar" });
   };
 
   return (

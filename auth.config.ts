@@ -9,7 +9,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
   pages: {
     signIn: "/auth/login",
     newUser: "/auth/new-account",
-    signOut: "/auth/login",
+    signOut: "https://cuotafacil.com.ar",
   },
   events: {
     createUser: async ({ user }) => {},
