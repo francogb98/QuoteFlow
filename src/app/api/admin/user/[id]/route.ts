@@ -1,3 +1,4 @@
+import { auth } from "@/auth.config";
 import prisma from "@/lib/prisma";
 import { NextResponse } from "next/server";
 
@@ -38,6 +39,12 @@ const getUser = async (id: string) => {
  * ---------------------------------------------------- */
 export async function GET(request: Request, { params }: Segments) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { id } = await params;
 
     const user = await getUser(id);
@@ -45,8 +52,13 @@ export async function GET(request: Request, { params }: Segments) {
     if (!user) {
       return NextResponse.json(
         { message: `Usuario con id ${id} no existe` },
-        { status: 404 }
+        { status: 404 },
       );
+    }
+
+    // Verificar que el usuario pertenece al admin autenticado
+    if (user.administradorId !== session.user.id) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
     return NextResponse.json(user);
@@ -54,7 +66,7 @@ export async function GET(request: Request, { params }: Segments) {
     console.error("Error en user detail:", error);
     return NextResponse.json(
       { message: "Error al obtener detalle del usuario" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

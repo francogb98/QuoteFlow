@@ -4,12 +4,24 @@ import prisma from "@/lib/prisma";
 export async function POST(req: NextRequest) {
   try {
     const body = await req.json();
-    console.log("me ejecute", body);
 
     const { usuarioId, endpoint, keys } = body;
 
     if (!usuarioId || !endpoint || !keys?.p256dh || !keys?.auth) {
       return NextResponse.json({ error: "Datos incompletos" }, { status: 400 });
+    }
+
+    // Verificar que el usuario existe antes de asociar la suscripción
+    const usuarioExiste = await prisma.usuario.findUnique({
+      where: { id: usuarioId },
+      select: { id: true },
+    });
+
+    if (!usuarioExiste) {
+      return NextResponse.json(
+        { error: "Usuario no encontrado" },
+        { status: 404 },
+      );
     }
 
     const userAgent = req.headers.get("user-agent") ?? null;
@@ -33,8 +45,6 @@ export async function POST(req: NextRequest) {
         userAgent,
       },
     });
-
-    console.log({ subscription });
 
     return NextResponse.json({
       ok: true,

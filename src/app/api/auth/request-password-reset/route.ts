@@ -9,6 +9,7 @@ export async function POST(req: Request) {
     where: { documento },
   });
 
+  // Always return the same message to prevent user enumeration
   if (!admin) {
     return Response.json({
       message:
@@ -16,22 +17,29 @@ export async function POST(req: Request) {
     });
   }
 
-  const token = crypto.randomBytes(32).toString("hex");
+  const rawToken = crypto.randomBytes(32).toString("hex");
+  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
 
-  const expires = new Date(Date.now() + 1000 * 60 * 60);
+  // 15-minute expiration
+  const expiresAt = new Date(Date.now() + 1000 * 60 * 15);
+
+  // Delete any existing tokens for this admin before creating a new one
+  await prisma.passwordResetToken.deleteMany({
+    where: { adminId: admin.id },
+  });
 
   await prisma.passwordResetToken.create({
     data: {
-      token,
+      tokenHash,
       adminId: admin.id,
-      expiresAt: expires,
+      expiresAt,
     },
   });
 
   await sendPasswordResetEmail({
     to: admin.email,
     nombre: admin.nombre,
-    token,
+    rawToken,
   });
 
   return Response.json({

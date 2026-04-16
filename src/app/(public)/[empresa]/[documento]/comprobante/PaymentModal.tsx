@@ -1,7 +1,7 @@
 "use client";
 
 import type React from "react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import {
   Dialog,
   DialogContent,
@@ -39,9 +39,18 @@ export function PaymentModal({
   const [isEditing, setIsEditing] = useState(false);
   const [isImageModalOpen, setIsImageModalOpen] = useState(false);
 
-  const { showSuccess, showError } = useNotifications(); // 👈 usar notificaciones
+  const { showSuccess, showError } = useNotifications();
 
   const hasComprobante = pago.comprobante;
+
+  // Revocar la URL del blob cuando cambia o cuando se desmonta el componente
+  useEffect(() => {
+    return () => {
+      if (previewUrl) {
+        URL.revokeObjectURL(previewUrl);
+      }
+    };
+  }, [previewUrl]);
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -71,7 +80,7 @@ export function PaymentModal({
         {
           method: "POST",
           body: formData,
-        }
+        },
       );
 
       const cloudinaryData = await cloudinaryResponse.json();
@@ -104,14 +113,14 @@ export function PaymentModal({
 
       showSuccess(
         hasComprobante ? "Comprobante actualizado" : "Comprobante cargado",
-        "Tu comprobante se guardó correctamente."
+        "Tu comprobante se guardó correctamente.",
       );
 
       onClose();
     } catch (error: any) {
       showError(
         "Error al subir comprobante",
-        error?.message || "Intenta nuevamente"
+        error?.message || "Intenta nuevamente",
       );
     } finally {
       setIsUploading(false);

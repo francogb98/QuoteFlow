@@ -178,7 +178,6 @@ export async function GET(
         ok: true,
         tempRegistration: {
           id: tempRegistration.id,
-          email: tempRegistration.email,
           nombreEmpresa: tempRegistration.nombreEmpresa,
           planTipo: tempRegistration.planTipo,
           frecuenciaPago: tempRegistration.frecuenciaPago,

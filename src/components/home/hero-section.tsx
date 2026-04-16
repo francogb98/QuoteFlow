@@ -36,7 +36,7 @@ export function HeroSection() {
               <span className="relative inline-flex rounded-full h-2 w-2 bg-accent"></span>
             </span>
             <span className="text-sm font-medium text-foreground">
-              Nuevo: Notificaciones automáticas por WhatsApp
+              Notificaciones automáticas de pago
             </span>
             <ArrowRight className="w-4 h-4 text-muted-foreground" />
           </div>
@@ -64,7 +64,7 @@ export function HeroSection() {
             }`}
           >
             La plataforma todo-en-uno para escuelas, academias y negocios que
-            automatiza el cobro de cuotas, envía notificaciones por WhatsApp y
+            automatiza el cobro de cuotas, envía notificaciones automáticas por
             email, y te ahorra horas de trabajo administrativo.
           </p>
 

@@ -8,10 +8,15 @@ import { logger } from "../lib/logger";
  */
 export async function ensureNextMonthPaymentsForPaidUsers(
   referenceDate: Date = new Date(),
-  cronId = "ensure-next-month"
+  cronId = "ensure-next-month",
 ) {
   const usuarios = await prisma.usuario.findMany({
-    where: { estado: "ACTIVO", estaActivo: true },
+    where: {
+      estado: "ACTIVO",
+      estaActivo: true,
+      // Exclude users belonging to SUPER_ADMIN accounts — they are not subject to billing
+      administrador: { rol: { not: "SUPER_ADMIN" } },
+    },
     include: {
       administrador: {
         select: { id: true, nombre: true, configuracionTarifa: true },
@@ -79,7 +84,7 @@ export async function ensureNextMonthPaymentsForPaidUsers(
         usuario,
         configuracion,
         ultimoPago,
-        fechaProximoPago
+        fechaProximoPago,
       );
 
       if (!nuevo) {
@@ -134,7 +139,7 @@ export async function ensureNextMonthPaymentsForPaidUsers(
           configuracion,
           ultimoPago,
           err,
-        }
+        },
       );
     }
   }

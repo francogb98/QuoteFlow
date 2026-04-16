@@ -15,8 +15,6 @@ model Empresa {
   fechaActualizacion DateTime        @updatedAt
   planTipo           TipoPlanEmpresa @default(BASICO)
 
-  whatsappHabilitado Boolean @default(false)
-
   mercadoPagoPreApprovalId String?
   estadoPago               EstadoEmpresa            @default(ACTIVO)
   frecuenciaPago           FrecuenciaPago           @default(MENSUAL)
@@ -56,36 +54,40 @@ model SuscripcionEmpresa {
 }
 
 model Administrador {
-  id                               String               @id @default(uuid())
+  id                               String                 @id @default(uuid())
   nombre                           String
-  documento                        String               @unique
-  email                            String               @unique
+  documento                        String                 @unique
+  email                            String                 @unique
   password                         String
   telefono                         String
-  rol                              Rol                  @default(PROFESOR)
-  estaActivo                       Boolean              @default(true)
-  fechaCreacion                    DateTime             @default(now())
-  fechaActualizacion               DateTime             @updatedAt
+  rol                              Rol                    @default(PROFESOR)
+  estaActivo                       Boolean                @default(true)
+  fechaCreacion                    DateTime               @default(now())
+  fechaActualizacion               DateTime               @updatedAt
   empresaId                        String
   claveMercadoPago                 String?
   tokenMercadoPagoExpiresAt        DateTime?
   mercadoPagoRefreshToken          String?
   configuracionTarifaId            String?
-  modeloDeCobro                    ModeloDeCobro        @default(COMPROBANTE)
-  recibirNotificacionesPago        Boolean              @default(true)
-  recibirNotificacionesComprobante Boolean              @default(true)
-  emailNotificaciones              Boolean              @default(true)
-  permitirModificarTarifa          Boolean              @default(true)
-  permitirModificarCobro           Boolean              @default(true)
+  modeloDeCobro                    ModeloDeCobro          @default(COMPROBANTE)
+  recibirNotificacionesPago        Boolean                @default(true)
+  recibirNotificacionesComprobante Boolean                @default(true)
+  emailNotificaciones              Boolean                @default(true)
+  permitirModificarTarifa          Boolean                @default(true)
+  permitirModificarCobro           Boolean                @default(true)
   resetPasswordTokenHash           String?
   resetPasswordExpires             DateTime?
-  configuracionTarifa              ConfiguracionTarifa? @relation(fields: [configuracionTarifaId], references: [id])
-  empresa                          Empresa              @relation(fields: [empresaId], references: [id])
+  configuracionTarifa              ConfiguracionTarifa?   @relation(fields: [configuracionTarifaId], references: [id])
+  empresa                          Empresa                @relation(fields: [empresaId], references: [id])
   logs                             AuditLog[]
-  notificacionesRecibidas          Notificacion[]       @relation("NotificacionDestinatario")
-  notificacionesEnviadas           Notificacion[]       @relation("NotificacionRemitente")
+  notificacionesRecibidas          Notificacion[]         @relation("NotificacionDestinatario")
+  notificacionesEnviadas           Notificacion[]         @relation("NotificacionRemitente")
   usuarios                         Usuario[]
   passwordResetTokens              PasswordResetToken[]
+  passwordResetSessions            PasswordResetSession[]
+
+  @@index([empresaId])
+  @@index([configuracionTarifaId])
 }
 
 model Notificacion {
@@ -195,8 +197,7 @@ model Pago {
   notificacions    Notificacion[]
   updatedAt        DateTime       @default(now()) @updatedAt
 
-  ultimaNotificacionWhatsApp DateTime?
-  notificado                 Boolean   @default(false)
+  notificado Boolean @default(false)
 
   @@index([usuarioId])
   @@index([fecha])
@@ -229,12 +230,28 @@ model RangoTarifa {
 
 model PasswordResetToken {
   id        String   @id @default(cuid())
-  token     String   @unique
+  tokenHash String   @unique
   adminId   String
   expiresAt DateTime
   createdAt DateTime @default(now())
 
   administrador Administrador @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([expiresAt])
+}
+
+model PasswordResetSession {
+  id          String   @id @default(cuid())
+  sessionHash String   @unique
+  adminId     String
+  expiresAt   DateTime
+  createdAt   DateTime @default(now())
+
+  administrador Administrador @relation(fields: [adminId], references: [id], onDelete: Cascade)
+
+  @@index([adminId])
+  @@index([expiresAt])
 }
 
 model ConfiguracionDinamicaTarifa {
@@ -262,6 +279,8 @@ model TempRegistration {
   frecuenciaPago FrecuenciaPago
   createdAt      DateTime        @default(now())
   expiresAt      DateTime
+
+  @@index([expiresAt])
 }
 
 model WebhookEvent {

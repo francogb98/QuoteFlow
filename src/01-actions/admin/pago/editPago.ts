@@ -58,30 +58,3 @@ export async function editPayment({ pagoId, newStatus, rejectionReason }: any) {
     return { ok: false, error: "Error en el servidor al editar el pago." };
   }
 }
-
-export async function editPagoNotificacionWhatsApp(data: { pagoId: string }) {
-  try {
-    const session = await auth();
-    if (!session) {
-      return { ok: false, error: "No autorizado" };
-    }
-
-    await prisma.pago.update({
-      where: { id: data.pagoId },
-      data: {
-        ultimaNotificacionWhatsApp: new Date(),
-        notificado: true,
-      },
-    });
-
-    revalidatePath(`/admin/pagos/${data.pagoId}`);
-
-    return { ok: true };
-  } catch (error) {
-    console.error(error);
-    return {
-      ok: false,
-      error: "Error en el servidor al marcar notificación de WhatsApp.",
-    };
-  }
-}

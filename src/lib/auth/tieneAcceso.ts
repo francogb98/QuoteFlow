@@ -1,6 +1,7 @@
 export type ResultadoAcceso = {
   tieneAcceso: boolean;
   motivo:
+    | "SUPER_ADMIN"
     | "MANUAL_OVERRIDE"
     | "TRIAL_ACTIVO"
     | "ACTIVA"
@@ -8,6 +9,14 @@ export type ResultadoAcceso = {
     | "VENCIDA"
     | "SIN_SUSCRIPCION";
 };
+
+/**
+ * Short-circuit helper — returns a ResultadoAcceso that grants unconditional access
+ * for SUPER_ADMIN users without touching subscription data.
+ */
+export function tieneAccesoSuperAdmin(): ResultadoAcceso {
+  return { tieneAcceso: true, motivo: "SUPER_ADMIN" };
+}
 
 export function tieneAccesoEmpresa(
   suscripcion: {

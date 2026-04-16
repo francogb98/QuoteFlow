@@ -2,6 +2,7 @@
 import { auth } from "@/*";
 import type { NextRequest } from "next/server";
 import { NextResponse } from "next/server";
+import { isSuperAdminRole } from "./lib/auth/isSuperAdmin";
 import { tieneAccesoEmpresa } from "./lib/auth/tieneAcceso";
 
 export async function proxy(req: NextRequest) {
@@ -9,6 +10,11 @@ export async function proxy(req: NextRequest) {
 
   if (!session?.user) {
     return NextResponse.redirect(new URL("/auth/login", req.url));
+  }
+
+  // SUPER_ADMIN bypasses all subscription/billing restrictions
+  if (isSuperAdminRole(session.user.rol)) {
+    return NextResponse.next();
   }
 
   //@ts-ignore

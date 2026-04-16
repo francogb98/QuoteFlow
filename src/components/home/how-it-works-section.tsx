@@ -23,7 +23,7 @@ const steps = [
     icon: Bell,
     title: "Activa notificaciones",
     description:
-      "Conecta WhatsApp y email para enviar recordatorios automáticos a tus clientes.",
+      "Configura notificaciones automáticas por email para enviar recordatorios de pago a tus clientes.",
   },
   {
     number: "04",

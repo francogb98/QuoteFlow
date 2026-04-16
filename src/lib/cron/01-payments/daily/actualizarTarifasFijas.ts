@@ -6,7 +6,7 @@ export async function actualizarTarifasFijas(
   diaActual: number,
   mesActual: number,
   añoActual: number,
-  cronId: string
+  cronId: string,
 ) {
   let tarifasActualizadas = 0;
 
@@ -26,19 +26,19 @@ export async function actualizarTarifasFijas(
 
   if (!configuracionesFijas.length) {
     logger.info(
-      `[${cronId}] No hay cambios de tarifa programados para el día ${diaActual}`
+      `[${cronId}] No hay cambios de tarifa programados para el día ${diaActual}`,
     );
     return { tarifasActualizadas };
   }
 
   logger.info(
-    `[${cronId}] Procesando ${configuracionesFijas.length} configuraciones fijas con cambios hoy`
+    `[${cronId}] Procesando ${configuracionesFijas.length} configuraciones fijas con cambios hoy`,
   );
 
   for (const configuracion of configuracionesFijas) {
     const rangoActual = findTarifaRangeForDate(
       configuracion.rangos,
-      fechaActual
+      fechaActual,
     );
     if (!rangoActual) continue;
 
@@ -53,6 +53,8 @@ export async function actualizarTarifasFijas(
               administradorId: admin.id,
               estado: "ACTIVO",
               estaActivo: true,
+              // Exclude users belonging to SUPER_ADMIN accounts
+              administrador: { rol: { not: "SUPER_ADMIN" } },
             },
             monto: { not: rangoActual.monto },
           },
@@ -64,17 +66,17 @@ export async function actualizarTarifasFijas(
 
         if (resultadoUpdate.count > 0) {
           logger.info(
-            `[${cronId}] 💰 Actualizados ${resultadoUpdate.count} pagos a $${rangoActual.monto} para admin ${admin.nombre}`
+            `[${cronId}] 💰 Actualizados ${resultadoUpdate.count} pagos a $${rangoActual.monto} para admin ${admin.nombre}`,
           );
         }
 
         return resultadoUpdate.count;
-      })
+      }),
     );
 
     tarifasActualizadas += resultados.reduce(
       (acc, r) => (r.status === "fulfilled" ? acc + r.value : acc),
-      0
+      0,
     );
   }
 

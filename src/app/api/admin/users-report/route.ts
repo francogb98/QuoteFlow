@@ -1,3 +1,4 @@
+import { auth } from "@/auth.config";
 import { NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 
@@ -5,22 +6,39 @@ const MONTHS = [9, 10, 11, 12]; // Fijos para tu frontend
 
 export async function GET(req: Request) {
   try {
+    const session = await auth();
+
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const { searchParams } = new URL(req.url);
     const year = Number(searchParams.get("year"));
-    const adminId = searchParams.get("adminId") || undefined;
+
+    // Solo SUPER_ADMIN puede consultar datos de otro admin vía query param.
+    // El resto forzosamente ve sus propios datos.
+    const isSuperAdmin = session.user.rol === "SUPER_ADMIN";
+    const adminId = isSuperAdmin
+      ? (searchParams.get("adminId") ?? session.user.id)
+      : session.user.id;
 
     if (!year) {
       return NextResponse.json(
         { error: "Parámetro 'year' es requerido" },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
-    // Traer admins para el selector
-    const admins = await prisma.administrador.findMany({
-      select: { id: true, nombre: true },
-      orderBy: { nombre: "asc" },
-    });
+    // Traer admins para el selector (solo SUPER_ADMIN puede ver todos)
+    const admins = isSuperAdmin
+      ? await prisma.administrador.findMany({
+          select: { id: true, nombre: true },
+          orderBy: { nombre: "asc" },
+        })
+      : await prisma.administrador.findMany({
+          where: { id: session.user.id },
+          select: { id: true, nombre: true },
+        });
 
     // Traer configuración de tarifa COMPLETA
     const tarifa = adminId
@@ -87,7 +105,7 @@ export async function GET(req: Request) {
     console.error("Error en users-report:", err);
     return NextResponse.json(
       { error: "Error al generar el reporte" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

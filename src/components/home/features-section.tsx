@@ -1,29 +1,14 @@
 "use client";
 
-import {
-  MessageSquare,
-  Mail,
-  Users,
-  CreditCard,
-  BarChart3,
-  Smartphone,
-} from "lucide-react";
+import { Mail, Users, CreditCard, BarChart3, Smartphone } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 
 const features = [
   {
-    icon: MessageSquare,
-    title: "Notificaciones por WhatsApp",
-    description:
-      "Envía recordatorios automáticos de pago directamente al WhatsApp de tus clientes. Aumenta tu tasa de cobro hasta un 40%.",
-    color: "bg-green-500/10 text-green-600",
-    iconBg: "bg-green-500",
-  },
-  {
     icon: Mail,
-    title: "Alertas por Email",
+    title: "Notificaciones automáticas",
     description:
-      "Comunicaciones profesionales automáticas con estados de cuenta, recibos y recordatorios de vencimiento.",
+      "Envía recordatorios automáticos de pago por email a tus clientes. Aumenta tu tasa de cobro y reduce la morosidad.",
     color: "bg-blue-500/10 text-blue-600",
     iconBg: "bg-blue-500",
   },

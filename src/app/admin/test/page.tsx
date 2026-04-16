@@ -1,7 +1,12 @@
 "use client";
 import { useMutation } from "@tanstack/react-query";
+import { notFound } from "next/navigation";
 
 export default function NamePage() {
+  if (process.env.NODE_ENV !== "development") {
+    notFound();
+  }
+
   const runCron = useMutation({
     mutationFn: async () => {
       const res = await fetch("/api/test/run-daily-cron", { method: "POST" });

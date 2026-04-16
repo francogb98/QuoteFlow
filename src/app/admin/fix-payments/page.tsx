@@ -1,11 +1,16 @@
 "use client";
 import { runFixIncorrectPayments } from "@/01-actions/admin/test/admin/fix-payments/fix-payments";
+import { notFound } from "next/navigation";
 import React, { useState } from "react";
 
 export default function FixPaymentsPage() {
+  if (process.env.NODE_ENV !== "development") {
+    notFound();
+  }
+
   const [year, setYear] = useState<number>(new Date().getFullYear());
   const [monthsText, setMonthsText] = useState<string>(
-    String(new Date().getMonth() + 1)
+    String(new Date().getMonth() + 1),
   );
   const [adminId, setAdminId] = useState<string>("");
   const [onlyPending, setOnlyPending] = useState<boolean>(true);

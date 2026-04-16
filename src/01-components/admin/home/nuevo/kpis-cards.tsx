@@ -5,8 +5,6 @@ import {
   DollarSign,
   Clock,
   AlertTriangle,
-  MessageCircle,
-  PhoneOff,
   Loader2,
   Save,
 } from "lucide-react";
@@ -25,11 +23,8 @@ import { KpiData, PaymentDetailRow } from "@/lib/data/dashboardQueries";
 
 import { startTransition, useState } from "react";
 
-// import { sendWhatsAppReminder } from "@/01-actions/twilio/twilio";
-
 import { toast } from "sonner";
 import { updateTelefonoUsuario } from "@/01-actions/admin/home/kpi/updateTelefonoUsuario";
-import { sendWhatsAppReminder } from "@/01-actions/twilio/twilio";
 
 // Interfaz para usuarios sin teléfono
 interface UsuarioSinTelefono {
@@ -44,10 +39,9 @@ interface KpiCardsProps {
   pagosPagados: PaymentDetailRow[];
   pagosPendientes: PaymentDetailRow[];
   pagosVencidos: PaymentDetailRow[];
-  usuariosSinTelefonoList: UsuarioSinTelefono[]; // Prop del primer código
+  usuariosSinTelefonoList: UsuarioSinTelefono[];
   dominioLink: string;
   empresaSlug: string;
-  whatsappHabilitado?: boolean;
 }
 
 // Helper: Días restantes (del segundo código)
@@ -69,12 +63,8 @@ export function KpiCards({
   usuariosSinTelefonoList,
   dominioLink,
   empresaSlug,
-  whatsappHabilitado,
 }: KpiCardsProps) {
   const [modalOpen, setModalOpen] = useState<string | null>(null);
-
-  // Estado para envío de Twilio
-  const [sendingId, setSendingId] = useState<string | null>(null);
 
   // Estados para edición de teléfono (primer código)
   const [telefonos, setTelefonos] = useState<Record<string, string>>({});
@@ -108,20 +98,6 @@ export function KpiCards({
       iconBg: "bg-emerald-100",
       iconColor: "text-emerald-600",
     },
-    // Tarjeta condicional de usuarios sin teléfono
-    ...(whatsappHabilitado
-      ? [
-          {
-            key: "sinTelefono",
-            title: "Usuarios sin teléfono",
-            value: data.usuariosSinTelefono.toString(),
-            subtitle: "no recibirán recordatorios",
-            icon: PhoneOff,
-            iconBg: "bg-gray-100",
-            iconColor: "text-gray-600",
-          },
-        ]
-      : []),
     {
       key: "pagados",
       title: "Recaudado del Mes",
@@ -218,97 +194,8 @@ export function KpiCards({
     });
   };
 
-  // // ACCIÓN: Enviar Twilio (Lógica del segundo código mejorada)
-  const handleTestTwilio = (tipo: "pendiente" | "vencido") => {
-    startTransition(async () => {
-      setSendingId("test");
-
-      const res = await sendWhatsAppReminder({
-        telefono: "3855956688", // tu número real SIN + ni 9
-        usuarioNombre: "Franco Test",
-        fechaVencimiento: new Date().toISOString(),
-        empresa: empresaSlug,
-        documento: "12345678",
-        linkPago: `${dominioLink}/${empresaSlug}/12345678`,
-        tipo: tipo,
-      });
-
-      if (res.success) {
-        toast.success(`Mensaje ${tipo} enviado`);
-      } else {
-        console.log(res.error);
-        toast.error(res.error || "Error al enviar");
-      }
-
-      setSendingId(null);
-    });
-  };
-
   return (
     <>
-      {/* KPI GRID */}
-      {/* <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <div className="flex gap-2 mb-4">
-          <button
-            onClick={() => handleTestTwilio("pendiente")}
-            className="flex items-center gap-2 bg-blue-600 text-white px-4 py-2 rounded-md text-sm hover:bg-blue-700"
-          >
-            {sendingId === "test" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <MessageCircle size={16} />
-            )}
-            Test Pendiente
-          </button>
-
-          <button
-            onClick={() => handleTestTwilio("vencido")}
-            className="flex items-center gap-2 bg-red-600 text-white px-4 py-2 rounded-md text-sm hover:bg-red-700"
-          >
-            {sendingId === "test" ? (
-              <Loader2 className="h-4 w-4 animate-spin" />
-            ) : (
-              <MessageCircle size={16} />
-            )}
-            Test Vencido
-          </button>
-        </div>
-
-        {kpiItems.map((kpi) => {
-          const Icon = kpi.icon;
-          const isClickable = kpi.key !== null;
-
-          return (
-            <Card
-              key={kpi.title}
-              className={`relative overflow-hidden transition-all ${
-                isClickable
-                  ? "cursor-pointer hover:border-primary hover:shadow-md"
-                  : ""
-              }`}
-              onClick={() => isClickable && setModalOpen(kpi.key)}
-            >
-              <CardContent className="p-5">
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground">
-                      {kpi.title}
-                    </p>
-                    <p className="mt-2 text-3xl font-bold">{kpi.value}</p>
-                    <span className="text-xs text-muted-foreground">
-                      {kpi.subtitle}
-                    </span>
-                  </div>
-                  <div className={`rounded-xl p-2.5 ${kpi.iconBg}`}>
-                    <Icon className={`h-5 w-5 ${kpi.iconColor}`} />
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          );
-        })}
-      </div> */}
-
       {/* MODAL */}
       <Dialog open={!!modalOpen} onOpenChange={() => setModalOpen(null)}>
         <DialogContent className="sm:max-w-lg">
@@ -371,8 +258,6 @@ export function KpiCards({
 
                   // RENDERIZADO: Pagos (Pagados, Pendientes, Vencidos)
                   const pago = item as PaymentDetailRow;
-                  const isSending = sendingId === pago.id;
-                  const hasPhone = !!pago.telefono;
 
                   return (
                     <div
@@ -410,36 +295,6 @@ export function KpiCards({
                         >
                           {formatCurrency(pago.monto)}
                         </span>
-
-                        {/* Botón de enviar Twilio (solo pendientes/vencidos) */}
-                        {/* {(modalOpen === "pendientes" ||
-                          modalOpen === "vencidos") && (
-                          <button
-                            onClick={() => handleSendTwilio(pago)}
-                            disabled={
-                              !hasPhone || isSending || !whatsappHabilitado
-                            }
-                            className={`flex items-center gap-1 px-3 py-1.5 rounded text-xs font-semibold ${
-                              hasPhone && whatsappHabilitado
-                                ? "bg-purple-600 text-white hover:bg-purple-700"
-                                : "bg-gray-200 text-gray-400 cursor-not-allowed"
-                            } transition-colors`}
-                            title={
-                              !hasPhone
-                                ? "Sin teléfono"
-                                : !whatsappHabilitado
-                                  ? "WhatsApp no habilitado"
-                                  : "Enviar recordatorio"
-                            }
-                          >
-                            {isSending ? (
-                              <Loader2 className="h-4 w-4 animate-spin" />
-                            ) : (
-                              <MessageCircle size={14} />
-                            )}
-                            Enviar
-                          </button>
-                        )} */}
                       </div>
                     </div>
                   );

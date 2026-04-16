@@ -64,7 +64,6 @@ export const plans: PlanOption[] = [
   //     "Usuarios ilimitados",
   //     "Tarifas personalizadas",
   //     "Recordatorios por email",
-  //     "Recordatorios automáticos por WhatsApp",
   //     "Prioridad en soporte",
   //   ],
   //   color: "from-green-500 to-emerald-600",
@@ -83,7 +82,7 @@ export const plans: PlanOption[] = [
   //   features: [
   //     "Hasta 3 administradores",
   //     "Usuarios ilimitados",
-  //     "Recordatorios automáticos por WhatsApp",
+  //     "Recordatorios automáticos por email",
   //     "Recordatorios por email",
   //     "Prioridad en soporte",
   //     "Ahorra $30.000 (2 meses)",

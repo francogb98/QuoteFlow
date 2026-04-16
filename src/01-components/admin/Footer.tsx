@@ -22,7 +22,7 @@ export const Footer = () => {
   };
 
   const logout = () => {
-    signOut({ callbackUrl: "https://cuotafacil.com.ar" });
+    signOut({ redirectTo: "https://cuotafacil.com.ar" });
   };
 
   return (

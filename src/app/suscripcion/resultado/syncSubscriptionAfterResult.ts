@@ -30,12 +30,5 @@ export async function syncSubscriptionAfterReturn(preapprovalId: string) {
         estadoSuscripcion: "ACTIVA",
       },
     }),
-
-    prisma.empresa.update({
-      where: { id: localSub.empresaId },
-      data: {
-        whatsappHabilitado: localSub.planTipo === "PRO",
-      },
-    }),
   ]);
 }

@@ -6,7 +6,7 @@ export async function generarPagosFuturos(
   fechaActual: Date,
   mesActual: number,
   añoActual: number,
-  cronId: string
+  cronId: string,
 ) {
   let pagosGenerados = 0;
   const proximoMes = mesActual === 12 ? 1 : mesActual + 1;
@@ -16,6 +16,8 @@ export async function generarPagosFuturos(
     where: {
       estado: "ACTIVO",
       estaActivo: true,
+      // Exclude users belonging to SUPER_ADMIN accounts — they are not subject to billing
+      administrador: { rol: { not: "SUPER_ADMIN" } },
       NOT: {
         pagos: {
           some: {
@@ -39,7 +41,7 @@ export async function generarPagosFuturos(
   });
 
   logger.info(
-    `[${cronId}] 👥 Encontrados ${usuariosActivos.length} usuarios para generar pagos futuros`
+    `[${cronId}] 👥 Encontrados ${usuariosActivos.length} usuarios para generar pagos futuros`,
   );
 
   const resultados = await Promise.allSettled(
@@ -49,11 +51,11 @@ export async function generarPagosFuturos(
       if (!configuracion || !ultimoPagoPagado) {
         if (!configuracion)
           logger.warn(
-            `[${cronId}] ⚠️ Usuario ${usuario.nombre} sin configuración de tarifa`
+            `[${cronId}] ⚠️ Usuario ${usuario.nombre} sin configuración de tarifa`,
           );
         if (!ultimoPagoPagado)
           logger.warn(
-            `[${cronId}] ⚠️ Usuario ${usuario.nombre} sin pagos pagados`
+            `[${cronId}] ⚠️ Usuario ${usuario.nombre} sin pagos pagados`,
           );
         return 0;
       }
@@ -68,19 +70,19 @@ export async function generarPagosFuturos(
         const fechaProximoPago = new Date(
           proximoPagoAño,
           proximoPagoMes - 1,
-          1
+          1,
         );
 
         const nuevoPago = await generarProximoPago(
           usuario,
           configuracion,
           ultimoPagoPagado,
-          fechaProximoPago
+          fechaProximoPago,
         );
 
         if (nuevoPago) {
           logger.debug(
-            `[${cronId}] ✅ Pago futuro generado: ${usuario.nombre} - ${nuevoPago.periodo}`
+            `[${cronId}] ✅ Pago futuro generado: ${usuario.nombre} - ${nuevoPago.periodo}`,
           );
           return 1;
         }
@@ -88,16 +90,16 @@ export async function generarPagosFuturos(
       } catch (error) {
         logger.error(
           `[${cronId}] ❌ Error generando pago futuro para ${usuario.nombre}:`,
-          error
+          error,
         );
         return 0;
       }
-    })
+    }),
   );
 
   pagosGenerados += resultados.reduce(
     (acc, r) => (r.status === "fulfilled" ? acc + r.value : acc),
-    0
+    0,
   );
 
   return { pagosGenerados };

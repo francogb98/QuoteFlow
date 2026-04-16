@@ -156,9 +156,7 @@ export function SidebarSimple({ user }: Props) {
         {/* Logout */}
         <div className="px-3 pb-4">
           <button
-            onClick={() =>
-              signOut({ callbackUrl: "https://cuotafacil.com.ar" })
-            }
+            onClick={() => signOut({ redirectTo: "https://cuotafacil.com.ar" })}
             className="w-full flex items-center gap-3 p-3 rounded-lg text-red-500 hover:bg-red-50 transition"
           >
             <LogOut size={20} />

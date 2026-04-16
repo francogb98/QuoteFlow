@@ -219,16 +219,7 @@ async function handleSubscriptionEvent(body: any) {
         data: dataUpdate,
       }),
 
-      ...(newStatus === "ACTIVA"
-        ? [
-            prisma.empresa.update({
-              where: { id: empresaId },
-              data: {
-                whatsappHabilitado: existing.planTipo === "PRO",
-              },
-            }),
-          ]
-        : []),
+      ...(newStatus === "ACTIVA" ? [] : []),
     ]);
   }
 }
@@ -328,13 +319,6 @@ async function handlePaymentEvent(body: any) {
         estadoSuscripcion: "ACTIVA",
         estadoPagoMercadoPago: "AUTHORIZED",
         fechaFinPeriodoActual: nuevaFechaFin,
-      },
-    }),
-
-    prisma.empresa.update({
-      where: { id: subscription.empresaId },
-      data: {
-        whatsappHabilitado: subscription.planTipo === "PRO",
       },
     }),
   ]);

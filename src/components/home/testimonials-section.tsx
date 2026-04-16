@@ -8,7 +8,7 @@ const testimonials = [
     name: "María González",
     role: "Directora, Academia de Danza Sol",
     content:
-      "CuotaFacil transformó nuestra gestión. Antes perdíamos horas persiguiendo pagos, ahora todo es automático. La notificación por WhatsApp fue un cambio total, nuestros alumnos pagan a tiempo.",
+      "CuotaFacil transformó nuestra gestión. Antes perdíamos horas persiguiendo pagos, ahora todo es automático. Los recordatorios por email son un cambio total, nuestros alumnos pagan a tiempo.",
     avatar: "MG",
     rating: 5,
   },

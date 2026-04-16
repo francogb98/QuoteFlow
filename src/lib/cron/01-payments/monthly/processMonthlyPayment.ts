@@ -10,13 +10,15 @@ export async function processMonthlyPaymentGeneration() {
   const proximoAño = mesActual === 12 ? añoActual + 1 : añoActual;
 
   logger.info(
-    `📅 [MENSUAL] Generando pagos para usuarios con pago actual pendiente: ${mesActual}/${añoActual}`
+    `📅 [MENSUAL] Generando pagos para usuarios con pago actual pendiente: ${mesActual}/${añoActual}`,
   );
 
   const usuariosParaGenerar = await prisma.usuario.findMany({
     where: {
       estado: "ACTIVO",
       estaActivo: true,
+      // Exclude users belonging to SUPER_ADMIN accounts — they are not subject to billing
+      administrador: { rol: { not: "SUPER_ADMIN" } },
       // Tienen al menos un pago PENDIENTE o VENCIDO este mes
       pagos: {
         some: {
@@ -55,7 +57,7 @@ export async function processMonthlyPaymentGeneration() {
   });
 
   logger.info(
-    `👥 [MENSUAL] Encontrados ${usuariosParaGenerar.length} usuarios con pagos pendientes`
+    `👥 [MENSUAL] Encontrados ${usuariosParaGenerar.length} usuarios con pagos pendientes`,
   );
 
   let pagosGenerados = 0;
@@ -72,18 +74,18 @@ export async function processMonthlyPaymentGeneration() {
         usuario,
         configuracion,
         pagoActual,
-        fechaActual
+        fechaActual,
       );
       if (nuevoPago) {
         pagosGenerados++;
         logger.debug(
-          `✅ [MENSUAL] Pago generado: ${usuario.nombre} - ${nuevoPago.periodo}`
+          `✅ [MENSUAL] Pago generado: ${usuario.nombre} - ${nuevoPago.periodo}`,
         );
       }
     } catch (error) {
       logger.error(
         `❌ [MENSUAL] Error generando pago para ${usuario.nombre}:`,
-        error
+        error,
       );
     }
   }
@@ -91,7 +93,7 @@ export async function processMonthlyPaymentGeneration() {
   const tiempoEjecucion = Date.now() - tiempoInicio;
 
   logger.info(
-    `✅ [MENSUAL] Generación completada en ${tiempoEjecucion}ms: ${pagosGenerados} pagos generados`
+    `✅ [MENSUAL] Generación completada en ${tiempoEjecucion}ms: ${pagosGenerados} pagos generados`,
   );
 
   return {

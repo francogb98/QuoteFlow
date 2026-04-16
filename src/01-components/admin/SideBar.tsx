@@ -168,15 +168,24 @@ export const Sidebar = ({ user }: any) => {
 
   // Filtrar items de navegación según el rol del usuario
   const navItems = allNavItems.filter((item) => {
+    const isSuperAdmin = user?.rol === "SUPER_ADMIN";
+
     if (item.label === "Logs") {
-      return user?.rol === "SUPER_ADMIN";
+      return isSuperAdmin;
     }
     if (item.label === "Codigos") {
-      return user?.rol === "SUPER_ADMIN";
+      return isSuperAdmin;
+    }
+    // Billing-related items are irrelevant for SUPER_ADMIN
+    if (item.label === "Pagos" && isSuperAdmin) {
+      return false;
+    }
+    if (item.label === "Conexión Mercado Pago" && isSuperAdmin) {
+      return false;
     }
     if (item.label === "Mi Suscripción") {
-      // Mostrar la opción de Suscripción a administradores y super admins, ocultar a profesores
-      return user?.rol !== "PROFESOR";
+      // Ocultar a profesores y a SUPER_ADMIN (no tienen suscripción propia)
+      return !isSuperAdmin && user?.rol !== "PROFESOR";
     }
     if (item.label === "Cuentas") {
       return user?.rol !== "PROFESOR";

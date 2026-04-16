@@ -23,6 +23,8 @@ export async function procesarVencimientosDinamicos(fecha?: Date) {
         estaActivo: true,
         fechaInicioMembresia: { not: null, lte: fechaActual },
         dinamicaTarifa: { isNot: null }, // solo usuarios con config dinámica
+        // Exclude users belonging to SUPER_ADMIN accounts
+        administrador: { rol: { not: "SUPER_ADMIN" } },
       },
     },
     include: {
@@ -31,7 +33,7 @@ export async function procesarVencimientosDinamicos(fecha?: Date) {
   });
 
   logger.info(
-    `🔍 Encontrados ${pagosDinamicos.length} pagos dinámicos para verificar vencimiento`
+    `🔍 Encontrados ${pagosDinamicos.length} pagos dinámicos para verificar vencimiento`,
   );
 
   for (const pago of pagosDinamicos) {
@@ -45,7 +47,7 @@ export async function procesarVencimientosDinamicos(fecha?: Date) {
     const vencido = isDynamicPaymentOverdue(
       usuario.fechaInicioMembresia,
       diasGracia,
-      fechaActual
+      fechaActual,
     );
 
     if (!vencido) continue;
@@ -64,7 +66,7 @@ export async function procesarVencimientosDinamicos(fecha?: Date) {
       if (montoRecargo > 0) recargosAplicados++;
 
       logger.debug(
-        `✅ Pago pasado a VENCIDO: Usuario ${usuario.nombre} - Período ${pago.periodo}`
+        `✅ Pago pasado a VENCIDO: Usuario ${usuario.nombre} - Período ${pago.periodo}`,
       );
     }
 
@@ -76,7 +78,7 @@ export async function procesarVencimientosDinamicos(fecha?: Date) {
       });
       recargosAplicados++;
       logger.debug(
-        `⚡ Recargo aplicado a pago ya vencido: Usuario ${usuario.nombre} - Período ${pago.periodo}`
+        `⚡ Recargo aplicado a pago ya vencido: Usuario ${usuario.nombre} - Período ${pago.periodo}`,
       );
     }
   }

@@ -5,7 +5,7 @@ const nextConfig: NextConfig = {
     serverActions: {
       allowedOrigins: [
         "localhost:3000",
-        "d4r7slnh-3000.brs.devtunnels.ms", // Agrega tu URL de tunnel
+        ...(process.env.ALLOWED_ORIGIN ? [process.env.ALLOWED_ORIGIN] : []),
       ],
     },
   },

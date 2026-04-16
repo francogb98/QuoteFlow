@@ -87,8 +87,10 @@ export function Header({ user, onNotificationsUpdate }: any) {
         />
       </header>
 
-      {/* Banner de Suscripción con datos reales */}
-      <SubscriptionStatusBanner suscripcion={suscripcion} />
+      {/* Banner de Suscripción con datos reales — oculto para SUPER_ADMIN */}
+      {user?.rol !== "SUPER_ADMIN" && (
+        <SubscriptionStatusBanner suscripcion={suscripcion} />
+      )}
 
       {/* Dejamos comentado o eliminado el PaymentActionModal por ahora */}
       {/* <PaymentActionModal ... /> */}

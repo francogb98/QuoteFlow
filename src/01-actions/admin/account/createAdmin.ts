@@ -21,12 +21,16 @@ const createAdminSchema = z.object({
 });
 
 export const createAdmin = async (
-  data: z.infer<typeof createAdminSchema>
+  data: z.infer<typeof createAdminSchema>,
 ): Promise<ActionResponse<any>> => {
   try {
     const session = await auth();
 
-    if (!session?.user || session.user.rol !== "ADMINISTRADOR") {
+    if (
+      !session?.user ||
+      (session.user.rol !== "ADMINISTRADOR" &&
+        session.user.rol !== "SUPER_ADMIN")
+    ) {
       return {
         ok: false,
         error: "No tienes permiso para realizar esta acción",

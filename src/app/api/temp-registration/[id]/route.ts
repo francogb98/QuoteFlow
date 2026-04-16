@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 
 export async function GET(
   _req: Request,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: Promise<{ id: string }> },
 ) {
   const { id } = await params;
   try {
@@ -12,12 +12,11 @@ export async function GET(
       select: {
         id: true,
         nombre: true,
-        documento: true,
-        email: true,
         nombreEmpresa: true,
-        telefono: true,
         planTipo: true,
         frecuenciaPago: true,
+        // documento, email y telefono se omiten deliberadamente
+        // para reducir exposición de PII en endpoint público
       },
     });
 
@@ -30,7 +29,7 @@ export async function GET(
     console.error("GET /api/temp-registration/:id error", err);
     return NextResponse.json(
       { error: "Ocurrió un error al obtener el registro temporal" },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }
