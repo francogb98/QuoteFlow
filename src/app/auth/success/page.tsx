@@ -1,6 +1,6 @@
 "use client";
 
-import { CheckCircle, Loader2, Clock } from "lucide-react";
+import { CheckCircle, Loader2, Clock, XCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
 import { useEffect, useState } from "react";
@@ -227,7 +227,7 @@ export default function RegistrationSuccessPage() {
       <div className="w-full max-w-md mx-auto py-12">
         <div className="bg-white/80 backdrop-blur-md shadow-2xl rounded-2xl p-8 border border-red-100 text-center">
           <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center mx-auto mb-6">
-            <CheckCircle className="w-8 h-8 text-red-600" />
+            <XCircle className="w-8 h-8 text-red-600" />
           </div>
           <h1 className="text-2xl font-bold text-red-600 mb-4">
             Error en el Proceso

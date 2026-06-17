@@ -22,7 +22,16 @@ export async function generarPagoMensual(usuarioId: string) {
     });
 
     if (pagoExistente) {
-      await prisma.pago.delete({ where: { id: pagoExistente.id } });
+      const pago = await prisma.pago.update({
+        where: { id: pagoExistente.id },
+        data: {
+          monto,
+          mes: mesActual,
+          año: añoActual,
+          fechaVencimiento: fechaVencimiento || null,
+        },
+      });
+      return pago;
     }
 
     const pago = await prisma.pago.create({

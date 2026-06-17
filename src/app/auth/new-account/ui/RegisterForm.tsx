@@ -93,7 +93,7 @@ export default function RegisterForm() {
         setSuccess(true);
         setSuccessMessage("¡Cuenta de prueba creada exitosamente!");
         setFormError(null);
-        setTimeout(() => router.push("/"), 2000);
+        setTimeout(() => router.push("/admin/home"), 2000);
       } else {
         setFormError({
           message: data.error || "Error al crear la cuenta de prueba",

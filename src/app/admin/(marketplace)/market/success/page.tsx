@@ -23,7 +23,7 @@ export default function MercadoPagoSuccessPage() {
     } else {
       // Si no hay ventana padre, redirigir al dashboard
       setTimeout(() => {
-        window.location.href = "/admin/dashboard";
+        window.location.href = "/admin/home";
       }, 3000);
     }
   }, []);

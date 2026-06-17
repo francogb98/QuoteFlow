@@ -1,375 +1,257 @@
-  # README_AUDIT
-
-  > Auditoría técnica generada el 15/04/2026  
-  > Stack: Next.js 15 · React 19 · TypeScript 5.9 · Prisma 6.9 · PostgreSQL 15 · NextAuth v5 beta · Zustand 5 · TanStack Query · Tailwind CSS 4 · shadcn/ui · MercadoPago · Cloudinary · Twilio · Firebase  
-  > Dominio: cuotafacil.com.ar
-
-  ---
-
-  ## 🧾 Resumen General
-
-  | Ítem | Valor |
-  |------|-------|
-  | **Estado general** | Funcional en producción, con deuda técnica crítica acumulada |
-  | **Nivel de madurez** | MVP Avanzado (feature-complete, no production-hardened) |
-  | **Propósito** | SaaS multi-tenant para gestión de cobros recurrentes (gimnasios, academias, clubes) |
-  | **Arquitectura base** | Next.js App Router + Server Actions + API Routes + Prisma ORM |
-  | **Versión** | 0.1.0 |
-
-  **Resumen ejecutivo**: La lógica de negocio está bien pensada. El modelado de dominio (tarifas fijas/dinámicas, cobros, notificaciones, suscripciones) es sólido y está bien reflejado en el schema de Prisma. El flujo de MercadoPago para empresas y usuarios individuales está implementado con HMAC validation. Sin embargo, en la iteración de Semana 1 se identificaron y corrigieron **9 vulnerabilidades críticas/altas de seguridad** que existían en producción. La deuda técnica principal ahora está concentrada en calidad de código, consistencia de arquitectura y performance.
-
-  ---
-
-  ## 🚨 Problemas Críticos (Alta prioridad)
-
-  > ✅ = **RESUELTO** en la primera iteración de implementación (15/04/2026)
-
-  ### C1 — Endpoint cron sin autenticación ✅ RESUELTO
-  - **Archivo**: `src/app/api/cron/diario/route.ts`
-  - **Problema**: El check de autenticación estaba comentado. Cualquier usuario anónimo podía hacer `GET /api/cron/diario` y disparar el procesamiento diario de pagos: marcar cuotas como vencidas, aplicar recargos, generar pagos futuros.
-  - **Impacto**: Manipulación directa del estado financiero de todos los clientes de la plataforma.
-  - **Fix aplicado**: Re-habilitado el check `if (!token || token !== process.env.CRON_SECRET)`.
-  - **Pendiente**: Asegurarse de que `CRON_SECRET` esté configurado en Vercel. El cron de Vercel debe pasar el header `Authorization: Bearer $CRON_SECRET`.
-
-  ### C2 — GET /api/admin/user/[id] sin autenticación ni ownership check ✅ RESUELTO
-  - **Archivo**: `src/app/api/admin/user/[id]/route.ts`
-  - **Problema**: El endpoint no llamaba a `auth()`. Cualquier request con un UUID válido obtenía todos los datos del usuario: nombre, documento, email, historial de pagos, configuración de tarifa.
-  - **Impacto**: Exposición de PII de todos los estudiantes/clientes de la plataforma mediante enumeración de IDs.
-  - **Fix aplicado**: Agregado `auth()` + verificación `user.administradorId !== session.user.id` (403 en caso de mismatch).
-
-  ### C3 — GET /api/admin/users-report acepta adminId como query param sin verificar ✅ RESUELTO
-  - **Archivo**: `src/app/api/admin/users-report/route.ts`
-  - **Problema**: Sin `auth()`. El parámetro `adminId` venía del query string — cualquiera podía consultar los datos de cualquier admin.
-  - **Impacto**: Exfiltración masiva de datos de todas las empresas registradas (usuarios, pagos, tarifas).
-  - **Fix aplicado**: Agregado `auth()`. Admins normales (`ADMINISTRADOR`/`PROFESOR`) usan forzosamente `session.user.id`. Solo `SUPER_ADMIN` puede pasar `adminId` por query param.
-
-  ### C4 — GET /api/temp-registration/[id] expone PII en proceso de registro ✅ RESUELTO
-  - **Archivos**: `src/app/api/temp-registration/[id]/route.ts`, `src/app/api/temp-registration/[id]/status/route.ts`
-  - **Problema**: Endpoints sin autenticación que retornaban `documento`, `email`, `telefono` de registros en curso. El status endpoint además retornaba el `email` en la respuesta.
-  - **Impacto**: Cosecha de PII de empresas en proceso de alta.
-  - **Fix aplicado**: Eliminados `documento`, `email`, `telefono` del `select` en el endpoint de detalle. Eliminado `email` de la respuesta del endpoint de status. El endpoint sigue siendo público (necesario para el flujo de registro sin sesión) pero ya no expone datos sensibles.
-
-  ### C5 — Token de reset de contraseña expuesto en URL
-  - **Archivo**: `src/01-actions/auth/reset-password/request-password-reset.ts:31`
-  - **Problema**: El link de reset incluye el token como query param (`?token=abc&id=uuid`). Queda en historial del navegador, headers `Referer` hacia terceros, logs de acceso de Cloudflare/Vercel, y proxies.
-  - **Impacto**: Vector de account takeover para cualquier administrador de la plataforma.
-  - **Estado**: ⬜ PENDIENTE — Requiere cambio en el flujo de reset: el token debería enviarse como POST body o usando un cookie HTTP-only de corta duración.
-
-  ### C6 — POST /api/send-whatsapp sin autenticación ✅ RESUELTO
-  - **Archivo**: `src/app/api/send-whatsapp/route.ts`
-  - **Problema**: Cualquier actor podía enviar mensajes WhatsApp (vía Twilio) a cualquier número usando la cuenta de la plataforma.
-  - **Fix aplicado**: Agregado `auth()` — retorna 401 si no hay sesión activa.
-
-  ### C7 — DATABASE_URL logueada en producción ✅ RESUELTO
-  - **Archivo**: `auth.config.ts`
-  - **Problema**: `console.log("DATABASE_URL:", process.env.DATABASE_URL)` — credenciales de DB en logs de Vercel.
-  - **Fix aplicado**: Línea eliminada.
-
-  ### C8 — Sin rate limiting en ningún endpoint
-  - **Afecta**: Login, reset-password, todos los endpoints de API.
-  - **Problema**: Sin throttling, un atacante puede hacer brute-force de contraseñas, enumerar admins por email en el flujo de reset, o disparar el cron en loop con requests paralelos.
-  - **Estado**: ⬜ PENDIENTE — Implementación recomendada: `@upstash/ratelimit` + Redis (Upstash free tier). Ver Roadmap Paso 10.
-
-  ### C9 — Push notification subscribe permite reasignar notificaciones a cualquier usuarioId ✅ PARCIALMENTE RESUELTO
-  - **Archivo**: `src/app/api/notifications/subscribe/route.ts`
-  - **Problema**: Tomaba `usuarioId` del body sin verificar que existiera o que el solicitante fuera ese usuario.
-  - **Fix aplicado**: Agregada verificación de existencia del `usuarioId` en DB antes de crear la suscripción. Eliminado el `console.log` que exponía datos del body.
-  - **Pendiente**: La solución completa requeriría un mecanismo de autenticación para usuarios públicos (no autenticados con NextAuth). Evaluarlo en Mes 2.
-
-  ---
-
-  ## ⚠️ Problemas Importantes (Media prioridad)
-
-  ### M1 — `claveMercadoPago` almacenada sin cifrar
-  - **Modelo**: `Administrador` en `prisma/schema.prisma`
-  - **Problema**: El access token de MercadoPago se guarda en texto plano. Un dump de DB expone todos los tokens.
-  - **Fix recomendado**: Usar el módulo `src/lib/crypto.ts` (ya existe) para cifrar antes de persistir y descifrar al leer.
-  - **Estado**: ⬜ PENDIENTE
-
-  ### M2 — Archivo zombie con secreto de webhook hardcodeado ✅ RESUELTO
-  - **Archivo**: `src/app/api/mercadopago/payment/route.ts` (eliminado)
-  - **Problema**: Contenía `const webhookSecret = "TU_SECRETO_DE_WEBHOOK"` — código muerto con comentarios de tutorial que dejaba el endpoint expuesto o completamente roto.
-  - **Fix aplicado**: Archivo eliminado.
-
-  ### M3 — Dev tunnel hardcodeado en `next.config.ts` ✅ RESUELTO
-  - **Problema**: `"d4r7slnh-3000.brs.devtunnels.ms"` en `allowedOrigins` de Server Actions permitía requests desde ese túnel en producción.
-  - **Fix aplicado**: Reemplazado por `process.env.ALLOWED_ORIGIN` (spread condicional). Agregar a `.env` local si se necesita el túnel en dev.
-
-  ### M4 — Páginas de test/fix-payments accesibles en producción ✅ RESUELTO
-  - **Archivos**: `src/app/admin/test/page.tsx`, `src/app/admin/fix-payments/page.tsx`
-  - **Fix aplicado**: Agregado guard `if (process.env.NODE_ENV !== "development") notFound()` en ambas.
-
-  ### M5 — Arquitectura duplicada: `01-components/` + `components/`, `01-actions/` + `actions/`
-  - **Problema**: Dos árboles de carpetas paralelos sin límites claros. ~215 archivos en `01-components/`, ~50 en `components/`. La carpeta `nuevo/` dentro de `01-components/` sugiere una refactorización iniciada y abandonada.
-  - **Impacto**: Confusión para nuevos developers. El código nuevo puede ir al lugar equivocado.
-  - **Estado**: ⬜ PENDIENTE — Plan de consolidación en Roadmap Paso 20.
-
-  ### M6 — 20+ instancias de tipo `any` y 6+ `@ts-ignore`
-  - **Archivos clave**:
-    - `src/types/find-user-result.ts` — interface principal con `any`
-    - `src/01-components/admin/users/user/pagos/PagosGrid.tsx` — todas las props como `any`
-    - `src/01-components/admin/users/list/NuevaTablaDeUsuarios.tsx` — `@ts-ignore` en sorting
-    - `src/01-components/admin/users/user/pagos/ModalEditPayment.tsx` — props como `any`
-    - `auth.config.ts` — cast `as any` en token callback
-  - **Impacto**: TypeScript no puede detectar errores en runtime. `strict: true` en tsconfig queda anulado en los puntos más críticos.
-  - **Estado**: ⬜ PENDIENTE — Ver Roadmap Paso 13.
-
-  ### M7 — Dos bibliotecas de validación en paralelo
-  - **Problema**: `zod ^4.0.5` Y `yup ^1.6.1` coexisten. Schemas no están centralizados.
-  - **Impacto**: Bundle más grande, patrones inconsistentes, schemas duplicados.
-  - **Estado**: ⬜ PENDIENTE — Ver Roadmap Paso 19.
-
-  ### M8 — Respuestas de API/Server Actions inconsistentes
-  - **Problema**: Los actions retornan indistintamente `{ ok: boolean, message }`, `{ success: boolean, data, error }`, `{ error: string }`. El archivo `src/lib/utils/action-errors.ts` define `ActionResponse<T>` pero con ambos campos `ok` y `success` simultáneamente.
-  - **Impacto**: El frontend hace `.ok`, `.success`, `.error` sin saber qué esperar en cada caso.
-  - **Estado**: ⬜ PENDIENTE — Ver Roadmap Paso 14.
-
-  ### M9 — N+1 risk en `getAdminForAuth()`
-  - **Archivo**: `src/lib/auth/get-admin.ts`
-  - **Problema**: En cada validación de sesión se hace una cadena de queries: Admin → Empresa → ConfiguracionTarifa → RangosTarifa → ConfiguracionDinamica. Sin caché, esto se ejecuta en cada request server-side.
-  - **Impacto**: Latencia alta en producción con muchos usuarios concurrentes.
-  - **Estado**: ⬜ PENDIENTE — Ver Roadmap Paso 26.
-
-  ### M10 — Missing indexes en Prisma schema ✅ RESUELTO
-  - **Problema**: `Administrador` (empresaId, configuracionTarifaId), `PasswordResetToken` (adminId, expiresAt), `TempRegistration` (expiresAt) carecían de índices.
-  - **Fix aplicado**: Agregados `@@index` en los tres modelos.
-  - **Pendiente**: Ejecutar `pnpm prisma migrate dev --name add_missing_indexes` en staging para aplicar la migración.
-
-  ### M11 — Lógica de timezone duplicada 3+ veces
-  - **Archivos**: `ModalCreatePayment.tsx` (2x), `UserForm.tsx`
-  - **Problema**: La conversión UTC → `America/Argentina/Buenos_Aires` está implementada manualmente con aritmética de offsets.
-  - **Fix recomendado**: Extraer a `src/lib/utils/timezone.ts` usando `date-fns-tz` (ya instalado).
-  - **Estado**: ⬜ PENDIENTE
-
-  ### M12 — Memory leak: `URL.createObjectURL` sin revoke ✅ RESUELTO
-  - **Archivo**: `src/app/(public)/[empresa]/[documento]/comprobante/PaymentModal.tsx`
-  - **Fix aplicado**: Agregado `useEffect` con cleanup que llama `URL.revokeObjectURL(previewUrl)` cuando cambia la URL o se desmonta el componente.
-
-  ### M13 — `manualOverrideEstado` sin trazabilidad
-  - **Modelo**: `SuscripcionEmpresa` en `prisma/schema.prisma`
-  - **Problema**: Los campos `manualOverrideEstado` y `manualOverrideHasta` pueden ser modificados sin registro de quién los cambió y cuándo.
-  - **Fix recomendado**: Agregar `manualOverrideBy String?` y `manualOverrideAt DateTime?` al modelo.
-  - **Estado**: ⬜ PENDIENTE
-
-  ---
-
-  ## 🧹 Mejoras Sugeridas (Baja prioridad)
-
-  ### B1 — Console.logs en producción ✅ PARCIALMENTE RESUELTO
-  - Configurada la regla ESLint `"no-console": ["warn", { allow: ["error", "warn"] }]` en `eslint.config.mjs`.
-  - Sigue pendiente eliminar las 15+ instancias existentes (ahora marcarán como warning en el linter).
-  - Ejemplos: `console.log("entre aqui")` en `recent-payments.tsx`, múltiples en `temp-registration/status`.
-
-  ### B2 — Deprecated Tailwind gradient classes
-  - **Archivos**: `UserDataUnified.tsx`, `UserForm.tsx`, `login/page.tsx` (8+ instancias)
-  - **Fix**: `bg-gradient-to-r` → `bg-linear-to-r`, `bg-gradient-to-br` → `bg-linear-to-br`, `flex-shrink-0` → `shrink-0`
-  - **Estado**: ⬜ PENDIENTE
-
-  ### B3 — Dos bibliotecas de fechas: `date-fns` + `moment-timezone`
-  - Ambas en el bundle final. `date-fns-tz` ya cubre el timezone handling.
-  - Migrar todo a `date-fns` + `date-fns-tz`, eliminar `moment-timezone`.
-  - **Estado**: ⬜ PENDIENTE
-
-  ### B4 — Solo 2 custom hooks para toda la aplicación
-  - Oportunidad de extraer lógica repetida: `useAdminSession`, `useUserSearch`, `usePagoActions`.
-  - **Estado**: ⬜ PENDIENTE
-
-  ### B5 — Zustand: 3 stores separados
-  - `useAdminPanelStore`, `useAppStore`, `useSideBarStore`. Unificar con slices.
-  - **Estado**: ⬜ PENDIENTE
-
-  ### B6 — TempRegistration sin cleanup automático
-  - Los registros temporales expirados siguen en la DB. Agregar limpieza en el cron diario.
-  - **Estado**: ⬜ PENDIENTE
-
-  ### B7 — Sin soft deletes
-  - No hay `deletedAt` en ningún modelo. Los registros eliminados se pierden permanentemente.
-  - **Estado**: ⬜ PENDIENTE
-
-  ### B8 — Timestamps inconsistentes entre modelos
-  - Algunos modelos usan `createdAt`/`updatedAt` (convención Prisma), otros usan `fechaCreacion`/`fechaActualizacion`.
-  - Estandarizar en próxima iteración de schema.
-  - **Estado**: ⬜ PENDIENTE
-
-  ### B9 — `skipLibCheck: true` en tsconfig
-  - Oculta errores de tipos en las declaraciones de dependencias.
-  - **Estado**: ⬜ PENDIENTE — evaluar desactivar y resolver errores resultantes.
-
-  ### B10 — Filtros y sort sin `useMemo` en tabla de usuarios
-  - **Archivo**: `src/01-components/admin/users/list/NuevaTablaDeUsuarios.tsx:123-160`
-  - `.filter()` y `.sort()` se recalculan en cada render. Con listas grandes esto es un bottleneck.
-  - **Estado**: ⬜ PENDIENTE
-
-  ---
-
-  ## 🏗 Recomendaciones de Arquitectura
-
-  ### A1 — Consolidar estructura de carpetas (prioridad alta)
-  Actualmente hay una migración iniciada `01-*` → estructura nueva que quedó inconclusa. Definir una convención y migrar progresivamente:
-
-  ```
-  src/
-    actions/           # SOLO esta carpeta (deprecar/eliminar 01-actions/)
-    components/        # SOLO esta carpeta (deprecar/eliminar 01-components/)
-      ui/              # shadcn components
-      admin/           # Componentes panel admin
-      public/          # Componentes portal público
-      shared/          # Componentes transversales
-    lib/
-      schemas/         # TODOS los schemas Zod centralizados
-      utils/
-      auth/
-      payments/
-      notifications/
-  ```
-
-  ### A2 — Middleware global de autenticación
-  Crear `src/middleware.ts` que proteja todas las rutas `/admin/*` y `/api/admin/*` a nivel de Edge, en lugar de verificar sesión en cada route handler individualmente. Esto elimina el riesgo de que un nuevo endpoint quede sin proteger por omisión.
-
-  ### A3 — Contrato único de respuesta para Server Actions
-  ```typescript
-  // src/lib/types/action-result.ts
-  type ActionResult<T = void> =
-    | { success: true; data: T; message?: string }
-    | { success: false; error: string; code?: string }
-  ```
-  Todos los server actions y API routes deben retornar este tipo. Eliminar el uso de `ok` como alias de `success`.
-
-  ### A4 — Schema de validación centralizado
-  Mover todos los schemas Zod a `src/lib/schemas/` con un index barrel. Eliminar Yup completamente. Co-locar tipos TypeScript inferidos desde los schemas con `z.infer<typeof Schema>`.
-
-  ### A5 — Rate limiting en capa middleware
-  Implementar con `@upstash/ratelimit` + Redis (Upstash tiene free tier), aplicado en `middleware.ts` para login, reset-password y otros endpoints críticos.
-
-  ---
+# AUDITORÍA TÉCNICA — CuotaFacil
 
-  ## 📈 Roadmap de Mejora (ordenado por impacto/urgencia)
+> Fecha: 17 de Junio 2026
+> Estado: **EN PROGRESO**
 
-  ### Semana 1 — Hardening de seguridad crítico ✅ COMPLETADO
+---
 
-  | Paso | Tarea | Estado |
-  |------|-------|--------|
-  | 1 | Re-habilitar auth en cron diario | ✅ |
-  | 2 | Auth + ownership en `/api/admin/user/[id]` | ✅ |
-  | 3 | Auth + SUPER_ADMIN check en `/api/admin/users-report` | ✅ |
-  | 4 | Reducir PII en temp-registration endpoints | ✅ |
-  | 5 | Auth en `/api/send-whatsapp` | ✅ |
-  | 6 | Eliminar DATABASE_URL del console.log | ✅ |
-  | 7 | Verificación de usuarioId en push notifications | ✅ |
-  | 8 | Eliminar archivo zombie `/api/mercadopago/payment/route.ts` | ✅ |
-  | 9 | Dev tunnel a variable de entorno en `next.config.ts` | ✅ |
+## CREDENCIALES DEL PROYECTO
 
-  ### Semana 2 — Estabilización de código
+- **Nombre**: CuotaFacil (internamente "Vocabite")
+- **Stack**: Next.js 16, React 19, TypeScript 5.9, Tailwind CSS 4, shadcn/ui, Prisma 6.9, PostgreSQL 15
+- **Despliegue**: Vercel
+- **Domain**: cuotafacil.com.ar
 
-  | Paso | Tarea | Status |
-  |------|-------|--------|
-  | 10 | Implementar rate limiting básico en login y reset-password (puede ser sin Redis como primera iteración con `next-rate-limit`) | ⬜ |
-  | 11 | Migrar Prisma schema a DB (ejecutar `prisma migrate dev` para aplicar nuevos indexes) | ⬜ |
-  | 12 | Cifrar `claveMercadoPago` con `src/lib/crypto.ts` antes de guardar/leer | ⬜ |
-  | 13 | Mover token de reset de contraseña a POST body (C5) | ⬜ |
-  | 14 | Eliminar páginas `admin/test` y `admin/fix-payments` completamente (o moverlas a routes protegidas) | ✅ Guard agregado |
+---
 
-  ### Semana 3 — Calidad de código y tipos
+## P0 — SEGURIDAD Y DATOS (Fix inmediato) ✅ COMPLETADO
 
-  | Paso | Tarea | Status |
-  |------|-------|--------|
-  | 15 | Eliminar 15+ `console.log` de producción (ESLint ahora avisa) | ⬜ |
-  | 16 | Tipar correctamente los 5 archivos con mayor densidad de `any` | ⬜ |
-  | 17 | Estandarizar respuesta de Server Actions con `ActionResult<T>` | ⬜ |
-  | 18 | Corregir deprecated Tailwind classes (8+ instancias) | ⬜ |
-  | 19 | Extraer timezone utils a `src/lib/utils/timezone.ts` | ⬜ |
+### Vulnerabilidades de seguridad
 
-  ### Mes 2 — Arquitectura
+- [x] **`POST /api/mercadopago`** — Sin auth. Cualquiera puede aprobar pagos. Agregar verificación de sesión o firma HMAC.
+- [x] **`GET /api/mercadopago`** — Sin auth. Cualquiera consulta detalles de pagos. Agregar verificación de sesión.
+- [x] **`POST /api/test/run-daily-cron`** — Endpoint de test en producción sin auth. Eliminar o agregar check `NODE_ENV !== "development"`.
+- [x] **`POST /api/payments/upload-comprobante`** — Sin auth. Cualquiera sube comprobantes falsos. Agregar verificación de sesión + ownership check.
+- [x] **`POST /api/auth/process-subscription`** — Sin auth. Cualquiera activa suscripciones. Agregar verificación de sesión.
+- [x] **`GET /api/temp-registration/[id]/status`** — Sin auth + race condition que crea empresas duplicadas. Agregar locking o idempotency.
+- [x] **`POST /api/notifications/subscribe`** — Sin auth. Cualquiera se suscribe a notificaciones de任意 usuario. Agregar verificación de sesión.
 
-  | Paso | Tarea | Status |
-  |------|-------|--------|
-  | 20 | Crear `src/middleware.ts` con protección global de rutas admin | ⬜ |
-  | 21 | Eliminar Yup, centralizar todos los schemas en `src/lib/schemas/` | ⬜ |
-  | 22 | Plan de consolidación de carpetas (`01-components/` → `components/`) | ⬜ |
-  | 23 | Implementar rate limiting con Upstash Redis | ⬜ |
-  | 24 | Agregar soft deletes (`deletedAt`) en modelos Usuario y Pago | ⬜ |
-  | 25 | Agregar `manualOverrideBy` y `manualOverrideAt` en `SuscripcionEmpresa` | ⬜ |
-  | 26 | Eliminar `moment-timezone` del bundle | ⬜ |
+### Bugs de seguridad en código
 
-  ### Mes 3 — Performance y DX
+- [x] **`src/lib/crypto.ts`** — IV (initialization vector) reutilizado para TODAS las encriptaciones. AES-256-CBC roto. Fix: generar IV único por cada `encrypt()` call.
+- [x] **`src/components/Providers.tsx:6`** — `QueryClient` creado fuera del componente. Causa data leaks entre usuarios en SSR. Fix: mover a `useState` + `useRef`.
 
-  | Paso | Tarea | Status |
-  |------|-------|--------|
-  | 27 | `useMemo` en filtros/sort de `NuevaTablaDeUsuarios` | ⬜ |
-  | 28 | Cachear `getAdminForAuth()` en el token de sesión (reducir joins por request) | ⬜ |
-  | 29 | Extraer custom hooks reutilizables (`useAdminSession`, etc.) | ⬜ |
-  | 30 | Limpieza automática de `TempRegistration` expiradas en cron | ⬜ |
-  | 31 | Estandarizar timestamps en schema (`createdAt`/`updatedAt` en todos los modelos) | ⬜ |
+### Bugs de integridad de datos
 
-  ---
+- [x] **`src/actions/users/public/generarPago.ts:25`** — `pagoExistente` se ELIMINA en lugar de actualizarse. Destruye historial financiero. Fix: cambiar `delete` por `update`.
 
-  ## 🧠 Notas Técnicas
+---
 
-  ### NT1 — CRON_SECRET en Vercel
+## P1 — BUGS CRÍTICOS DE UX ✅ COMPLETADO
 
-  Después del fix C1, el cron de Vercel debe configurarse pasando el header de autorización. En `vercel.json` los crons usan el header `Authorization: Bearer $CRON_SECRET` automáticamente si se configura en las variables de entorno del proyecto.
+- [x] **`src/app/admin/page.tsx`** — Redirect a `/admin/dashboard` que NO EXISTE. Fix: cambiar a `/admin/home`.
+- [x] **`src/app/admin/(marketplace)/market/success/page.tsx`** — Mismo redirect roto a `/admin/dashboard`. Fix: cambiar a `/admin/home`.
+- [x] **`src/app/auth/reset-password/reset-password-form.tsx`** — Texto corrupto: "contraseÃ±a" en lugar de "contraseña". Fix: re-guardar archivo con UTF-8 encoding correcto.
+- [x] **`src/app/(public)/payment/failure/page.tsx:93`** — Botón "Intentar nuevamente" sin `onClick` handler. Fix: agregar redirección al flujo de pago.
+- [x] **`src/app/auth/new-account/ui/RegisterForm.tsx`** — Trial redirect va a `/` (landing) en lugar de `/admin/home`. Fix: cambiar URL de destino.
+- [x] **`src/app/layout.tsx:27`** — `<html lang="en">` en app española. Fix: cambiar a `<html lang="es">`.
+- [x] **`src/app/auth/success/page.tsx:230`** — Icono `CheckCircle` (verde) usado para estado de error. Fix: cambiar por `XCircle` o `AlertCircle`.
+- [x] **`src/components/ButtonBack.tsx`** — "Volver atras" sin tilde. Fix: "Volver atrás".
+- [x] **`src/01-components/admin/SideBar.tsx:213`** — CSS bug `hiddenrelative` (sin espacio). Fix: `hidden relative`.
+- [x] **`src/app/(public)/payment/page.tsx`** — Página placeholder con solo `<h1>Hello Page</h1>`. Fix: eliminar o completar.
 
-  ### NT2 — NextAuth v5 beta en producción
+---
 
-  La versión `^5.0.0-beta.28` es experimental. Los `@ts-ignore` en los callbacks de sesión son probablemente por cambios de tipos no estabilizados en la beta. Monitorear el release de v5 estable.
+## P2 — INFRAESTRUCTURA DE ERRORES Y LOADING ✅ COMPLETADO
 
-  ### NT3 — Arquitectura de cobros es sólida
+### Error Boundaries
 
-  La lógica de `FIJA_MENSUAL` vs `DINAMICA_POR_FECHA_INGRESO` con rangos de tarifa está bien modelada. El cron diario que genera pagos y marca vencidos es el corazón correcto del sistema. La seguridad del endpoint del cron es lo que se corrigió primero.
+- [x] Agregar `src/app/error.tsx` — Error boundary global.
+- [x] Agregar `src/app/admin/error.tsx` — Error boundary para admin.
+- [x] Agregar `src/app/auth/error.tsx` — Error boundary para auth.
 
-  ### NT4 — Webhook MercadoPago tiene validación HMAC ✅
+### Loading States
 
-  `src/app/api/mercadopago/webhooks/route.ts` implementa correctamente la verificación de firma HMAC-SHA256. Este endpoint específico está bien. El archivo zombie (`mercadopago/payment/route.ts`) que fue eliminado era código de tutorial copiado, no el webhook real.
+- [x] Agregar `src/app/admin/loading.tsx` — Skeleton para transiciones admin.
+- [x] Agregar `src/app/admin/home/loading.tsx` — Skeleton para dashboard.
+- [x] Agregar `src/app/admin/users/loading.tsx` — Skeleton para lista de usuarios.
+- [x] Agregar `src/app/admin/pagos/loading.tsx` — Skeleton para lista de pagos.
+- [x] Agregar `src/app/admin/notificaciones/loading.tsx` — Skeleton para notificaciones.
+- [x] Agregar `src/app/admin/settings/loading.tsx` — Skeleton para settings.
 
-  ### NT5 — Prisma gestiona bien SQL injection
+---
 
-  El uso de Prisma ORM elimina el riesgo de SQL injection por queries parametrizadas. No hay queries raw (`$queryRaw`) identificadas en la base de código.
+## P3 — CONSOLIDACIÓN DE DIRECTORIOS
 
-  ### NT6 — React Query bien integrado
-  El patrón de `queryClient.invalidateQueries()` después de server actions es correcto. La inconsistencia está en los query keys (algunos arrays, algunos strings) — unificar al estandarizar arquitectura.
+### Acciones
 
-  ### NT7 — Migración pendiente en Prisma
+- [ ] Migrar contenido de `src/01-actions/` a `src/actions/`.
+- [ ] Eliminar `src/01-actions/`.
+- [ ] Verificar que todos los imports apunten al directorio consolidado.
 
-  Después de los nuevos `@@index` agregados al schema, se debe ejecutar:
+### Componentes
 
-  ```bash
-  pnpm prisma migrate dev --name add_missing_indexes
-  ```
+- [ ] Migrar componentes válidos de `src/01-components/` a `src/components/`.
+- [ ] Eliminar `src/01-components/`.
+- [ ] Eliminar componentes obsoletos: `components/admin/Header.tsx` (viejo), `components/NavBar.tsx` (viejo), `01-components/admin/Footer.tsx` (obsoleto).
 
-  En staging primero, luego en producción con `pnpm prisma migrate deploy`.
+### Consolidación específica
 
-  ---
+- [ ] Unificar 2 Headers admin → 1 solo.
+- [ ] Unificar 2 NavBars → 1 solo.
+- [ ] Unificar 2 Pricing pages → 1 solo (o eliminar la de admin si la landing es la fuente de verdad).
+- [ ] Unificar `lib/plans/data.tsx` y `lib/data/plansData.tsx` → 1 solo archivo.
+- [ ] Unificar `lib/auth/get-admin.ts` y `actions/users/admin/getAdmin.ts` → 1 solo.
+- [ ] Unificar `tieneAcceso.ts` y `subscriptions.ts` → 1 solo módulo de verificación de acceso.
 
-  ## ✅ Estado de Implementación
+---
 
-  ### Semana 1 completada el 15/04/2026
+## P4 — SISTEMA DE DISEÑO
 
-  **9 vulnerabilidades críticas/medias resueltas:**
+### Migración a design tokens
+
+- [ ] Migrar `src/components/form/Input.tsx` a design tokens.
+- [ ] Migrar `src/components/form/SelectInput.tsx` a design tokens.
+- [ ] Migrar `src/components/form/CheckboxInput.tsx` a design tokens.
+- [ ] Migrar `src/components/form/Formulario.tsx` a design tokens + responsive.
+- [ ] Migrar `src/app/auth/login/ui/LoginForm.tsx` a design tokens.
+- [ ] Migrar `src/app/auth/new-account/ui/RegisterForm.tsx` a design tokens.
+- [ ] Migrar `src/01-components/admin/users/user/UserForm.tsx` a design tokens.
+- [ ] Migrar `src/01-components/admin/users/new/FormCreateUser.tsx` a design tokens.
+- [ ] Migrar `src/components/admin/AdminCard.tsx` a design tokens.
+- [ ] Migrar `src/components/admin/AdminList.tsx` a design tokens.
+- [ ] Migrar `src/components/admin/GlobalUserSidePanel.tsx` a design tokens.
+- [ ] Migrar `src/01-components/admin/Header.tsx` a design tokens.
+- [ ] Migrar `src/components/DataTable.tsx` a design tokens.
+- [ ] Migrar `src/components/admin/tabla-components/*` a design tokens.
+- [ ] Migrar `src/components/admin/planes/Planes.tsx` a design tokens.
+- [ ] Migrar `src/components/admin/suscripcion-tecnica/SuscripcionTecnicaPanel.tsx` a design tokens.
 
-  - C1: Cron auth re-habilitado
+### Accesibilidad
 
-  - C2: Admin user endpoint protegido con auth + ownership
+- [ ] `src/components/ui/spinner.tsx` — Agregar `role="status"`, `aria-live="polite"`, `aria-label="Cargando"`.
+- [ ] `src/app/auth/login/ui/LoginForm.tsx` — Agregar `<Label>` al campo password.
+- [ ] `src/components/ui/table.tsx` — Agregar `scope="col"` a `<th>`.
+- [ ] `src/components/Logo.tsx` — Agregar `<title>` al SVG.
+- [ ] `src/components/DataTable.tsx` — Agregar `aria-label` a botones de paginación.
+- [ ] Eliminar `alert()` nativo en `notificaciones-dropdown.tsx:131` → usar sonner toast.
 
-  - C3: Users-report protegido, adminId no viene del query param
+---
 
-  - C4: PII (documento, email, telefono) eliminada de endpoints públicos
+## P5 — TYPE SAFETY
 
-  - C6: WhatsApp endpoint requiere sesión
+### Eliminar `any` en funciones financieras críticas
 
-  - C7: DATABASE_URL removida de logs
-
-  - C9: Push notifications verifican existencia del usuarioId
-
-  - M2: Archivo zombie eliminado
-
-  - M3: Dev tunnel movido a variable de entorno
-
-  **Otras mejoras:**
-
-  - M4: Páginas de test/fix-payments protegidas con NODE_ENV guard
-
-  - M10: Indexes de BD agregados en Administrador, PasswordResetToken, TempRegistration
-
-  - M12: Memory leak del blob URL corregido en PaymentModal
-
-  - B1: Regla ESLint `no-console` configurada como warning
+- [ ] `src/lib/cron/01-payments/lib/generarProximoPago.ts` — Definir interfaces para `usuario`, `configuracion`, `pagoReferencia`.
+- [ ] `src/actions/admin/users/lib/tariff-utils.ts` — Definir interface para `configuracionTarifa`.
+- [ ] `src/actions/admin/users/admin/tarifas/actualizarTarifa.ts` — Definir interface para `data`.
+- [ ] `src/actions/admin/users/admin/tarifas/crearTarifa.ts` — Definir interface para `data`.
+- [ ] `src/actions/users/public/updateUserPayment.ts` — Definir interface para `payment`.
+- [ ] `src/lib/data/dashboardQueries.ts` — Definir interfaces para queries internas.
+- [ ] `src/lib/cron/01-payments/daily/orchestrator.ts` — Definir interface para `summary`.
+
+### Eliminar `@ts-ignore`
+
+- [ ] `src/components/AppStoreInitializer.tsx:22-23` — Corregir tipo de `setTarifa`.
+- [ ] `src/app/admin/page.tsx:64` — Corregir tipo de `UsersTable`.
+- [ ] `src/app/admin/users/page.tsx` — Corregir tipos de searchParams.
+- [ ] `src/app/admin/users/[id]/page.tsx` — Corregir acceso a `dinamicas`.
+- [ ] `src/app/admin/tarifas/page.tsx` — Corregir tipo de `user`.
+- [ ] `src/app/admin/account/page.tsx` — Corregir import.
+- [ ] `src/app/admin/codigos/page.tsx` — Corregir tipos.
+
+---
+
+## P6 — ELIMINAR DUPLICACIÓN
+
+### Funciones a consolidar
+
+- [ ] `getNormalizedBusinessDate()` — Existe en `dateUtils.ts` Y `processing-payments-daily.action.ts`. Mantener solo en `dateUtils.ts`.
+- [ ] `findTarifaRangeForDate` / `getApplicableTariffRange` — Existe en `calculations.ts` Y `tariff-utils.ts`. Mantener solo en `tariff-utils.ts`.
+- [ ] `clampPage` / `clampPageSize` — Existe en `super-admin-dashboard.ts` Y `super-admin-whatsapp.ts`. Extraer a `lib/utils/pagination.ts`.
+- [ ] Notificación de vencimientos fijos vs dinámicos — `notificarVencimientosFijos.ts` y `notificarVencimientosDinamicos.ts` son casi idénticos. Unificar en función parametrizada.
+- [ ] Tarifa upsert logic — Existe en `actualizarTarifa.ts` Y `lib/config/tariff.ts`. Mantener solo en `lib/config/tariff.ts`.
+- [ ] Subscription access check — Existe en `tieneAcceso.ts` Y `subscriptions.ts`. Unificar en un solo módulo.
+
+---
+
+## P7 — PERFORMANCE
+
+### Queries optimizadas
+
+- [ ] `src/lib/data/dashboardQueries.ts` — Dividir `getDashboardData` (619 líneas, 15+ queries) en funciones más pequeñas.
+- [ ] `src/lib/data/dashboardQueries.ts` — Paginar query de usuarios (query #11 trae TODOS sin límite).
+- [ ] `src/lib/data/dashboardQueries.ts` — Eliminar duplicación de query `pagosPagadosMes` / `detallesPagados`.
+- [ ] `src/lib/cron/01-payments/daily/orchestrator.ts` — Eliminar N+1: reemplazar `findFirst` por loop con `findMany`.
+- [ ] `src/actions/users/public/findUser.ts` — Eliminar N+1: reemplazar loop de `findFirst` por query con `OR`.
+- [ ] `src/actions/admin/users/admin/tarifas/actualizarTarifa.ts` — Batch update de usuarios en lugar de loop con `updateMany` individual.
+
+### Optimizaciones de bundle
+
+- [ ] Eliminar `moment-timezone` (~300KB) → usar solo `date-fns`.
+- [ ] Revisar si `framer-motion` se usa lo suficiente para justificar el bundle.
+- [ ] Revisar si `react-datepicker` + `react-day-picker` ambos son necesarios.
+
+### Caché
+
+- [ ] `auth.config.ts` — Agregar caché corta (5 min) al `session` callback que consulta DB.
+- [ ] `src/lib/auth/get-admin.ts` — Agregar caché de revalidation para datos de admin.
+
+---
+
+## P8 — ACCESIBILIDAD
+
+- [x] `<html lang="en">` → `<html lang="es">` en `layout.tsx`.
+- [ ] Spinner sin `role="status"` ni `aria-label`.
+- [ ] Password field sin `<Label>` en login.
+- [ ] Tabla sin `scope="col"` en `<th>`.
+- [ ] Logo SVG sin `<title>`.
+- [ ] Botones de paginación sin `aria-label`.
+- [ ] `alert()` nativo en lugar de componentes accesibles.
+- [ ] Botón hamburger sin `aria-label` en Header.
+
+---
+
+## P9 — FEATURES NUEVAS (Post-fix)
+
+### Quick wins de producto
+
+- [ ] Exportación CSV de usuarios.
+- [ ] Exportación CSV de pagos.
+- [ ] Wizard de onboarding post-registro (checklist de 3-5 pasos).
+- [ ] Confirmation dialogs antes de acciones destructivas (eliminar notificación, etc.).
+- [ ] Estados vacíos descriptivos en todas las listas.
+
+### Features de alto valor
+
+- [ ] Dashboard analítico con gráficos de tendencia de cobranza.
+- [ ] Recordatorios automáticos configurables por el admin.
+- [ ] Reportes programables (email automático semanal de estado de cobranza).
+- [ ] Filtros avanzados en lista de usuarios (por estado de pago, rango de fechas, etc.).
+- [ ] Búsqueda de usuarios por nombre o DNI desde el dashboard.
+- [ ] Badges de estado visual (dots de color) en la lista de usuarios.
+
+---
+
+## VERIFICACIÓN FINAL
+
+### Checklist de calidad
+
+- [ ] `npm run lint` pasa sin errores.
+- [ ] `npm run build` completa sin errores.
+- [ ] Todos los endpoints sensibles requieren autenticación.
+- [ ] Login funciona correctamente (redirect a `/admin/home`).
+- [ ] Reset password muestra texto legible ("contraseña").
+- [ ] Trial redirect lleva al dashboard, no a la landing.
+- [ ] Dark mode funciona en toda la app.
+- [ ] No hay `any` en funciones financieras.
+- [ ] No hay `@ts-ignore` en el proyecto.
+- [ ] No hay `console.log` de datos sensibles.
+- [ ] Spinner anuncia estado de carga a lectores de pantalla.
+- [ ] Todos los formularios tienen labels asociados.
+
+---
+
+## SCORING FINAL
+
+| Categoría | Antes | Actual | Meta |
+|-----------|-------|--------|------|
+| Arquitectura | 4/10 | 5/10 | 7/10 |
+| Código | 3/10 | 4/10 | 7/10 |
+| Base de Datos | 5/10 | 5/10 | 7/10 |
+| Performance | 4/10 | 4/10 | 7/10 |
+| UI | 4/10 | 4/10 | 7/10 |
+| UX | 3/10 | 5/10 | 7/10 |
+| Escalabilidad | 3/10 | 3/10 | 7/10 |
+| Producto | 4/10 | 4/10 | 6/10 |
+| Preparación para vender | 2/10 | 4/10 | 6/10 |

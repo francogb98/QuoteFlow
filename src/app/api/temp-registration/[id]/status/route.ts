@@ -100,10 +100,21 @@ export async function GET(
                 `[TEMP STATUS] Pago autorizado/activo, creando empresa y admin`,
               );
 
-              const result = await createCompanyAndAdmin(
-                tempRegistration.id,
-                matchingPreapproval.id || "",
-              );
+              // Check if empresa already exists (race condition guard)
+              const existingEmpresa = await prisma.empresa.findUnique({
+                where: { nombre: tempRegistration.nombreEmpresa },
+                select: { id: true },
+              });
+
+              let result;
+              if (existingEmpresa) {
+                result = { ok: true, empresaId: existingEmpresa.id };
+              } else {
+                result = await createCompanyAndAdmin(
+                  tempRegistration.id,
+                  matchingPreapproval.id || "",
+                );
+              }
 
               if (result.ok) {
                 console.log(

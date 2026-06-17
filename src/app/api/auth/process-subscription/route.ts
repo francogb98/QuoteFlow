@@ -1,8 +1,14 @@
 import { NextRequest, NextResponse } from "next/server";
+import { auth } from "@/auth.config";
 import { successSuscriber } from "@/01-actions/auth/registration/02-successSuscriber";
 
 export async function POST(request: NextRequest) {
   try {
+    const session = await auth();
+    if (!session?.user?.id) {
+      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
+    }
+
     const body = await request.json();
     const {
       preapproval_created,

@@ -210,7 +210,7 @@ export const Sidebar = ({ user }: any) => {
           {/* Notificaciones en mobile header */}
           <button
             onClick={handleNotificacionesClickMobile}
-            className="hiddenrelative p-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
+            className="hidden relative p-2 rounded-xl bg-gradient-to-r from-blue-500 to-indigo-600 text-white shadow-lg hover:shadow-xl transition-all duration-300 hover:scale-105"
           >
             <Bell size={20} />
             {notificacionesNoLeidas > 0 && (

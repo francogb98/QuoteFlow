@@ -7,7 +7,7 @@ import Link from "next/link";
 
 function ResetPasswordForm() {
   const params = useSearchParams();
-  const linkError = params.get("error"); // "invalid" | "expired" â€” set by verify-reset-token
+  const linkError = params.get("error"); // "invalid" | "expired" — set by verify-reset-token
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -26,12 +26,12 @@ function ResetPasswordForm() {
     setMessage(null);
 
     if (password.length < 6) {
-      setError("La contraseÃ±a debe tener al menos 6 caracteres.");
+      setError("La contraseña debe tener al menos 6 caracteres.");
       return;
     }
 
     if (password !== confirmPassword) {
-      setError("Las contraseÃ±as no coinciden.");
+      setError("Las contraseñas no coinciden.");
       return;
     }
 
@@ -43,20 +43,20 @@ function ResetPasswordForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        // Token is NOT sent in the body â€” the server reads it from the httpOnly cookie
+        // Token is NOT sent in the body — the server reads it from the httpOnly cookie
         body: JSON.stringify({ password }),
       });
 
       const body = await res.json();
 
       if (!res.ok) {
-        setError(body?.error || "No se pudo cambiar la contraseÃ±a.");
+        setError(body?.error || "No se pudo cambiar la contraseña.");
         setLoading(false);
         return;
       }
 
       setMessage(
-        "ContraseÃ±a actualizada correctamente. Redirigiendo al login...",
+        "Contraseña actualizada correctamente. Redirigiendo al login...",
       );
       setSuccess(true);
       setPassword("");
@@ -67,7 +67,7 @@ function ResetPasswordForm() {
       }, 2500);
     } catch (err) {
       console.error(err);
-      setError("OcurriÃ³ un error inesperado.");
+      setError("Ocurrió un error inesperado.");
     }
 
     setLoading(false);
@@ -80,12 +80,12 @@ function ResetPasswordForm() {
         <div className="w-full max-w-md bg-white/90 backdrop-blur-sm rounded-2xl p-8 shadow-lg border border-red-100 text-center">
           <AlertCircle className="w-10 h-10 text-red-400 mx-auto mb-4" />
           <h2 className="text-xl font-semibold text-gray-800 mb-2">
-            Enlace invÃ¡lido
+            Enlace inválido
           </h2>
           <p className="text-sm text-gray-500 mb-6">
             {linkError === "expired"
               ? "El enlace de restablecimiento ha expirado. Solicita uno nuevo."
-              : "El enlace de restablecimiento no es vÃ¡lido o ya fue utilizado."}
+              : "El enlace de restablecimiento no es válido o ya fue utilizado."}
           </p>
           <Link
             href="/auth/forgot-password"
@@ -106,10 +106,10 @@ function ResetPasswordForm() {
             <Lock className="w-6 h-6 text-purple-600" />
           </div>
           <h1 className="text-2xl font-semibold text-gray-800">
-            Restablecer contraseÃ±a
+            Restablecer contraseña
           </h1>
           <p className="text-sm text-gray-500 mt-2">
-            Ingresa tu nueva contraseÃ±a para continuar.
+            Ingresa tu nueva contraseña para continuar.
           </p>
         </div>
 
@@ -129,13 +129,13 @@ function ResetPasswordForm() {
           <form onSubmit={handleSubmit} className="space-y-4" noValidate>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Nueva contraseÃ±a
+                Nueva contraseña
               </label>
               <input
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="MÃ­nimo 6 caracteres"
+                placeholder="Mínimo 6 caracteres"
                 required
                 disabled={loading}
                 className={inputClasses}
@@ -144,13 +144,13 @@ function ResetPasswordForm() {
 
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1">
-                Confirmar contraseÃ±a
+                Confirmar contraseña
               </label>
               <input
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
-                placeholder="Repite tu contraseÃ±a"
+                placeholder="Repite tu contraseña"
                 required
                 disabled={loading}
                 className={inputClasses}
@@ -168,7 +168,7 @@ function ResetPasswordForm() {
                   Actualizando...
                 </>
               ) : (
-                "Restablecer contraseÃ±a"
+                "Restablecer contraseña"
               )}
             </button>
 

@@ -90,9 +90,14 @@ export default async function FailurePage({ params }: Props) {
               </h3>
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                <Button className="w-full bg-blue-600 hover:bg-blue-700">
-                  <RefreshCw className="w-4 h-4 mr-2" />
-                  Intentar nuevamente
+                <Button
+                  asChild
+                  className="w-full bg-blue-600 hover:bg-blue-700"
+                >
+                  <Link href="/" className="flex items-center justify-center">
+                    <RefreshCw className="w-4 h-4 mr-2" />
+                    Intentar nuevamente
+                  </Link>
                 </Button>
 
                 <Button
