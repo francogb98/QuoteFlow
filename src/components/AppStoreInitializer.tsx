@@ -1,8 +1,8 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useCallback } from "react";
 import { useAppStore } from "@/lib/store/useAppStore";
-import { getAppData } from "@/01-actions/admin/home/getAppData";
+import { getAppData } from "@/actions/admin/home/getAppData";
 
 /**
  * Componente para inicializar el store global con los datos del admin
@@ -19,8 +19,16 @@ export function AppStoreInitializer() {
       if (response.ok && response.data) {
         setAdmin(response.data.admin);
         if (response.data.tarifa) {
-          //@ts-ignore
-          setTarifa(response.data.tarifa);
+          setTarifa({
+            id: response.data.tarifa.id,
+            tipoConfiguracion: response.data.tarifa.tipoConfiguracion,
+            fechaCreacion: response.data.tarifa.fechaCreacion instanceof Date
+              ? response.data.tarifa.fechaCreacion.toISOString()
+              : String(response.data.tarifa.fechaCreacion),
+            estaActiva: response.data.tarifa.estaActiva,
+            rangos: response.data.tarifa.rangos ?? [],
+            dinamicas: response.data.tarifa.dinamicas ?? [],
+          });
         }
       }
     } catch (error) {

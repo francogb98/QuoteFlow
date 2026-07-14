@@ -37,7 +37,10 @@ export const QuoteFlowLogo: FC<QuoteFlowLogoProps> = ({
           className="w-full h-full"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-label="Logo CuotaFacil"
         >
+          <title>CuotaFacil</title>
           {/* Gradient Definitions */}
           <defs>
             <linearGradient
@@ -138,7 +141,10 @@ export const QuoteFlowLogo: FC<QuoteFlowLogoProps> = ({
           className="w-full h-full"
           fill="none"
           xmlns="http://www.w3.org/2000/svg"
+          role="img"
+          aria-label="Logo CuotaFacil"
         >
+          <title>CuotaFacil</title>
           <defs>
             <linearGradient
               id="logoGradient"

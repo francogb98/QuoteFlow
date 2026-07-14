@@ -1,6 +1,5 @@
 "use server";
 
-import moment from "moment-timezone";
 import {
   actualizarTarifasFijas,
   generarPagosFuturos,
@@ -12,14 +11,13 @@ import { notificarVencimientosFijos } from "./notificarVencimientosFijos";
 import { notificarVencimientosDinamicos } from "./notificarVencimientosDinamicos";
 import { ensureNextMonthPaymentsForPaidUsers } from "./ensureNextMonthPayments";
 
-// Zona horaria de referencia
 const TIMEZONE = "America/Argentina/Buenos_Aires";
 
-/**
- * Obtiene la fecha de negocio (medianoche en Argentina)
- */
 function getNormalizedBusinessDate(): Date {
-  return moment().tz(TIMEZONE).startOf("day").toDate();
+  const now = new Date();
+  const argentinaDateStr = now.toLocaleDateString("sv-SE", { timeZone: TIMEZONE });
+  const [year, month, day] = argentinaDateStr.split("-").map(Number);
+  return new Date(year, month - 1, day, 0, 0, 0, 0);
 }
 
 export async function processDailyComplete(/* params */) {
@@ -33,15 +31,14 @@ export async function processDailyComplete(/* params */) {
       "cron-daily-ensure-next",
     );
     // logs resumidos para testeo
-    const rAny = result as any; // tipado flexible para ajustarnos a la forma real del retorno
+    const resultTyped = result as { checked?: number; failures?: unknown[]; generados?: number; generadosUsers?: Array<{ usuarioId?: string; administradorId?: string; administradorNombre?: string; pagoId?: string }>; errores?: unknown[] };
     logger.info(
-      `[cron-daily] ensureNextMonthPaymentsForPaidUsers: usuariosProcesados=${rAny.checked ?? 0}, fallas=${rAny.failures?.length ?? 0}, pagosGenerados=${rAny.generados ?? rAny.checked ?? 0}`,
+      `[cron-daily] ensureNextMonthPaymentsForPaidUsers: usuariosProcesados=${resultTyped.checked ?? 0}, fallas=${resultTyped.failures?.length ?? 0}, pagosGenerados=${resultTyped.generados ?? resultTyped.checked ?? 0}`,
     );
 
-    if (rAny.generadosUsers && rAny.generadosUsers.length > 0) {
-      // mostrar detalle usuario(admin) -> pagoId
-      const resumen = rAny.generadosUsers.map(
-        (g: any) =>
+    if (resultTyped.generadosUsers && resultTyped.generadosUsers.length > 0) {
+      const resumen = resultTyped.generadosUsers.map(
+        (g) =>
           `${g.usuarioId} (admin: ${g.administradorId ?? "?"}:${g.administradorNombre ?? "?"}) -> pago:${g.pagoId ?? "?"}`,
       );
       logger.info(
@@ -49,9 +46,9 @@ export async function processDailyComplete(/* params */) {
       );
     }
 
-    if (rAny.errores && rAny.errores.length > 0) {
+    if (resultTyped.errores && resultTyped.errores.length > 0) {
       logger.warn(
-        `[cron-daily] Errores al generar pagos para ${rAny.errores.length} usuarios. Revisar logs detallados.`,
+        `[cron-daily] Errores al generar pagos para ${resultTyped.errores.length} usuarios. Revisar logs detallados.`,
       );
     }
   } catch (err) {

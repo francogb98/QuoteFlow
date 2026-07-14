@@ -1,6 +1,6 @@
 "use server";
 import { auth } from "@/*";
-import PaymentAnalyticsDashboard from "@/01-components/admin/analitycs/payment-analitics-dashboard";
+import PaymentAnalyticsDashboard from "@/components/admin/analitycs/payment-analitics-dashboard";
 import { Metadata } from "next";
 import { redirect } from "next/navigation";
 

@@ -1,10 +1,10 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Pencil, X, User, Mail, Building, FileText } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 import { useForm } from "react-hook-form";
-import { editAdmin } from "@/01-actions/admin/account/editAdmin";
+import { editAdmin } from "@/actions/admin/account/editAdmin";
 
 interface Inputs {
   nombre: string;

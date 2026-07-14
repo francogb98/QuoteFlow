@@ -8,15 +8,15 @@ interface Props {
 export const TableGrid = ({ table }: { table: any }) => {
   return (
     <div className="overflow-x-auto">
-      <table className="min-w-full divide-y divide-gray-200 text-sm">
-        <thead className="bg-gray-50">
+      <table className="min-w-full divide-y divide-border text-sm">
+        <thead className="bg-muted/50">
           {table.getHeaderGroups().map((headerGroup: any) => (
             <tr key={headerGroup.id}>
               {headerGroup.headers.map((header: any) => (
                 <th
                   key={header.id}
                   scope="col"
-                  className={`px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider ${
+                  className={`px-3 py-2 sm:px-4 sm:py-3 text-left text-xs font-medium text-muted-foreground uppercase tracking-wider ${
                     header.column.columnDef.meta?.className || ""
                   }`}
                 >
@@ -33,10 +33,10 @@ export const TableGrid = ({ table }: { table: any }) => {
             </tr>
           ))}
         </thead>
-        <tbody className="bg-white divide-y divide-gray-200">
+        <tbody className="bg-card divide-y divide-border">
           {table.getRowModel().rows.length > 0 ? (
             table.getRowModel().rows.map((row: any) => (
-              <tr key={row.id} className="hover:bg-gray-50 transition-colors">
+              <tr key={row.id} className="hover:bg-muted/50 transition-colors">
                 {row.getVisibleCells().map((cell: any) => (
                   <td
                     key={cell.id}
@@ -53,7 +53,7 @@ export const TableGrid = ({ table }: { table: any }) => {
             <tr>
               <td
                 colSpan={table.getAllColumns().length}
-                className="px-4 py-3 text-center text-sm text-gray-500"
+                className="px-4 py-3 text-center text-sm text-muted-foreground"
               >
                 No se encontraron usuarios
               </td>

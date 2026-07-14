@@ -2,18 +2,34 @@
 import prisma from "@/lib/prisma";
 import { calculateNextPaymentDate } from "./calculations";
 import { logger } from "./logger";
+import type { Pago, RangoTarifa, ConfiguracionDinamicaTarifa } from "@prisma/client";
 
-/**
- * generarProximoPago:
- * - Si pagoReferencia tiene mes/año, calcula proximaFecha a partir de esos valores.
- * - Usa usuario.fechaInicioMembresia (día) si está para ajustar el día de vencimiento.
- * - Evita problemas de timezone fijando la hora al mediodía.
- * - Monto: prioriza monto del usuario; si falta, aplica fallbacks y crea pago (incluso monto 0).
- */
+interface GenerarProximoPagoUsuario {
+  id: string;
+  fechaInicioMembresia?: Date | null;
+  monto?: number | null;
+  montoBase?: number | null;
+  rangoTarifa?: Pick<RangoTarifa, "diaInicio" | "monto"> | null;
+  dinamicaTarifaId?: string | null;
+  dinamicaTarifa?: Pick<ConfiguracionDinamicaTarifa, "montoBase"> | null;
+}
+
+export interface GenerarProximoPagoConfiguracion {
+  rangos?: Pick<RangoTarifa, "diaInicio" | "monto">[] | null;
+  dinamicas?: (Pick<ConfiguracionDinamicaTarifa, "id" | "montoBase">)[] | null;
+  montoDefault?: number | null;
+}
+
+interface GenerarProximoPagoPagoReferencia {
+  mes?: number | null;
+  año?: number | null;
+  monto?: number | null;
+}
+
 export async function generarProximoPago(
-  usuario: any,
-  configuracion: any,
-  pagoReferencia: any,
+  usuario: GenerarProximoPagoUsuario,
+  configuracion: GenerarProximoPagoConfiguracion | null,
+  pagoReferencia: GenerarProximoPagoPagoReferencia | null,
   fechaActual: Date
 ) {
   logger.info(`[generarProximoPago] Inicio usuario=${usuario?.id}`);
@@ -106,7 +122,7 @@ export async function generarProximoPago(
     }
 
     // --- MONTO: priorizar monto del usuario; aplicar fallbacks y crear siempre (incluso 0) ---
-    const toFinite = (v: any) =>
+    const toFinite = (v: unknown): number | null =>
       Number.isFinite(Number(v)) ? Number(v) : null;
 
     let monto: number | null =
@@ -121,7 +137,7 @@ export async function generarProximoPago(
       usuario?.dinamicaTarifaId
     ) {
       const dyn = configuracion.dinamicas.find(
-        (d: any) => String(d.id) === String(usuario.dinamicaTarifaId)
+        (d) => String(d.id) === String(usuario.dinamicaTarifaId)
       );
       if (dyn) monto = toFinite(dyn.montoBase);
     }

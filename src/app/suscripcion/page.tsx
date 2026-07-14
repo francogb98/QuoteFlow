@@ -1,5 +1,5 @@
 import { auth } from "@/*";
-import SuscripcionView from "@/01-components/admin/subscription/SuscripcionView";
+import SuscripcionView from "@/components/admin/subscription/SuscripcionView";
 import { isSuperAdminRole } from "@/lib/auth/isSuperAdmin";
 import { tieneAccesoEmpresa } from "@/lib/auth/tieneAcceso";
 import { redirect } from "next/navigation";

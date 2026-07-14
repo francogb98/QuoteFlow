@@ -26,6 +26,7 @@ interface ConfiguracionTarifa {
   estaActiva: boolean;
   dinamicas: Dinamica[];
   rangos: Rango[];
+  montoDefault?: number | null;
 }
 
 interface AdminData {

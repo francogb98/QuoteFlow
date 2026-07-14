@@ -3,7 +3,7 @@ import { useState } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { Loader2 } from "lucide-react";
 import { useRouter } from "next/navigation";
-import { saveUserEmail } from "@/01-actions/public/user/editEmailUser";
+import { saveUserEmail } from "@/actions/public/user/editEmailUser";
 
 interface Props {
   userId: string;

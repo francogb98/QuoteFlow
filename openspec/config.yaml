@@ -1,0 +1,48 @@
+schema: spec-driven
+
+context: |
+  Project: quoteflow (package name: vocabite)
+  Tech stack: Next.js 16 (App Router, Turbopack), TypeScript 5.9 strict, Tailwind CSS v4, shadcn/ui (new-york), PostgreSQL + Prisma 6.9
+  Auth: next-auth v5 (Credentials), bcryptjs
+  State: Zustand, TanStack React Query
+  Payments: MercadoPago
+  Email: Resend + react-email
+  SMS: Twilio, web-push, Firebase FCM
+  Media: next-cloudinary
+  Architecture: App Router with Server Actions, RSC, Prisma ORM in lib/prisma.ts
+
+strict_tdd: false
+
+testing:
+  runner: null
+  layers:
+    unit: false
+    integration: false
+    e2e: false
+  coverage: false
+  linter: eslint (next lint)
+  type_checker: typescript (tsc --noEmit)
+  formatter: null
+
+rules:
+  proposal:
+    - Include rollback plan for risky changes
+  specs:
+    - Use Given/When/Then for scenarios
+    - Use RFC 2119 keywords (MUST, SHALL, SHOULD, MAY)
+  design:
+    - Include sequence diagrams for complex flows
+    - Document architecture decisions with rationale
+  tasks:
+    - Group by phase, use hierarchical numbering
+    - Keep tasks completable in one session
+  apply:
+    - Follow existing code patterns
+    tdd: false
+    test_command: ""
+  verify:
+    test_command: "npm run typecheck && npm run lint"
+    build_command: "npm run build"
+    coverage_threshold: 0
+  archive:
+    - Warn before merging destructive deltas

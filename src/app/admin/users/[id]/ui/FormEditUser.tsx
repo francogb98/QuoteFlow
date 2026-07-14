@@ -13,7 +13,7 @@ import {
   UserHeader,
   UserForm,
   PagosGrid,
-} from "@/01-components/admin";
+} from "@/components/admin";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 export const FormEditUser = ({ id, tarifasDisponibles }: any) => {

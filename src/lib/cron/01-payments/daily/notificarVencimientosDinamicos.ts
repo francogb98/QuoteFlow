@@ -1,8 +1,8 @@
-"use server";
+﻿"use server";
 
 import prisma from "@/lib/prisma";
 import { differenceInCalendarDays } from "date-fns";
-import { sendReminderEmail } from "@/01-actions/admin/emails/sendReminderEmail";
+import { sendReminderEmail } from "@/actions/admin/emails/sendReminderEmail";
 import {
   getNormalizedBusinessDate,
   calculateDynamicDueDate,
@@ -15,7 +15,7 @@ export async function notificarVencimientosDinamicos(fecha?: Date) {
 
   const admins = await prisma.administrador.findMany({
     where: {
-      // Exclude SUPER_ADMIN — not subject to billing or payment notifications
+      // Exclude SUPER_ADMIN ’” not subject to billing or payment notifications
       rol: { not: "SUPER_ADMIN" },
       configuracionTarifa: {
         tipoConfiguracion: "DINAMICA_POR_FECHA_INGRESO",
@@ -88,7 +88,7 @@ export async function notificarVencimientosDinamicos(fecha?: Date) {
         }
       }
 
-      // --- ENVÍO Y REGISTRO ---
+      // --- ENVÑO Y REGISTRO ---
       if (debeNotificar && tipoNotificacion) {
         // Email
         await sendReminderEmail({

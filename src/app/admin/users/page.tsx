@@ -2,11 +2,11 @@
 import { auth } from "@/auth.config";
 import { redirect } from "next/navigation";
 
-import { NotAllowed } from "@/01-components/admin";
-import { UserDashboardWrapper } from "@/01-components/admin/users/list/UsersDashboardWrapper";
+import { NotAllowed } from "@/components/admin";
+import { UserDashboardWrapper } from "@/components/admin/users/list/UsersDashboardWrapper";
 
 import type { Metadata } from "next";
-import { CreateUserButton } from "@/01-components/admin/users/new/create-user-button";
+import { CreateUserButton } from "@/components/admin/users/new/create-user-button";
 
 export const revalidate = 0;
 
@@ -21,8 +21,8 @@ interface Props {
 export async function generateMetadata({
   searchParams,
 }: Props): Promise<Metadata> {
-  //@ts-ignore
-  const { profesorId } = (await searchParams) || null;
+  const params = await searchParams;
+  const { profesorId } = params || {};
   return {
     title: `Usuarios - ${profesorId ? `Profesor` : "Administrador "}`,
     description: "Listado de usuarios",
@@ -34,8 +34,8 @@ export default async function UsersListPage({ searchParams }: Props) {
   if (!session?.user) redirect("/auth/login");
 
   const { user } = session;
-  //@ts-ignore
-  const { profesorId } = (await searchParams) || null; // Leer el ID del profesor de los searchParams
+  const params = await searchParams;
+  const { profesorId } = params || {};
 
   const missingTariff = !user.configuracionTarifa;
   const missingMercadoPago =
@@ -45,8 +45,7 @@ export default async function UsersListPage({ searchParams }: Props) {
   const tarifasDisponibles =
     user.configuracionTarifa?.tipoConfiguracion === "FIJA_MENSUAL"
       ? user.configuracionTarifa.rangos
-      : //@ts-ignore
-        user.configuracionTarifa?.dinamicas || [];
+      : (user.configuracionTarifa as unknown as { dinamicas?: unknown[] })?.dinamicas || [];
 
   const isDynamicTariff =
     user.configuracionTarifa?.tipoConfiguracion ===

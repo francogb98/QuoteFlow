@@ -25,11 +25,22 @@ import {
   eliminarNotificacion,
   marcarTodasComoLeidas,
   marcarNotificacionComoLeida,
-} from "@/01-actions/admin/notificaciones/notificaciones";
+} from "@/actions/admin/notificaciones/notificaciones";
 import { useSearchParams } from "next/navigation";
 import { toast } from "sonner";
-import { ModalComprobante } from "@/01-components/admin/ui/ModalComprobante";
-import { getPagoUser } from "@/01-actions/admin/pago/getPagoUser";
+import { ModalComprobante } from "@/components/admin/ui/ModalComprobante";
+import { getPagoUser } from "@/actions/admin/pago/getPagoUser";
+
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 interface Notificacion {
   id: string;
@@ -115,6 +126,7 @@ export default function NotificacionesPage() {
   );
   const [selectedPagoId, setSelectedPagoId] = useState<string | null>(null);
   const [loadingPagoId, setLoadingPagoId] = useState<string | null>(null);
+  const [deleteDialogId, setDeleteDialogId] = useState<string | null>(null);
 
   const cargarNotificaciones = useCallback(async () => {
     setCargando(true);
@@ -186,6 +198,7 @@ export default function NotificacionesPage() {
       setNotificaciones((prev) => prev.filter((n) => n.id !== id));
       toast.success("Notificación eliminada");
     }
+    setDeleteDialogId(null);
   };
 
   const notificacionesFiltradas = notificaciones.filter((notif) => {
@@ -375,7 +388,7 @@ export default function NotificacionesPage() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => handleEliminar(notificacion.id)}
+                              onClick={() => setDeleteDialogId(notificacion.id)}
                               className="h-8 w-8 p-0 text-gray-400 hover:text-red-600 hover:bg-red-50"
                             >
                               <Trash2 className="w-4 h-4" />
@@ -427,6 +440,31 @@ export default function NotificacionesPage() {
         }}
         onUpdate={cargarNotificaciones} // Recarga la lista tras aprobar/rechazar
       />
+
+      {/* Dialog de confirmación para eliminar */}
+      <AlertDialog
+        open={!!deleteDialogId}
+        onOpenChange={() => setDeleteDialogId(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Eliminar notificación</AlertDialogTitle>
+            <AlertDialogDescription>
+              ¿Estás seguro de que quieres eliminar esta notificación? Esta acción
+              no se puede deshacer.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={() => deleteDialogId && handleEliminar(deleteDialogId)}
+              className="bg-red-600 hover:bg-red-700"
+            >
+              Eliminar
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }

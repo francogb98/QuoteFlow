@@ -1,6 +1,5 @@
-// app/pricing/page.tsx
 import { Metadata } from "next";
-import { IoCheckmark, IoClose } from "react-icons/io5";
+import { Check, X } from "lucide-react";
 
 export const metadata: Metadata = {
   title: "Planes y Precios",
@@ -60,13 +59,13 @@ const features = [
 
 export function Planes() {
   return (
-    <div className="bg-white py-24 sm:py-32">
+    <div className="bg-background py-24 sm:py-32">
       <div className="mx-auto max-w-7xl px-6 lg:px-8">
         <div className="mx-auto max-w-4xl text-center">
-          <h2 className="text-3xl font-bold tracking-tight text-gray-900 sm:text-4xl">
+          <h2 className="text-3xl font-bold tracking-tight text-foreground sm:text-4xl">
             Planes a medida para cada necesidad
           </h2>
-          <p className="mt-6 text-lg leading-8 text-gray-600">
+          <p className="mt-6 text-lg leading-8 text-muted-foreground">
             Elige el plan que mejor se adapte a tu negocio y comienza a crecer
             hoy mismo.
           </p>
@@ -77,28 +76,28 @@ export function Planes() {
           {tiers.map((tier) => (
             <div
               key={tier.id}
-              className={`rounded-3xl p-8 ring-1 ring-gray-200 ${
+              className={`rounded-3xl p-8 ring-1 ring-border ${
                 tier.featured
-                  ? "ring-2 ring-blue-600 bg-gray-50 hover:ring-blue-300"
-                  : "hover:ring-blue-300"
+                  ? "ring-2 ring-primary bg-muted/50"
+                  : ""
               }`}
             >
               <h3
                 id={tier.id}
                 className={`text-3xl font-semibold leading-8 ${
-                  tier.featured ? "text-blue-600" : "text-gray-900"
+                  tier.featured ? "text-primary" : "text-foreground"
                 }`}
               >
                 {tier.name}
               </h3>
-              <p className="mt-4 text-sm leading-6 text-gray-600">
+              <p className="mt-4 text-sm leading-6 text-muted-foreground">
                 {tier.description}
               </p>
               <p className="mt-6 flex items-baseline gap-x-1">
-                <span className="text-4xl font-bold tracking-tight text-gray-900">
+                <span className="text-4xl font-bold tracking-tight text-foreground">
                   {tier.price}
                 </span>
-                <span className="text-sm font-semibold leading-6 text-gray-600">
+                <span className="text-sm font-semibold leading-6 text-muted-foreground">
                   {tier.name === "Mensual" ? "/mes" : ""}
                   {tier.name === "Anual" ? "/anual" : ""}
                 </span>
@@ -108,8 +107,8 @@ export function Planes() {
                 aria-describedby={tier.id}
                 className={`mt-6 block rounded-md py-2 px-3 text-center text-sm font-semibold leading-6 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 ${
                   tier.featured
-                    ? "bg-blue-600 text-white hover:bg-blue-500 focus-visible:outline-blue-600"
-                    : "bg-gray-600 text-white hover:bg-gray-500 focus-visible:outline-gray-600"
+                    ? "bg-primary text-primary-foreground hover:bg-primary/90 focus-visible:outline-primary"
+                    : "bg-muted text-muted-foreground hover:bg-muted/80 focus-visible:outline-muted-foreground"
                 }`}
               >
                 Comenzar
@@ -120,16 +119,16 @@ export function Planes() {
 
         {/* Tabla Comparativa de Beneficios */}
         <div className="mt-24">
-          <h3 className="text-2xl font-bold tracking-tight text-gray-900 text-center mb-8">
+          <h3 className="text-2xl font-bold tracking-tight text-foreground text-center mb-8">
             Comparación de características
           </h3>
-          <div className="overflow-hidden shadow ring-1 ring-black ring-opacity-5 rounded-lg">
-            <table className="min-w-full divide-y divide-gray-300">
-              <thead className="bg-gray-50">
+          <div className="overflow-hidden shadow ring-1 ring-border rounded-lg">
+            <table className="min-w-full divide-y divide-border">
+              <thead className="bg-muted/50">
                 <tr>
                   <th
                     scope="col"
-                    className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-gray-900 sm:pl-6"
+                    className="py-3.5 pl-4 pr-3 text-left text-sm font-semibold text-foreground sm:pl-6"
                   >
                     Beneficios
                   </th>
@@ -137,19 +136,19 @@ export function Planes() {
                     <th
                       key={tier.id}
                       scope="col"
-                      className="px-3 py-3.5 text-center text-sm font-semibold text-gray-900"
+                      className="px-3 py-3.5 text-center text-sm font-semibold text-foreground"
                     >
                       {tier.name}
                     </th>
                   ))}
                 </tr>
               </thead>
-              <tbody className="divide-y divide-gray-200 bg-white">
+              <tbody className="divide-y divide-border bg-card">
                 {features.map((feature) => (
                   <tr key={feature.name}>
-                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-gray-900 sm:pl-6">
+                    <td className="whitespace-nowrap py-4 pl-4 pr-3 text-sm font-medium text-foreground sm:pl-6">
                       <div className="font-semibold">{feature.name}</div>
-                      <div className="text-gray-500 text-xs mt-1">
+                      <div className="text-muted-foreground text-xs mt-1">
                         {feature.description}
                       </div>
                     </td>
@@ -158,12 +157,10 @@ export function Planes() {
                         key={`${feature.name}-${tier.name}`}
                         className="whitespace-nowrap px-3 py-4 text-sm text-center"
                       >
-                        {feature.tiers[
-                          tier.name as keyof typeof feature.tiers
-                        ] ? (
-                          <IoCheckmark className="inline-block h-5 w-5 text-green-500" />
+                        {feature.tiers[tier.name as keyof typeof feature.tiers] ? (
+                          <Check className="inline-block h-5 w-5 text-accent" />
                         ) : (
-                          <IoClose className="inline-block h-5 w-5 text-red-400" />
+                          <X className="inline-block h-5 w-5 text-destructive/60" />
                         )}
                       </td>
                     ))}
@@ -176,17 +173,16 @@ export function Planes() {
 
         {/* Preguntas frecuentes */}
         <div className="mt-24">
-          <h3 className="text-2xl font-bold tracking-tight text-gray-900 text-center mb-8">
+          <h3 className="text-2xl font-bold tracking-tight text-foreground text-center mb-8">
             Preguntas frecuentes
           </h3>
-          <dl className="space-y-6 divide-y divide-gray-200 max-w-3xl mx-auto">
+          <dl className="space-y-6 divide-y divide-border max-w-3xl mx-auto">
             {[
               {
                 question: "¿Puedo cambiar de plan más tarde?",
                 answer:
                   "Sí, puedes actualizar o degradar tu plan en cualquier momento desde tu panel de control.",
               },
-
               {
                 question: "¿Puedo cancelar mi suscripción?",
                 answer:
@@ -199,10 +195,10 @@ export function Planes() {
               },
             ].map((faq) => (
               <div key={faq.question} className="pt-6">
-                <dt className="text-lg font-semibold leading-7 text-gray-900">
+                <dt className="text-lg font-semibold leading-7 text-foreground">
                   {faq.question}
                 </dt>
-                <dd className="mt-2 text-base leading-7 text-gray-600">
+                <dd className="mt-2 text-base leading-7 text-muted-foreground">
                   {faq.answer}
                 </dd>
               </div>

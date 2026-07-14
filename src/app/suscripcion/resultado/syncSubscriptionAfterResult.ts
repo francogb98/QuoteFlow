@@ -23,12 +23,40 @@ export async function syncSubscriptionAfterReturn(preapprovalId: string) {
 
   if (!localSub) return;
 
-  await prisma.$transaction([
-    prisma.suscripcionEmpresa.update({
-      where: { id: localSub.id },
-      data: {
-        estadoSuscripcion: "ACTIVA",
-      },
-    }),
-  ]);
+  // El webhook es la fuente de verdad para fechas; aquí solo hacemos sync de estado.
+  const requiresStatusSync =
+    localSub.estadoSuscripcion !== "ACTIVA" ||
+    localSub.estadoPagoMercadoPago !== "AUTHORIZED";
+
+  if (!requiresStatusSync) {
+    console.log("[syncSubscriptionAfterReturn] Already synced", {
+      preapprovalId,
+      suscripcionId: localSub.id,
+    });
+    return;
+  }
+
+  console.log("[syncSubscriptionAfterReturn] status.before", {
+    preapprovalId,
+    suscripcionId: localSub.id,
+    estadoSuscripcion: localSub.estadoSuscripcion,
+    estadoPagoMercadoPago: localSub.estadoPagoMercadoPago,
+  });
+
+  const updated = await prisma.suscripcionEmpresa.update({
+    where: { id: localSub.id },
+    data: {
+      estadoSuscripcion: "ACTIVA",
+      estadoPagoMercadoPago: "AUTHORIZED",
+    },
+    select: {
+      id: true,
+      estadoSuscripcion: true,
+      estadoPagoMercadoPago: true,
+      fechaInicio: true,
+      fechaFinPeriodoActual: true,
+    },
+  });
+
+  console.log("[syncSubscriptionAfterReturn] status.after", updated);
 }

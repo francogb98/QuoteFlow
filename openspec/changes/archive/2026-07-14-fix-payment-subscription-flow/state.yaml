@@ -1,0 +1,13 @@
+schema: sdd-change-state
+change: fix-payment-subscription-flow
+created: 2026-07-14T14:45:00-03:00
+phases:
+  proposal: completed
+  specs: completed
+  design: completed
+  tasks: completed
+  apply: completed
+  verify: completed
+  archive: pending
+artifacts:
+  proposal: proposal.md

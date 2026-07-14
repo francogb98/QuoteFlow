@@ -1,12 +1,14 @@
-"use client";
+﻿"use client";
 
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { useForm } from "react-hook-form";
 import { Loader2, AlertCircle, CheckCircle, EyeOff, Eye } from "lucide-react";
-import { login } from "@/01-actions/auth/login";
+import { login } from "@/actions/auth/login";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 
 interface LoginFormData {
   documento: string;
@@ -36,14 +38,13 @@ export const LoginForm = () => {
       const response = await login(data.documento, data.password);
 
       if (response.ok) {
-        // Mostrar estado de éxito
         setSuccess(true);
 
-        // Redirigir después de mostrar el éxito usando recarga completa de página
-        // Esto asegura que la sesión esté establecida antes de la redirección
         setTimeout(() => {
-          window.location.href = response.url || "/admin/home";
-        }, 1500);
+          const targetUrl = response.url || "/admin/home";
+          router.push(targetUrl);
+          router.refresh();
+        }, 600);
       } else {
         setError(
           response.error ||
@@ -64,22 +65,14 @@ export const LoginForm = () => {
     setIsPasswordVisible(!isPasswordVisible);
   };
 
-  const inputClasses =
-    "w-full px-4 py-3 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm";
-
-  const passwordInputClasses =
-    "w-full px-4 py-3 pr-12 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm";
   return (
     <form className="space-y-6" onSubmit={handleSubmit(onSubmit)} noValidate>
       <div className="space-y-4">
         <div>
-          <label
-            htmlFor="documento"
-            className="block text-sm font-medium text-gray-700 mb-2"
-          >
+          <Label htmlFor="documento" className="mb-2 block">
             DNI
-          </label>
-          <input
+          </Label>
+          <Input
             type="text"
             id="documento"
             {...register("documento", {
@@ -89,12 +82,11 @@ export const LoginForm = () => {
                 message: "Ingrese un DNI válido (8-10 dígitos)",
               },
             })}
-            className={inputClasses}
             placeholder="Ingresa tu DNI"
             disabled={loading || success}
           />
           {errors.documento && (
-            <p className="mt-1 text-sm text-red-600 flex items-center">
+            <p className="mt-1 text-sm text-destructive flex items-center">
               <AlertCircle className="w-4 h-4 mr-1" />
               {errors.documento.message}
             </p>
@@ -102,21 +94,24 @@ export const LoginForm = () => {
         </div>
 
         <div className="relative">
-          <input
+          <Label htmlFor="password" className="mb-2 block">
+            Contraseña
+          </Label>
+          <Input
             type={isPasswordVisible ? "text" : "password"}
             id="password"
             {...register("password", {
               required: "La contraseña es requerida",
             })}
-            className={passwordInputClasses}
             placeholder="Ingresa tu contraseña"
             disabled={loading || success}
+            className="pr-12"
           />
           <button
             type="button"
             onClick={togglePasswordVisibility}
             disabled={loading || success}
-            className="absolute inset-y-0 right-0 flex items-center pr-3 text-gray-400 hover:text-gray-600 focus:outline-none focus:text-gray-600 transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
+            className="absolute inset-y-0 right-0 top-7 flex items-center pr-3 text-muted-foreground hover:text-foreground focus:outline-none transition-colors duration-200 disabled:opacity-50 disabled:cursor-not-allowed"
             aria-label={
               isPasswordVisible ? "Ocultar contraseña" : "Mostrar contraseña"
             }
@@ -132,16 +127,16 @@ export const LoginForm = () => {
 
       {/* Alerta de error */}
       {error && (
-        <div className="p-4 bg-red-50 border border-red-200 text-red-700 rounded-xl flex items-start animate-in slide-in-from-top-2">
-          <AlertCircle className="w-5 h-5 mr-2 mt-0.5 flex-shrink-0" />
+        <div className="p-4 bg-destructive/10 border border-destructive/20 text-destructive rounded-xl flex items-start animate-in slide-in-from-top-2">
+          <AlertCircle className="w-5 h-5 mr-2 mt-0.5 shrink-0" />
           <span className="text-sm">{error}</span>
         </div>
       )}
 
-      {/* Alerta de éxito - Versión simple */}
+      {/* Alerta de éxito */}
       {success && (
-        <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex items-center animate-in slide-in-from-top-2">
-          <CheckCircle className="w-5 h-5 mr-3 flex-shrink-0" />
+        <div className="p-4 bg-accent/10 border border-accent/20 text-accent rounded-xl flex items-center animate-in slide-in-from-top-2">
+          <CheckCircle className="w-5 h-5 mr-3 shrink-0" />
           <div>
             <div className="font-medium text-sm">
               ¡Sesión iniciada correctamente!
@@ -157,9 +152,9 @@ export const LoginForm = () => {
         disabled={loading || success}
         className={`w-full py-3 rounded-xl font-medium shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed ${
           success
-            ? "bg-green-600 hover:bg-green-700"
-            : "bg-gradient-to-r from-emerald-500 to-green-600 hover:from-emerald-600 hover:to-green-700 hover:scale-[1.02] hover:shadow-xl"
-        } text-white`}
+            ? "bg-accent hover:bg-accent/90 text-accent-foreground"
+            : "bg-accent hover:bg-accent/90 text-accent-foreground hover:scale-[1.02] hover:shadow-xl"
+        }`}
       >
         {loading ? (
           <>
@@ -178,18 +173,16 @@ export const LoginForm = () => {
 
       <div className="relative my-8">
         <div className="absolute inset-0 flex items-center">
-          <div className="w-full border-t border-purple-200"></div>
+          <div className="w-full border-t border-border"></div>
         </div>
         <div className="relative flex justify-center text-sm">
-          <span className="px-4 bg-white/80 text-gray-500 rounded-full">O</span>
+          <span className="px-4 bg-background text-muted-foreground rounded-full">O</span>
         </div>
       </div>
 
-      {/* <ForgotPasswordButton /> */}
-
       <Button
         variant="outline"
-        className="w-full border-purple-200 text-purple-600 hover:bg-purple-50 py-3 rounded-xl font-medium transition-all duration-200 hover:border-purple-300 bg-transparent"
+        className="w-full py-3 rounded-xl font-medium transition-all duration-200"
         disabled={loading || success}
         asChild
       >

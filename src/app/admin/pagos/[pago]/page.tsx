@@ -1,5 +1,5 @@
-import { getPagoUser } from "@/01-actions/admin/pago/getPagoUser";
-import { PagosCard } from "@/01-components/admin/pagos/PagosCard";
+import { getPagoUser } from "@/actions/admin/pago/getPagoUser";
+import { PagosCard } from "@/components/admin/pagos/PagosCard";
 
 interface NamePageProps {
   params: Promise<{

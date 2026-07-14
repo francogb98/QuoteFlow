@@ -1,8 +1,18 @@
 import { TipoConfiguracionTarifa } from "@prisma/client";
+import type { RangoTarifa, ConfiguracionDinamicaTarifa } from "@prisma/client";
+
+interface ConfiguracionTarifaCompleta {
+  tipoConfiguracion: TipoConfiguracionTarifa;
+  rangos?: Pick<RangoTarifa, "diaInicio" | "diaFin" | "monto">[];
+  dinamicas?: Pick<ConfiguracionDinamicaTarifa, "montoBase" | "diasGracia" | "montoRecargo">[];
+  diasGracia?: number;
+  montoBase?: number;
+  montoRecargo?: number;
+}
 
 // Función para calcular el monto de pago dinámico
 export function calculateDynamicPaymentAmount(
-  configuracionTarifa: any,
+  configuracionTarifa: ConfiguracionTarifaCompleta,
   fechaVencimiento: Date,
   fechaActual: Date = new Date()
 ): number {
@@ -17,10 +27,10 @@ export function calculateDynamicPaymentAmount(
     (fechaActual.getTime() - fechaVencimiento.getTime()) / (1000 * 60 * 60 * 24)
   );
 
-  if (diasVencido <= configuracionTarifa.diasGracia) {
-    return configuracionTarifa.montoBase;
+  if (diasVencido <= (configuracionTarifa.diasGracia ?? 0)) {
+    return configuracionTarifa.montoBase ?? 0;
   } else {
-    return configuracionTarifa.montoRecargo;
+    return configuracionTarifa.montoRecargo ?? 0;
   }
 }
 
@@ -35,7 +45,7 @@ export function calculateNextDynamicPaymentDate(
 }
 
 // Función para obtener el rango de tarifa apropiado en sistema fijo mensual
-export function getApplicableTariffRange(rangos: any[], diaDelMes: number) {
+export function getApplicableTariffRange(rangos: Pick<RangoTarifa, "diaInicio" | "diaFin" | "monto">[], diaDelMes: number) {
   if (!rangos || rangos.length === 0) {
     throw new Error("No hay rangos de tarifas configurados");
   }
@@ -50,7 +60,7 @@ export function getApplicableTariffRange(rangos: any[], diaDelMes: number) {
 }
 
 // Función para validar configuración de tarifa
-export function validateTariffConfiguration(configuracionTarifa: any): {
+export function validateTariffConfiguration(configuracionTarifa: ConfiguracionTarifaCompleta | null): {
   isValid: boolean;
   errors: string[];
 } {

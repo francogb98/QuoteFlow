@@ -14,7 +14,7 @@ import {
   FaInfoCircle,
 } from "react-icons/fa";
 
-import { handlePayment } from "@/01-actions/payment/handlePayment";
+import { handlePayment } from "@/actions/payment/handlePayment";
 
 import type { Pago } from "@prisma/client";
 interface Props {

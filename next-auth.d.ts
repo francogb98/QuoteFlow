@@ -45,7 +45,7 @@ declare module "next-auth" {
 
       // Información de la empresa
       empresa: PrismaEmpresa;
-      empresaId: string | null;
+      empresaId: string;
       modeloCobro: ModeloCobro | null;
 
       // Configuraciones
@@ -66,6 +66,17 @@ declare module "next-auth" {
       name: string;
       email: string;
       documento: string;
+      empresaId?: string;
+      rol?: string;
+      suscripcion?: {
+        estadoSuscripcion: string;
+        estadoPagoMercadoPago: string | null;
+        fechaFinPeriodoActual: Date | string | null;
+        manualOverrideEstado: string | null;
+        manualOverrideHasta: Date | string | null;
+        planTipo?: string;
+        frecuenciaPago?: string;
+      } | null;
     };
   }
 }

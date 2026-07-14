@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useEffect, useState } from "react";
 import { useSearchParams, useRouter } from "next/navigation";
@@ -14,9 +14,9 @@ import { PlanSelection } from "./PlanSelection";
 import { PersonalInfoForm } from "./PersonalInfoForm";
 import { PromoCodeField } from "./PromoCodeField";
 
-import { prepareRegistrationForPayment } from "@/01-actions/auth/registration/01-prepareRegistration";
-import { createTrialAccount as createTrialAccountAction } from "@/01-actions/auth/registration/05-createTrialAccount";
-import { PlanOption, plans } from "@/lib";
+import { prepareRegistrationForPayment } from "@/actions/auth/registration/01-prepareRegistration";
+import { createTrialAccount as createTrialAccountAction } from "@/actions/auth/registration/05-createTrialAccount";
+import { PlanOption, plans } from "@/lib/plans/data";
 
 interface RegisterFormData {
   nombre: string;
@@ -148,7 +148,7 @@ export default function RegisterForm() {
       return;
     }
 
-    // Si hay código promocional válido → cuenta de prueba
+    // Si hay código promocional válido →’ cuenta de prueba
     if (validPromoCode) {
       const trialData = {
         nombre: data.nombre,
@@ -325,7 +325,7 @@ export default function RegisterForm() {
               <CheckCircle className="w-5 h-5 mr-2" />
               {validPromoCode
                 ? "¡Cuenta creada! Redirigiendo..."
-                : "¡Éxito! Redirigiendo al pago..."}
+                : "¡Ñ‰xito! Redirigiendo al pago..."}
             </>
           ) : (
             <>

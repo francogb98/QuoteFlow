@@ -1,5 +1,4 @@
-//@ts-ignore
-import { AdminsGrid } from "@/01-components/admin/account/AdminsGrid";
+import { AdminsGrid } from "@/components/admin/account/AdminsGrid";
 
 export default function NamePage() {
   return (

@@ -1,4 +1,4 @@
-import { Navbar } from "@/components";
+import { Navbar } from "@/components/home/NavBar";
 
 export default function Layout({ children }: { children: React.ReactNode }) {
   return (

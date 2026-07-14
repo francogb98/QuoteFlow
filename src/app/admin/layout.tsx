@@ -2,6 +2,8 @@
 import type React from "react";
 import { redirect } from "next/navigation";
 import { auth } from "@/*";
+import { isSuperAdminRole } from "@/lib/auth/isSuperAdmin";
+import { tieneAccesoEmpresa } from "@/lib/auth/tieneAcceso";
 import AdminClientLayout from "./AdminClientLayout";
 import { AppStoreInitializer } from "@/components/AppStoreInitializer";
 
@@ -14,6 +16,15 @@ export default async function AdminLayout({
 
   if (!session?.user) {
     redirect("/auth/login");
+  }
+
+  // SUPER_ADMIN bypasses subscription checks
+  if (!isSuperAdminRole(session.user.rol)) {
+    const suscripcion = (session.user as any)?.empresa?.suscripcion ?? null;
+    const resultado = tieneAccesoEmpresa(suscripcion);
+    if (!resultado.tieneAcceso) {
+      redirect("/suscripcion");
+    }
   }
 
   return (

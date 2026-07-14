@@ -2,7 +2,7 @@ import { notFound } from "next/navigation";
 import prisma from "@/lib/prisma";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CheckCircle, CreditCard } from "lucide-react";
-import { PlanOption, plans } from "@/lib";
+import { PlanOption, plans } from "@/lib/plans/data";
 import { PaymentForm } from "./ui/PaymentForm";
 import Link from "next/link";
 

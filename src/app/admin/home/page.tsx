@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { KpiCards } from "@/01-components/admin/home/nuevo/kpis-cards";
+import { KpiCards } from "@/components/admin/home/nuevo/kpis-cards";
 import { getDashboardData } from "@/lib/data/dashboardQueries";
 import { UsersTable } from "./ui/users-table";
 import { ShareCompanyLink } from "./ui/SharedCompanyLink";

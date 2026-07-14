@@ -1,4 +1,4 @@
-import { getPayment } from "@/01-actions/payment/getPayment";
+import { getPayment } from "@/actions/payment/getPayment";
 import { ComprobanteView } from "./ui/ComprobanteView";
 import { notFound } from "next/navigation";
 

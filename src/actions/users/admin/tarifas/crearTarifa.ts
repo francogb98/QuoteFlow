@@ -3,8 +3,29 @@
 import { auth } from "@/auth.config";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import type { TipoConfiguracionTarifa } from "@prisma/client";
 
-export async function crearConfiguracionTarifa(data: any) {
+interface CrearTarifaRango {
+  nombre: string;
+  diaInicio: number;
+  diaFin: number;
+  monto: number;
+}
+
+interface CrearTarifaDinamica {
+  nombre: string;
+  montoBase: number;
+  diasGracia: number;
+  montoRecargo: number;
+}
+
+interface CrearTarifaData {
+  tipoConfiguracion: TipoConfiguracionTarifa;
+  rangos?: CrearTarifaRango[];
+  dinamicas?: CrearTarifaDinamica[];
+}
+
+export async function crearConfiguracionTarifa(data: CrearTarifaData) {
   try {
     const session = await auth();
 

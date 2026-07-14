@@ -28,6 +28,14 @@ interface SuscripcionTecnicaPanelProps {
   })[];
 }
 
+const estadoBadgeVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
+  ACTIVA: "default",
+  TRIAL: "secondary",
+  CANCELADA: "outline",
+  VENCIDA: "destructive",
+  PENDIENTE: "outline",
+};
+
 export default function SuscripcionTecnicaPanel({
   empresas,
 }: SuscripcionTecnicaPanelProps) {
@@ -49,15 +57,8 @@ export default function SuscripcionTecnicaPanel({
   };
 
   const getEstadoBadge = (estado: string) => {
-    const colors: Record<string, string> = {
-      ACTIVA: "bg-green-100 text-green-800",
-      TRIAL: "bg-blue-100 text-blue-800",
-      CANCELADA: "bg-yellow-100 text-yellow-800",
-      VENCIDA: "bg-red-100 text-red-800",
-      PENDIENTE: "bg-gray-100 text-gray-800",
-    };
     return (
-      <Badge className={colors[estado] || "bg-gray-100 text-gray-800"}>
+      <Badge variant={estadoBadgeVariant[estado] || "outline"}>
         {estado}
       </Badge>
     );
@@ -75,10 +76,10 @@ export default function SuscripcionTecnicaPanel({
   return (
     <div className="space-y-6">
       <div>
-        <h1 className="text-3xl font-bold text-gray-900">
+        <h1 className="text-3xl font-bold text-foreground">
           Panel Técnico de Suscripciones
         </h1>
-        <p className="text-gray-600 mt-2">
+        <p className="text-muted-foreground mt-2">
           Gestión técnica de suscripciones de empresas
         </p>
       </div>
@@ -87,8 +88,8 @@ export default function SuscripcionTecnicaPanel({
         <div
           className={`p-4 rounded-md ${
             message.type === "success"
-              ? "bg-green-50 text-green-800 border border-green-200"
-              : "bg-red-50 text-red-800 border border-red-200"
+              ? "bg-accent/10 text-accent border border-accent/20"
+              : "bg-destructive/10 text-destructive border border-destructive/20"
           }`}
         >
           {message.text}
@@ -127,7 +128,7 @@ export default function SuscripcionTecnicaPanel({
                     <TableCell>
                       <div className="text-sm">
                         <div>{admin?.nombre || "-"}</div>
-                        <div className="text-gray-500 text-xs">
+                        <div className="text-muted-foreground text-xs">
                           {admin?.email || ""}
                         </div>
                       </div>
@@ -141,7 +142,7 @@ export default function SuscripcionTecnicaPanel({
                       {suscripcion ? (
                         <div className="text-sm">
                           <div>{suscripcion.planTipo}</div>
-                          <div className="text-gray-500 text-xs">
+                          <div className="text-muted-foreground text-xs">
                             {suscripcion.frecuenciaPago}
                           </div>
                         </div>

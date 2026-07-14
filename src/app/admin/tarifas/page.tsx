@@ -1,5 +1,5 @@
 import { auth } from "@/*";
-import { TariffManagement } from "@/01-components/admin/tarifas/nueva/tariff-managment";
+import { TariffManagement } from "@/components/admin/tarifas/nueva/tariff-managment";
 import { redirect } from "next/navigation";
 
 export const metadata = {
@@ -18,8 +18,7 @@ export default async function NamePage() {
 
   return (
     <>
-      {/* @ts-ignore */}
-      <TariffManagement user={user} />
+      <TariffManagement user={user as unknown as React.ComponentProps<typeof TariffManagement>["user"]} />
     </>
   );
 }

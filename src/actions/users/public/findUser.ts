@@ -14,11 +14,11 @@ export const findUser = async (
       include: {
         administradores: {
           where: { estaActivo: true },
-          include: {
+          select: {
+            id: true,
+            modeloDeCobro: true,
             configuracionTarifa: {
-              include: {
-                rangos: true,
-              },
+              include: { rangos: true },
             },
           },
         },
@@ -33,31 +33,20 @@ export const findUser = async (
       };
     }
 
-    let usuario = null;
-    let adminEncontrado = null;
+    const adminIds = empresaExist.administradores.map((a) => a.id);
 
-    // Buscar el usuario en todos los administradores de la empresa
-    for (const admin of empresaExist.administradores) {
-      const usuarioEncontrado = await prisma.usuario.findFirst({
-        where: {
-          documento,
-          administradorId: admin.id,
-        },
-        include: {
-          pagos: {
-            orderBy: { fecha: "desc" },
-          },
-        },
-      });
+    // Single query with OR to find user across all admins (eliminates N+1)
+    const usuario = await prisma.usuario.findFirst({
+      where: {
+        documento,
+        administradorId: { in: adminIds },
+      },
+      include: {
+        pagos: { orderBy: { fecha: "desc" } },
+      },
+    });
 
-      if (usuarioEncontrado) {
-        usuario = usuarioEncontrado;
-        adminEncontrado = admin;
-        break; // Salir del bucle cuando se encuentra el usuario
-      }
-    }
-
-    if (!usuario || !adminEncontrado) {
+    if (!usuario) {
       return {
         ok: false,
         message:
@@ -65,15 +54,18 @@ export const findUser = async (
       };
     }
 
-    // ✅ SOLO RETORNAR DATOS - Sin actualizaciones
+    const adminEncontrado = empresaExist.administradores.find(
+      (a) => a.id === usuario.administradorId
+    );
 
+    // SOLO RETORNAR DATOS - Sin actualizaciones
     return {
       ok: true,
       id: usuario.id,
-      administradorId: adminEncontrado.id,
-      modoDePago: adminEncontrado.modeloDeCobro,
+      administradorId: adminEncontrado!.id,
+      modoDePago: adminEncontrado!.modeloDeCobro,
       usuario: usuario,
-      configuracionTarifa: adminEncontrado.configuracionTarifa,
+      configuracionTarifa: adminEncontrado!.configuracionTarifa,
       empresa: {
         id: empresaExist.id,
         nombre: empresaExist.nombre,

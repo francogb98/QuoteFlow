@@ -1,4 +1,4 @@
-import { PagosGrid } from "@/01-components/admin/pagos/PagosGrid";
+import { PagosGrid } from "@/components/admin/pagos/PagosGrid";
 
 export default function PagosPage() {
   return (

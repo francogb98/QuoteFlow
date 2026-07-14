@@ -1,4 +1,4 @@
-import { sendPasswordResetEmail } from "@/01-actions/admin/emails/sendPasswordResetEmail";
+﻿import { sendPasswordResetEmail } from "@/actions/admin/emails/sendPasswordResetEmail";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 

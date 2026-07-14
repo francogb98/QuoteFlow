@@ -1,5 +1,5 @@
-"use client";
-import { runFixIncorrectPayments } from "@/01-actions/admin/test/admin/fix-payments/fix-payments";
+﻿"use client";
+import { runFixIncorrectPayments } from "@/actions/admin/test/admin/fix-payments/fix-payments";
 import { notFound } from "next/navigation";
 import React, { useState } from "react";
 

@@ -5,11 +5,11 @@ import {
   CardContent,
   CardHeader,
   CardTitle,
-  CardDescription,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 import { UserCheck, UserX, Loader2 } from "lucide-react";
-import type { AdminListItem } from "@/actions/users/admin/getAdmins"; // Importa el tipo
+import type { AdminListItem } from "@/actions/users/admin/getAdmins";
 import { Rol } from "@prisma/client";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { toggleAdminStatus } from "@/actions/users/admin/toggleAdminStatus";
@@ -33,7 +33,7 @@ export function AdminCard({ admin }: AdminCardProps) {
     onSuccess: (result) => {
       if (result?.ok) {
         toast.success(result.message || "Estado actualizado");
-        queryClient.invalidateQueries({ queryKey: ["admins"] }); // Invalidar la caché para recargar la lista
+        queryClient.invalidateQueries({ queryKey: ["admins"] });
       } else if (result?.error) {
         toast.error(result.error);
       }
@@ -51,13 +51,13 @@ export function AdminCard({ admin }: AdminCardProps) {
   };
 
   return (
-    <Card className="w-[300px] bg-white shadow-md hover:shadow-lg transition-shadow duration-200 border border-purple-100">
+    <Card className="w-[300px] shadow-md hover:shadow-lg transition-shadow duration-200">
       <CardHeader className="pb-3">
-        <CardTitle className="text-lg font-semibold text-gray-800">
+        <CardTitle className="text-lg font-semibold text-card-foreground">
           {admin.nombre}
         </CardTitle>
       </CardHeader>
-      <CardContent className="space-y-2 text-sm text-gray-700">
+      <CardContent className="space-y-2 text-sm text-card-foreground">
         <p>
           <span className="font-medium">DNI:</span> {admin.documento}
         </p>
@@ -72,15 +72,9 @@ export function AdminCard({ admin }: AdminCardProps) {
         </p>
         <p>
           <span className="font-medium">Estado:</span>{" "}
-          <span
-            className={`px-2 py-0.5 inline-flex text-xs leading-5 font-semibold rounded-full ${
-              admin.estaActivo
-                ? "bg-green-100 text-green-800"
-                : "bg-red-100 text-red-800"
-            }`}
-          >
+          <Badge variant={admin.estaActivo ? "default" : "destructive"}>
             {admin.estaActivo ? "Activo" : "Inactivo"}
-          </span>
+          </Badge>
         </p>
         <div className="pt-4">
           <Button
@@ -88,14 +82,7 @@ export function AdminCard({ admin }: AdminCardProps) {
             size="sm"
             onClick={handleToggleStatus}
             disabled={toggleStatusMutation.isPending}
-            className={`w-full
-              ${
-                admin.estaActivo
-                  ? "text-red-600 hover:bg-red-50 border-red-200"
-                  : "text-green-600 hover:bg-green-50 border-green-200"
-              }
-              transition-colors duration-200
-            `}
+            className={`w-full transition-colors duration-200`}
           >
             {toggleStatusMutation.isPending ? (
               <>

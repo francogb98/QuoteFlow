@@ -1,16 +1,132 @@
-export const runtime = "nodejs";
+﻿export const runtime = "nodejs";
 
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import crypto from "crypto";
 import { FrecuenciaPago, EstadoPagoMercadoPago } from "@prisma/client";
-import { createCompanyAndAdmin } from "@/01-actions/auth/registration/03-createCompanyAndAdmin";
+import { createCompanyAndAdmin } from "@/actions/auth/registration/03-createCompanyAndAdmin";
 import { PreApproval, Payment } from "mercadopago";
 import { MercadoPagoConfig } from "mercadopago";
 
 const mpConfig = new MercadoPagoConfig({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
 });
+
+function sleep(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function parseMercadoPagoDate(value: unknown): Date | undefined {
+  if (!value) return undefined;
+
+  if (value instanceof Date && !Number.isNaN(value.getTime())) {
+    return value;
+  }
+
+  if (typeof value === "number") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+
+  if (typeof value === "string") {
+    const date = new Date(value);
+    return Number.isNaN(date.getTime()) ? undefined : date;
+  }
+
+  return undefined;
+}
+
+function mapMercadoPagoStatusToEstadoPago(
+  status: string | undefined,
+): EstadoPagoMercadoPago | undefined {
+  switch (status) {
+    case "pending":
+      return "PENDING";
+    case "authorized":
+    case "active":
+      return "AUTHORIZED";
+    case "cancelled":
+      return "CANCELLED";
+    case "expired":
+    case "rejected":
+      return "REJECTED";
+    default:
+      return undefined;
+  }
+}
+
+function getPreapprovalDates(preapproval: any) {
+  const fechaInicio = parseMercadoPagoDate(
+    preapproval?.start_date || preapproval?.date_created,
+  );
+  const fechaFinPeriodoActual = parseMercadoPagoDate(
+    preapproval?.next_payment_date,
+  );
+  const fechaUltimaModificacion = parseMercadoPagoDate(
+    preapproval?.last_modified,
+  );
+
+  return {
+    fechaInicio,
+    fechaFinPeriodoActual,
+    fechaUltimaModificacion,
+    raw: {
+      start_date: preapproval?.start_date,
+      date_created: preapproval?.date_created,
+      next_payment_date: preapproval?.next_payment_date,
+      last_modified: preapproval?.last_modified,
+    },
+  };
+}
+
+async function fetchPreapprovalWithRetry(
+  preapprovalClient: PreApproval,
+  preapprovalId: string,
+  options?: { retries?: number; delayMs?: number },
+) {
+  const retries = options?.retries ?? 3;
+  const delayMs = options?.delayMs ?? 700;
+  let lastError: unknown;
+
+  for (let attempt = 1; attempt <= retries; attempt++) {
+    try {
+      const preapproval = await preapprovalClient.get({ id: preapprovalId });
+
+      const dates = getPreapprovalDates(preapproval);
+      const hasRelevantDates =
+        !!dates.fechaInicio || !!dates.fechaFinPeriodoActual;
+
+      console.log("[webhook.preapproval.fetch]", {
+        preapprovalId,
+        attempt,
+        status: preapproval?.status,
+        hasRelevantDates,
+        ...dates.raw,
+      });
+
+      if (hasRelevantDates || attempt === retries) {
+        return preapproval;
+      }
+    } catch (error) {
+      lastError = error;
+      console.warn("[webhook.preapproval.fetch.error]", {
+        preapprovalId,
+        attempt,
+        error,
+      });
+    }
+
+    if (attempt < retries) {
+      await sleep(delayMs);
+    }
+  }
+
+  if (lastError) {
+    throw lastError;
+  }
+
+  return null;
+}
 
 /* =========================================================
    POST WEBHOOK
@@ -41,7 +157,9 @@ export async function POST(request: NextRequest) {
     const resourceId = body.data?.id;
 
     /* =========================================================
-       IDEMPOTENCIA
+       IDEMPOTENCIA ’” verificar ANTES, registrar DESPUÑ‰S
+       (registrar antes causaba que fallos silenciosos quedaran
+       marcados como procesados y MP nunca reintentaba)
     ========================================================= */
 
     if (resourceId) {
@@ -52,14 +170,6 @@ export async function POST(request: NextRequest) {
       if (existing) {
         return NextResponse.json({ ok: true });
       }
-
-      await prisma.webhookEvent.create({
-        data: {
-          providerId: resourceId,
-          topic,
-          rawPayload: rawBody,
-        },
-      });
     }
 
     switch (topic) {
@@ -69,8 +179,24 @@ export async function POST(request: NextRequest) {
         break;
       case "authorized_payment":
       case "subscription_authorized_payment":
+      case "payment": // MP a veces envía pagos de suscripción con topic genérico
         await handlePaymentEvent(body);
         break;
+    }
+
+    // Registrar el evento DESPUÑ‰S del procesamiento exitoso.
+    // Si el procesamiento lanza error, el evento no se registra
+    // y MP puede reintentar el webhook.
+    if (resourceId) {
+      await prisma.webhookEvent.create({
+        data: {
+          providerId: resourceId,
+          topic,
+          rawPayload: rawBody,
+        },
+      }).catch(() => {
+        // Ignorar error de duplicado por concurrencia (unique constraint)
+      });
     }
 
     return NextResponse.json({ ok: true });
@@ -120,7 +246,10 @@ async function handleSubscriptionEvent(body: any) {
 
   let subscription;
   try {
-    subscription = await preapprovalClient.get({ id: preapprovalId });
+    subscription = await fetchPreapprovalWithRetry(preapprovalClient, preapprovalId, {
+      retries: 3,
+      delayMs: 700,
+    });
   } catch (error) {
     console.error(
       "[handleSubscriptionEvent] Error fetching preapproval:",
@@ -129,8 +258,19 @@ async function handleSubscriptionEvent(body: any) {
     return;
   }
 
+  if (!subscription) return;
+
   const status = subscription.status;
   const externalReference = subscription.external_reference;
+  const mpDates = getPreapprovalDates(subscription);
+  const mappedEstadoPago = mapMercadoPagoStatusToEstadoPago(status);
+
+  console.log("[handleSubscriptionEvent] incoming", {
+    preapprovalId,
+    status,
+    externalReference,
+    ...mpDates.raw,
+  });
 
   if (!status || !externalReference) return;
 
@@ -150,37 +290,42 @@ async function handleSubscriptionEvent(body: any) {
   const [type, referenceId] = externalReference.split(":");
 
   /* =========================================================
-     CASO 1 — REGISTRO NUEVO
+     CASO 1 ’” REGISTRO NUEVO
   ========================================================= */
   if (type === "temp") {
+    // createCompanyAndAdmin ya crea Empresa + Admin + SuscripcionEmpresa
+    // Es idempotente: si ya existe, retorna el empresaId existente
     const result = await createCompanyAndAdmin(referenceId, preapprovalId);
     if (!result.ok || !result.empresaId) return;
 
-    const temp = await prisma.tempRegistration.findUnique({
-      where: { id: referenceId },
-    });
-    if (!temp) return;
+    // Actualizar SuscripcionEmpresa con datos reales de MP
+    const dataUpdate: any = {
+      estadoSuscripcion: newStatus,
+    };
+    if (mappedEstadoPago) dataUpdate.estadoPagoMercadoPago = mappedEstadoPago;
+    if (mpDates.fechaInicio) dataUpdate.fechaInicio = mpDates.fechaInicio;
+    if (mpDates.fechaFinPeriodoActual) {
+      dataUpdate.fechaFinPeriodoActual = mpDates.fechaFinPeriodoActual;
+    }
 
-    const months = temp.frecuenciaPago === FrecuenciaPago.ANUAL ? 12 : 1;
-    const fechaFin = new Date();
-    fechaFin.setMonth(fechaFin.getMonth() + months);
-
-    await prisma.suscripcionEmpresa.create({
-      data: {
-        empresaId: result.empresaId,
-        planTipo: temp.planTipo,
-        frecuenciaPago: temp.frecuenciaPago,
-        mercadoPagoPreApprovalId: preapprovalId,
-        estadoSuscripcion: newStatus,
-        fechaInicio: new Date(),
-        fechaFinPeriodoActual: fechaFin,
+    const updated = await prisma.suscripcionEmpresa.update({
+      where: { empresaId: result.empresaId },
+      data: dataUpdate,
+      select: {
+        id: true,
+        empresaId: true,
+        fechaInicio: true,
+        fechaFinPeriodoActual: true,
+        estadoSuscripcion: true,
       },
     });
+
+    console.log("[handleSubscriptionEvent] update.after (temp)", updated);
     return;
   }
 
   /* =========================================================
-     CASO 2 — EMPRESA EXISTENTE
+     CASO 2 ’” EMPRESA EXISTENTE
   ========================================================= */
   if (type === "empresa") {
     const empresaId = referenceId;
@@ -198,8 +343,18 @@ async function handleSubscriptionEvent(body: any) {
       estadoSuscripcion: newStatus,
     };
 
-    // Si se activa, extendemos la fecha desde hoy (o desde la fecha fin actual si existe)
-    if (newStatus === "ACTIVA") {
+    if (mappedEstadoPago) {
+      dataUpdate.estadoPagoMercadoPago = mappedEstadoPago;
+    }
+
+    if (mpDates.fechaInicio) {
+      dataUpdate.fechaInicio = mpDates.fechaInicio;
+    }
+
+    // Fuente canónica: Mercado Pago. Solo si no está disponible, usamos fallback local.
+    if (mpDates.fechaFinPeriodoActual) {
+      dataUpdate.fechaFinPeriodoActual = mpDates.fechaFinPeriodoActual;
+    } else if (newStatus === "ACTIVA") {
       const months = existing.frecuenciaPago === FrecuenciaPago.ANUAL ? 12 : 1;
       const baseDate =
         existing.fechaFinPeriodoActual &&
@@ -213,6 +368,19 @@ async function handleSubscriptionEvent(body: any) {
       dataUpdate.fechaFinPeriodoActual = nuevaFechaFin;
     }
 
+    console.log("[handleSubscriptionEvent] update.before", {
+      empresaId,
+      preapprovalId,
+      currentFechaInicio: existing.fechaInicio?.toISOString?.(),
+      currentFechaFinPeriodoActual:
+        existing.fechaFinPeriodoActual?.toISOString?.(),
+      update: {
+        ...dataUpdate,
+        fechaInicio: dataUpdate.fechaInicio?.toISOString?.(),
+        fechaFinPeriodoActual: dataUpdate.fechaFinPeriodoActual?.toISOString?.(),
+      },
+    });
+
     await prisma.$transaction([
       prisma.suscripcionEmpresa.update({
         where: { empresaId },
@@ -221,25 +389,39 @@ async function handleSubscriptionEvent(body: any) {
 
       ...(newStatus === "ACTIVA" ? [] : []),
     ]);
+
+    const updated = await prisma.suscripcionEmpresa.findUnique({
+      where: { empresaId },
+      select: {
+        id: true,
+        empresaId: true,
+        fechaInicio: true,
+        fechaFinPeriodoActual: true,
+        estadoSuscripcion: true,
+        estadoPagoMercadoPago: true,
+      },
+    });
+
+    console.log("[handleSubscriptionEvent] update.after", updated);
   }
 }
 
 /* =========================================================
-   HANDLE PAYMENT EVENT — FASE 1: REGISTRAR PAGOS
+   HANDLE PAYMENT EVENT ’” FASE 1: REGISTRAR PAGOS
    ========================================================= */
 
 async function handlePaymentEvent(body: any) {
   const paymentId = body.data?.id;
   if (!paymentId) return;
 
-  // 1️⃣ Intentar obtener el pago con manejo de reintentos
+  // 1ï¸âƒ£ Intentar obtener el pago con manejo de reintentos
   const paymentClient = new Payment(mpConfig);
   let payment;
 
   try {
     payment = await paymentClient.get({ id: paymentId });
   } catch (error: any) {
-    // ✅ CORRECCIÓN CRÍTICA:
+    // âœ… CORRECCIÑ“N CRÑTICA:
     // Si MP devuelve 404, significa que el pago aún no está indexado en su API pública.
     // Lanzamos un error para que la función POST principal retorne 500.
     // Mercado Pago verá el error 500 y reenviará el webhook en unos minutos.
@@ -256,7 +438,7 @@ async function handlePaymentEvent(body: any) {
 
   if (!payment) return;
 
-  // 2️⃣ Verificar estado aprobado
+  // 2ï¸âƒ£ Verificar estado aprobado
   if (payment.status !== "approved") {
     console.log(
       `[handlePaymentEvent] Payment ${paymentId} status: ${payment.status}. Ignored.`,
@@ -266,15 +448,35 @@ async function handlePaymentEvent(body: any) {
 
   const preapprovalId =
     (payment as any).preapproval_id || payment.metadata?.preapproval_id;
-  if (!preapprovalId) return;
 
-  const subscription = await prisma.suscripcionEmpresa.findUnique({
-    where: { mercadoPagoPreApprovalId: String(preapprovalId) },
-  });
+  // Buscar suscripción: primero por preapproval_id, luego por external_reference
+  // como fallback para pagos donde preapproval_id no está expuesto por el SDK.
+  let subscription = preapprovalId
+    ? await prisma.suscripcionEmpresa.findUnique({
+        where: { mercadoPagoPreApprovalId: String(preapprovalId) },
+      })
+    : null;
 
-  if (!subscription) return;
+  if (!subscription) {
+    const externalRef =
+      (payment as any).external_reference ||
+      payment.metadata?.external_reference;
+    if (externalRef && String(externalRef).startsWith("empresa:")) {
+      const empresaId = String(externalRef).split(":")[1];
+      subscription = await prisma.suscripcionEmpresa.findUnique({
+        where: { empresaId },
+      });
+    }
+  }
 
-  // 3️⃣ Idempotencia: Verificar si ya registramos este pago
+  if (!subscription) {
+    console.warn(
+      `[handlePaymentEvent] No subscription found for payment ${paymentId} (preapprovalId=${preapprovalId})`,
+    );
+    return;
+  }
+
+  // 3ï¸âƒ£ Idempotencia: Verificar si ya registramos este pago
   const existingPayment = await prisma.pagoSuscripcionEmpresa.findUnique({
     where: { mercadoPagoPaymentId: String(paymentId) },
   });
@@ -284,23 +486,33 @@ async function handlePaymentEvent(body: any) {
     return;
   }
 
-  // 4️⃣ Registrar el pago
-  await prisma.pagoSuscripcionEmpresa.create({
-    data: {
-      empresaId: subscription.empresaId,
-      suscripcionId: subscription.id,
-      mercadoPagoPaymentId: String(paymentId),
-      mercadoPagoPreApprovalId: preapprovalId,
-      monto: payment.transaction_amount || 0,
-      estadoMercadoPago: "AUTHORIZED",
-      fechaPago: payment.date_approved
-        ? new Date(payment.date_approved)
-        : new Date(),
-      rawPayload: JSON.stringify(payment),
-    },
-  });
+  // 4ï¸âƒ£ Registrar el pago
+  const preapprovalLookupId =
+    String(preapprovalId || subscription.mercadoPagoPreApprovalId || "") || null;
 
-  // 5️⃣ Extender período y Activar
+  let syncedPreapproval: any = null;
+  if (preapprovalLookupId) {
+    try {
+      const preapprovalClient = new PreApproval(mpConfig);
+      syncedPreapproval = await fetchPreapprovalWithRetry(
+        preapprovalClient,
+        preapprovalLookupId,
+        {
+          retries: 3,
+          delayMs: 700,
+        },
+      );
+    } catch (error) {
+      console.warn("[handlePaymentEvent] preapproval sync error", {
+        preapprovalLookupId,
+        error,
+      });
+    }
+  }
+
+  const preapprovalDates = getPreapprovalDates(syncedPreapproval);
+
+  // 5ï¸âƒ£ Extender período y Activar
   const months = subscription.frecuenciaPago === FrecuenciaPago.ANUAL ? 12 : 1;
   const ahora = new Date();
   const baseDate =
@@ -309,21 +521,71 @@ async function handlePaymentEvent(body: any) {
       ? new Date(subscription.fechaFinPeriodoActual)
       : ahora;
 
-  const nuevaFechaFin = new Date(baseDate);
-  nuevaFechaFin.setMonth(nuevaFechaFin.getMonth() + months);
+  const fallbackFechaFin = new Date(baseDate);
+  fallbackFechaFin.setMonth(fallbackFechaFin.getMonth() + months);
+
+  const dataUpdate: any = {
+    estadoSuscripcion: "ACTIVA",
+    estadoPagoMercadoPago: "AUTHORIZED",
+    fechaFinPeriodoActual: preapprovalDates.fechaFinPeriodoActual || fallbackFechaFin,
+  };
+
+  if (preapprovalDates.fechaInicio) {
+    dataUpdate.fechaInicio = preapprovalDates.fechaInicio;
+  }
+
+  console.log("[handlePaymentEvent] update.before", {
+    paymentId,
+    preapprovalId,
+    preapprovalLookupId,
+    currentFechaInicio: subscription.fechaInicio?.toISOString?.(),
+    currentFechaFinPeriodoActual: subscription.fechaFinPeriodoActual?.toISOString?.(),
+    mpDates: preapprovalDates.raw,
+    update: {
+      ...dataUpdate,
+      fechaInicio: dataUpdate.fechaInicio?.toISOString?.(),
+      fechaFinPeriodoActual: dataUpdate.fechaFinPeriodoActual?.toISOString?.(),
+    },
+    fechaFinSource: preapprovalDates.fechaFinPeriodoActual
+      ? "mercado_pago"
+      : "fallback_local",
+  });
 
   await prisma.$transaction([
+    prisma.pagoSuscripcionEmpresa.create({
+      data: {
+        empresaId: subscription.empresaId,
+        suscripcionId: subscription.id,
+        mercadoPagoPaymentId: String(paymentId),
+        mercadoPagoPreApprovalId: preapprovalId,
+        monto: payment.transaction_amount || 0,
+        estadoMercadoPago: "AUTHORIZED",
+        fechaPago: payment.date_approved
+          ? new Date(payment.date_approved)
+          : new Date(),
+        rawPayload: JSON.stringify(payment),
+      },
+    }),
     prisma.suscripcionEmpresa.update({
       where: { id: subscription.id },
-      data: {
-        estadoSuscripcion: "ACTIVA",
-        estadoPagoMercadoPago: "AUTHORIZED",
-        fechaFinPeriodoActual: nuevaFechaFin,
-      },
+      data: dataUpdate,
     }),
   ]);
 
+  const updatedSubscription = await prisma.suscripcionEmpresa.findUnique({
+    where: { id: subscription.id },
+    select: {
+      id: true,
+      empresaId: true,
+      fechaInicio: true,
+      fechaFinPeriodoActual: true,
+      estadoSuscripcion: true,
+      estadoPagoMercadoPago: true,
+    },
+  });
+
   console.log(
-    `[handlePaymentEvent] ✅ Success! Sub active until ${nuevaFechaFin}`,
+    `[handlePaymentEvent] âœ… Success! Sub active until ${dataUpdate.fechaFinPeriodoActual}`,
   );
+  console.log("[handlePaymentEvent] update.after", updatedSubscription);
 }

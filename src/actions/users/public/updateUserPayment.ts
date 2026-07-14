@@ -1,22 +1,36 @@
 "use server";
 import prisma from "@/lib/prisma";
+import type { MetodoPago } from "@prisma/client";
 
-export const updateUserPayment = async (payment: any) => {
+interface MercadoPagoPayment {
+  id?: number;
+  transaction_amount?: number;
+  payment_method_id?: string;
+  statement_descriptor?: string;
+  metadata?: Record<string, unknown>;
+}
+
+export const updateUserPayment = async (payment: MercadoPagoPayment) => {
   try {
     // 1. Verificar que existan los metadatos necesarios
-    if (
-      !payment.metadata?.documento ||
+    if (!payment.metadata?.documento ||
       !payment.metadata?.admin_id ||
       !payment.metadata?.mes
     ) {
       throw new Error("Faltan metadatos requeridos");
     }
 
+    const metadata = payment.metadata as {
+      documento: string;
+      admin_id: string;
+      mes: string;
+    };
+
     // 2. Buscar el usuario
     const user = await prisma.usuario.findFirst({
       where: {
-        documento: payment.metadata.documento,
-        administradorId: payment.metadata.admin_id,
+        documento: metadata.documento,
+        administradorId: metadata.admin_id,
       },
       include: {
         pagos: true,
@@ -43,7 +57,7 @@ export const updateUserPayment = async (payment: any) => {
       Diciembre: 12,
     };
 
-    const mesNumero = meses[payment.metadata.mes];
+    const mesNumero = meses[metadata.mes];
     if (!mesNumero) {
       throw new Error("Mes no válido en los metadatos");
     }
@@ -64,8 +78,8 @@ export const updateUserPayment = async (payment: any) => {
         data: {
           fecha: new Date(),
           estado: "PAGADO",
-          metodo: "MERCADOPAGO",
-          comprobante: `${payment.id}`, //paymentpayment.id,
+          metodo: "MERCADOPAGO" as MetodoPago,
+          comprobante: payment.id != null ? String(payment.id) : null, //paymentpayment.id,
           estaVencido: false,
         },
       });
@@ -73,13 +87,13 @@ export const updateUserPayment = async (payment: any) => {
       // Crear nuevo pago
       await prisma.pago.create({
         data: {
-          monto: payment.amount / 100,
+          monto: (payment.transaction_amount ?? 0) / 100,
           fecha: new Date(),
           mes: mesNumero,
           año: añoActual,
           estado: "PAGADO",
-          metodo: payment.payment_method || "MERCADOPAGO",
-          comprobante: payment.receipt_url || null,
+          metodo: (payment.payment_method_id as MetodoPago) || "MERCADOPAGO",
+          comprobante: payment.id != null ? String(payment.id) : null,
           estaVencido: false,
           usuarioId: user.id,
           periodo: `${añoActual}-${String(mesNumero).padStart(2, "0")}`,

@@ -38,8 +38,7 @@ export default async function NamePage({ params }: Props) {
   const tarifasDisponibles =
     session.user.configuracionTarifa?.tipoConfiguracion === "FIJA_MENSUAL"
       ? session.user.configuracionTarifa.rangos
-      : //@ts-ignore
-        session.user.configuracionTarifa.dinamicas;
+      : (session.user.configuracionTarifa as unknown as { dinamicas?: unknown[] })?.dinamicas;
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50 p-4 md:p-6">

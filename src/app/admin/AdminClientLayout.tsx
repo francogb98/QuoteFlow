@@ -2,10 +2,11 @@
 
 import type React from "react";
 import { Toaster } from "sonner";
-import { Header } from "@/01-components/admin/Header";
-import { SidebarSimple } from "@/01-components/admin/prueba/SideBarPrueba";
+import { Header } from "@/components/admin/Header";
+import { SidebarSimple } from "@/components/admin/prueba/SideBarPrueba";
 import { useSidebarStore } from "@/lib/store/useSideBarStore";
-import { AdminPanelManager } from "@/01-components/admin/prueba/AdminPanelManager";
+import { AdminPanelManager } from "@/components/admin/prueba/AdminPanelManager";
+import { OnboardingWizard } from "@/components/admin/onboarding/OnboardingWizard";
 
 interface Props {
   children: React.ReactNode;
@@ -16,22 +17,25 @@ export default function AdminClientLayout({ children, user }: Props) {
   const isOpen = useSidebarStore((state) => state.isOpen);
 
   return (
-    <div className="h-screen bg-gradient-to-br from-purple-50 via-white to-emerald-50 overflow-hidden">
+    <div className="h-screen overflow-hidden bg-linear-to-br from-purple-50 via-white to-emerald-50">
       <SidebarSimple user={user} />
 
       <div
-        className={`flex flex-col min-h-screen transition-all duration-300
+        className={`flex h-full min-h-0 flex-col transition-all duration-300
         ${isOpen ? "md:pl-64" : "md:pl-20"}`}
       >
         <Header user={user} />
 
-        <main className="flex-1 overflow-y-auto px-2 sm:px-10 py-4">
+        <main className="min-h-0 flex-1 overflow-y-auto px-2 py-4 sm:px-10">
           {children}
         </main>
       </div>
 
       {/* Manager de paneles globales */}
       <AdminPanelManager user={user} />
+
+      {/* Onboarding wizard for new users */}
+      <OnboardingWizard />
 
       <Toaster position="top-right" richColors />
     </div>

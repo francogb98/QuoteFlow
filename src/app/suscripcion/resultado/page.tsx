@@ -7,25 +7,7 @@ const config = new MercadoPagoConfig({
   accessToken: process.env.MERCADO_PAGO_ACCESS_TOKEN!,
 });
 
-import { EstadoPagoMercadoPago } from "@prisma/client";
 import { syncSubscriptionAfterReturn } from "./syncSubscriptionAfterResult";
-
-function mapMercadoPagoStatus(status: string): EstadoPagoMercadoPago {
-  switch (status) {
-    case "pending":
-      return EstadoPagoMercadoPago.PENDING;
-
-    case "authorized":
-    case "active":
-      return EstadoPagoMercadoPago.AUTHORIZED;
-
-    case "cancelled":
-      return EstadoPagoMercadoPago.CANCELLED;
-
-    default:
-      return EstadoPagoMercadoPago.REJECTED;
-  }
-}
 
 export default async function ResultadoPage({
   searchParams,
@@ -89,20 +71,6 @@ export default async function ResultadoPage({
     estadoColor = "text-red-600";
     estadoSuscripcion = "CANCELADA";
   }
-
-  await prisma.suscripcionEmpresa.update({
-    where: { empresaId },
-    data: {
-      estadoSuscripcion: estadoSuscripcion,
-      estadoPagoMercadoPago: mapMercadoPagoStatus(mpSubscription.status!),
-      fechaInicio: mpSubscription.date_created
-        ? new Date(mpSubscription.date_created)
-        : undefined,
-      fechaFinPeriodoActual: mpSubscription.next_payment_date
-        ? new Date(mpSubscription.next_payment_date)
-        : undefined,
-    },
-  });
 
   if (mpSubscription.status === "cancelled") {
     estadoTexto = "Suscripción cancelada";

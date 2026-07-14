@@ -1,6 +1,6 @@
-"use server";
+﻿"use server";
 
-import { sendEmail } from "@/01-actions/admin/emails/sendEmail";
+import { sendEmail } from "@/actions/admin/emails/sendEmail";
 import { logger } from "../lib";
 import prisma from "@/lib/prisma";
 import { format } from "date-fns";
@@ -22,7 +22,7 @@ export async function enviarRecordatoriosDePago(fechaActual: Date) {
   fechaRecordatorioFin.setHours(23, 59, 59, 999);
 
   logger.info(
-    `💌 [RECORDATORIOS] Buscando pagos que vencen en 3 días (fecha: ${format(
+    `ðŸ’Œ [RECORDATORIOS] Buscando pagos que vencen en 3 días (fecha: ${format(
       fechaRecordatorio,
       "dd-MM-yyyy"
     )})...`
@@ -70,11 +70,11 @@ export async function enviarRecordatoriosDePago(fechaActual: Date) {
 
     if (pagosProximos.length === 0) {
       logger.info(
-        "🎉 No se encontraron pagos próximos a vencer para enviar recordatorios."
+        "ðŸŽ‰ No se encontraron pagos próximos a vencer para enviar recordatorios."
       );
     } else {
       logger.info(
-        `📬 Se encontraron ${pagosProximos.length} pagos próximos. Enviando correos...`
+        `ðŸ“¬ Se encontraron ${pagosProximos.length} pagos próximos. Enviando correos...`
       );
 
       for (const pago of pagosProximos) {
@@ -107,7 +107,7 @@ export async function enviarRecordatoriosDePago(fechaActual: Date) {
       }
     }
   } catch (error) {
-    logger.error("❌ Error al enviar recordatorios de pago:", error);
+    logger.error("âŒ Error al enviar recordatorios de pago:", error);
   }
 
   return { recordatoriosEnviados };

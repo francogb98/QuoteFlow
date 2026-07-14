@@ -39,7 +39,6 @@ export interface RecentPaymentRow {
   fecha: string;
 }
 
-// NUEVO: Tipo para los detalles en el modal
 export interface PaymentDetailRow {
   id: string;
   usuarioNombre: string;
@@ -93,7 +92,6 @@ export interface UserRow {
   fechaCreacion: string;
 }
 
-// NUEVO: Interfaz para usuarios sin teléfono
 export interface UsuarioSinTelefono {
   id: string;
   nombre: string;
@@ -111,11 +109,9 @@ export interface DashboardData {
   upcomingDeadlines: UpcomingDeadlineRow[];
   usersOverview: UsersOverviewData;
   users: UserRow[];
-  // NUEVOS: Campos para los modales
   pagosPagadosDetalles: PaymentDetailRow[];
   pagosPendientesDetalles: PaymentDetailRow[];
   pagosVencidosDetalles: PaymentDetailRow[];
-  // NUEVO: Campo para la lista de usuarios sin teléfono
   usuariosSinTelefonoList: UsuarioSinTelefono[];
 }
 
@@ -124,18 +120,8 @@ export interface DashboardData {
 // ============================
 
 const MESES_CORTOS = [
-  "Ene",
-  "Feb",
-  "Mar",
-  "Abr",
-  "May",
-  "Jun",
-  "Jul",
-  "Ago",
-  "Sep",
-  "Oct",
-  "Nov",
-  "Dic",
+  "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+  "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
 ];
 
 const METHOD_COLORS: Record<string, string> = {
@@ -152,6 +138,370 @@ const METHOD_LABELS: Record<string, string> = {
   TARJETA: "Tarjeta",
 };
 
+const USUARIOS_TABLE_LIMIT = 50;
+
+// ============================
+// Sub-queries (each returns raw Prisma data)
+// ============================
+
+async function fetchKpiCounts(administradorId: string, mesActual: number, añoActual: number) {
+  const [totalUsuarios, usuariosActivos, usuariosSinTelefono, pagosPendientesMes, pagosVencidosMes] =
+    await Promise.all([
+      prisma.usuario.count({ where: { administradorId } }),
+      prisma.usuario.count({ where: { administradorId, estado: "ACTIVO" } }),
+      prisma.usuario.count({
+        where: { administradorId, OR: [{ telefono: null }, { telefono: "" }] },
+      }),
+      prisma.pago.count({
+        where: {
+          usuario: { administradorId },
+          mes: mesActual,
+          año: añoActual,
+          estado: "PENDIENTE",
+        },
+      }),
+      prisma.pago.count({
+        where: {
+          usuario: { administradorId },
+          estado: "VENCIDO",
+          mes: mesActual,
+          año: añoActual,
+        },
+      }),
+    ]);
+
+  return { totalUsuarios, usuariosActivos, usuariosSinTelefono, pagosPendientesMes, pagosVencidosMes };
+}
+
+async function fetchPagosPagadosDetalles(administradorId: string, mesActual: number, añoActual: number) {
+  return prisma.pago.findMany({
+    where: {
+      usuario: { administradorId },
+      mes: mesActual,
+      año: añoActual,
+      estado: "PAGADO",
+    },
+    select: {
+      id: true,
+      monto: true,
+      fecha: true,
+      usuario: {
+        select: {
+          nombre: true,
+          apellido: true,
+          telefono: true,
+          documento: true,
+        },
+      },
+    },
+    orderBy: { fecha: "desc" },
+  });
+}
+
+async function fetchPagosPendientesDetalles(administradorId: string, mesActual: number, añoActual: number) {
+  return prisma.pago.findMany({
+    where: {
+      usuario: { administradorId },
+      mes: mesActual,
+      año: añoActual,
+      estado: "PENDIENTE",
+    },
+    select: {
+      id: true,
+      monto: true,
+      fechaVencimiento: true,
+      usuario: {
+        select: { nombre: true, apellido: true, documento: true, telefono: true },
+      },
+    },
+    orderBy: { fechaVencimiento: "asc" },
+  });
+}
+
+async function fetchPagosVencidosDetalles(administradorId: string, mesActual: number, añoActual: number) {
+  return prisma.pago.findMany({
+    where: {
+      usuario: { administradorId },
+      mes: mesActual,
+      año: añoActual,
+      estado: "VENCIDO",
+    },
+    select: {
+      id: true,
+      monto: true,
+      fechaVencimiento: true,
+      usuario: {
+        select: { nombre: true, apellido: true, documento: true, telefono: true },
+      },
+    },
+    orderBy: { fechaVencimiento: "asc" },
+  });
+}
+
+async function fetchRecentPayments(administradorId: string) {
+  return prisma.pago.findMany({
+    where: { usuario: { administradorId } },
+    include: {
+      usuario: {
+        select: { id: true, nombre: true, apellido: true, telefono: true, documento: true },
+      },
+    },
+    orderBy: { fecha: "desc" },
+    take: 7,
+  });
+}
+
+async function fetchNotifications(administradorId: string) {
+  return prisma.notificacion.findMany({
+    where: { administradorId },
+    orderBy: [{ leida: "asc" }, { fechaCreacion: "desc" }],
+    take: 6,
+  });
+}
+
+async function fetchUpcomingDeadlines(administradorId: string, now: Date) {
+  return prisma.pago.findMany({
+    where: {
+      usuario: { administradorId },
+      estado: "PENDIENTE",
+      fechaVencimiento: { gte: now },
+    },
+    include: {
+      usuario: {
+        select: { id: true, nombre: true, apellido: true, documento: true, telefono: true },
+      },
+    },
+    orderBy: { fechaVencimiento: "asc" },
+    take: 5,
+  });
+}
+
+async function fetchPaymentMethodsByMonth(administradorId: string, mesActual: number, añoActual: number) {
+  return prisma.pago.groupBy({
+    by: ["metodo"],
+    where: {
+      usuario: { administradorId },
+      mes: mesActual,
+      año: añoActual,
+      estado: "PAGADO",
+    },
+    _count: true,
+  });
+}
+
+async function fetchPaymentsLast6Months(administradorId: string, mesActual: number, añoActual: number) {
+  return prisma.pago.findMany({
+    where: {
+      usuario: { administradorId },
+      fecha: { gte: new Date(añoActual, mesActual - 7, 1) },
+    },
+    select: { monto: true, mes: true, año: true, estado: true },
+  });
+}
+
+async function fetchUsersForTable(administradorId: string) {
+  return prisma.usuario.findMany({
+    where: { administradorId },
+    select: {
+      id: true,
+      nombre: true,
+      apellido: true,
+      documento: true,
+      telefono: true,
+      email: true,
+      estado: true,
+      fechaCreacion: true,
+      pagos: {
+        select: {
+          id: true,
+          mes: true,
+          año: true,
+          estado: true,
+          monto: true,
+          metodo: true,
+        },
+        orderBy: [{ año: "desc" }, { mes: "desc" }],
+        take: 3,
+      },
+    },
+    orderBy: { fechaCreacion: "desc" },
+    take: USUARIOS_TABLE_LIMIT,
+  });
+}
+
+async function fetchUsuariosSinTelefono(administradorId: string) {
+  return prisma.usuario.findMany({
+    where: {
+      administradorId,
+      OR: [{ telefono: null }, { telefono: "" }],
+    },
+    select: { id: true, nombre: true, apellido: true, documento: true },
+  });
+}
+
+// ============================
+// Mappers (raw data → typed rows)
+// ============================
+
+function mapPagosPagadosDetalles(
+  detalles: Awaited<ReturnType<typeof fetchPagosPagadosDetalles>>
+): PaymentDetailRow[] {
+  return detalles.map((p) => ({
+    id: p.id,
+    usuarioNombre: p.usuario.nombre,
+    usuarioApellido: p.usuario.apellido,
+    monto: p.monto,
+    fechaVencimiento: null,
+    fechaPago: p.fecha ? p.fecha.toISOString() : null,
+    estado: "PAGADO",
+    telefono: p.usuario.telefono,
+    documento: p.usuario.documento,
+  }));
+}
+
+function mapPagosPendientesDetalles(
+  detalles: Awaited<ReturnType<typeof fetchPagosPendientesDetalles>>
+): PaymentDetailRow[] {
+  return detalles.map((p) => ({
+    id: p.id,
+    usuarioNombre: p.usuario.nombre,
+    usuarioApellido: p.usuario.apellido,
+    monto: p.monto,
+    fechaVencimiento: p.fechaVencimiento ? p.fechaVencimiento.toISOString() : null,
+    fechaPago: null,
+    estado: "PENDIENTE",
+    telefono: p.usuario.telefono,
+    documento: p.usuario.documento,
+  }));
+}
+
+function mapPagosVencidosDetalles(
+  detalles: Awaited<ReturnType<typeof fetchPagosVencidosDetalles>>
+): PaymentDetailRow[] {
+  return detalles.map((p) => ({
+    id: p.id,
+    usuarioNombre: p.usuario.nombre,
+    usuarioApellido: p.usuario.apellido,
+    monto: p.monto,
+    fechaVencimiento: p.fechaVencimiento ? p.fechaVencimiento.toISOString() : null,
+    fechaPago: null,
+    estado: "VENCIDO",
+    telefono: p.usuario.telefono,
+    documento: p.usuario.documento,
+  }));
+}
+
+function mapMonthlyChart(
+  pagos: Awaited<ReturnType<typeof fetchPaymentsLast6Months>>,
+  mesActual: number,
+  añoActual: number
+): MonthlyChartData[] {
+  const monthlyMap = new Map<string, { pagados: number; pendientes: number; vencidos: number }>();
+  for (let i = 5; i >= 0; i--) {
+    let m = mesActual - i;
+    let y = añoActual;
+    if (m <= 0) { m += 12; y -= 1; }
+    monthlyMap.set(`${y}-${m}`, { pagados: 0, pendientes: 0, vencidos: 0 });
+  }
+
+  for (const pago of pagos) {
+    const entry = monthlyMap.get(`${pago.año}-${pago.mes}`);
+    if (entry) {
+      if (pago.estado === "PAGADO") entry.pagados += pago.monto;
+      else if (pago.estado === "PENDIENTE") entry.pendientes += pago.monto;
+      else if (pago.estado === "VENCIDO") entry.vencidos += pago.monto;
+    }
+  }
+
+  const chart: MonthlyChartData[] = [];
+  for (const [key, data] of monthlyMap) {
+    const mesIndex = parseInt(key.split("-")[1], 10) - 1;
+    chart.push({ mes: MESES_CORTOS[mesIndex], ...data });
+  }
+  return chart;
+}
+
+function mapPaymentMethods(
+  pagosPorMetodo: Awaited<ReturnType<typeof fetchPaymentMethodsByMonth>>
+): PaymentMethodData[] {
+  return pagosPorMetodo.map((entry) => ({
+    name: METHOD_LABELS[entry.metodo] || entry.metodo,
+    value: entry._count,
+    color: METHOD_COLORS[entry.metodo] || "#6b7280",
+  }));
+}
+
+function mapRecentPayments(
+  pagosRecientes: Awaited<ReturnType<typeof fetchRecentPayments>>
+): RecentPaymentRow[] {
+  return pagosRecientes.map((p) => ({
+    id: p.id,
+    usuarioId: p.usuario?.id,
+    usuarioNombre: p.usuario.nombre,
+    usuarioApellido: p.usuario.apellido,
+    monto: p.monto,
+    estado: p.estado,
+    metodo: p.metodo,
+    periodo: p.periodo,
+    fecha: p.fecha.toISOString(),
+  }));
+}
+
+function mapNotifications(
+  notificaciones: Awaited<ReturnType<typeof fetchNotifications>>
+): NotificationRow[] {
+  return notificaciones.map((n) => ({
+    id: n.id,
+    tipo: n.tipo,
+    titulo: n.titulo,
+    mensaje: n.mensaje,
+    leida: n.leida,
+    fechaCreacion: n.fechaCreacion.toISOString(),
+  }));
+}
+
+function mapUpcomingDeadlines(
+  proximosVencimientos: Awaited<ReturnType<typeof fetchUpcomingDeadlines>>,
+  now: Date
+): UpcomingDeadlineRow[] {
+  return proximosVencimientos.map((p) => {
+    const venc = p.fechaVencimiento ? new Date(p.fechaVencimiento) : new Date();
+    const diffMs = venc.getTime() - now.getTime();
+    const diasRestantes = Math.max(0, Math.ceil(diffMs / (1000 * 60 * 60 * 24)));
+    return {
+      usuarioId: p.usuario?.id,
+      id: p.id,
+      usuarioNombre: p.usuario.nombre,
+      usuarioApellido: p.usuario.apellido,
+      monto: p.monto,
+      fechaVencimiento: venc.toISOString(),
+      diasRestantes,
+    };
+  });
+}
+
+function mapUsersForTable(
+  usersDataRaw: Awaited<ReturnType<typeof fetchUsersForTable>>
+): UserRow[] {
+  return usersDataRaw.map((user) => ({
+    id: user.id,
+    nombre: user.nombre,
+    apellido: user.apellido,
+    documento: user.documento,
+    telefono: user.telefono,
+    email: user.email,
+    estado: user.estado,
+    fechaCreacion: user.fechaCreacion.toISOString(),
+    pagos: user.pagos.map((p) => ({
+      id: p.id,
+      mes: MESES_CORTOS[p.mes - 1],
+      monto: p.monto,
+      estado: p.estado,
+      metodo: p.metodo,
+    })),
+  }));
+}
+
 // ============================
 // Main query function
 // ============================
@@ -163,457 +513,74 @@ export async function getDashboardData(
   const mesActual = now.getMonth() + 1;
   const añoActual = now.getFullYear();
 
-  // Get admin name
   const admin = await prisma.administrador.findUnique({
     where: { id: administradorId },
     select: { nombre: true },
   });
 
-  // ---- Parallel queries ----
-  const [
-    totalUsuarios,
-    usuariosActivos,
-    usuariosSinTelefono,
-    pagosPagadosMes,
-    pagosPendientesMes,
-    pagosVencidosMes, // CORREGIDO: Ahora también filtramos por mes/año
-    pagosRecientes,
-    notificaciones,
-    proximosVencimientos,
-    pagosPorMetodo,
-    pagosUltimos6Meses,
-    usersDataRaw,
-    // NUEVOS: Queries para detalles de modal
-    detallesPagados,
-    detallesPendientes,
-    detallesVencidos,
-  ] = await Promise.all([
-    // 1. Total usuarios
-    prisma.usuario.count({ where: { administradorId } }),
+  // ---- Parallel queries (batched for clarity) ----
+  const [kpiCounts, pagosPagados, detallesPendientes, detallesVencidos] =
+    await Promise.all([
+      fetchKpiCounts(administradorId, mesActual, añoActual),
+      fetchPagosPagadosDetalles(administradorId, mesActual, añoActual),
+      fetchPagosPendientesDetalles(administradorId, mesActual, añoActual),
+      fetchPagosVencidosDetalles(administradorId, mesActual, añoActual),
+    ]);
 
-    // 2. Usuarios activos
-    prisma.usuario.count({ where: { administradorId, estado: "ACTIVO" } }),
-
-    prisma.usuario.count({
-      where: {
-        administradorId,
-        OR: [{ telefono: null }, { telefono: "" }],
-      },
-    }),
-
-    // 3. Monto recaudado (mes actual)
-    prisma.pago.findMany({
-      where: {
-        usuario: { administradorId },
-        mes: mesActual,
-        año: añoActual,
-        estado: "PAGADO",
-      },
-      select: { monto: true },
-    }),
-
-    // 4. Conteo pendientes (mes actual)
-    prisma.pago.count({
-      where: {
-        usuario: { administradorId },
-        mes: mesActual,
-        año: añoActual,
-        estado: "PENDIENTE",
-      },
-    }),
-
-    // 5. Conteo vencidos (CORREGIDO: filtrado por mes actual)
-    prisma.pago.count({
-      where: {
-        usuario: { administradorId },
-        estado: "VENCIDO",
-        mes: mesActual,
-        año: añoActual,
-      },
-    }),
-
-    // 6. Pagos recientes (general)
-    prisma.pago.findMany({
-      where: { usuario: { administradorId } },
-      include: {
-        usuario: {
-          select: {
-            id: true,
-            nombre: true,
-            apellido: true,
-            telefono: true,
-            documento: true,
-          },
-        },
-      },
-      orderBy: { fecha: "desc" },
-      take: 7,
-    }),
-
-    // 7. Notificaciones
-    prisma.notificacion.findMany({
-      where: { administradorId },
-      orderBy: [{ leida: "asc" }, { fechaCreacion: "desc" }],
-      take: 6,
-    }),
-
-    // 8. Proximos vencimientos (pendientes futuros)
-    prisma.pago.findMany({
-      where: {
-        usuario: { administradorId },
-        estado: "PENDIENTE",
-        fechaVencimiento: { gte: now },
-      },
-      include: {
-        usuario: {
-          select: {
-            id: true,
-            nombre: true,
-            apellido: true,
-            documento: true,
-            telefono: true,
-          },
-        },
-      },
-      orderBy: { fechaVencimiento: "asc" },
-      take: 5,
-    }),
-
-    // 9. Agrupacion por metodo
-    prisma.pago.groupBy({
-      by: ["metodo"],
-      where: {
-        usuario: { administradorId },
-        mes: mesActual,
-        año: añoActual,
-        estado: "PAGADO",
-      },
-      _count: true,
-    }),
-
-    // 10. Datos para grafico (ultimos 6 meses)
-    prisma.pago.findMany({
-      where: {
-        usuario: { administradorId },
-        fecha: { gte: new Date(añoActual, mesActual - 7, 1) },
-      },
-      select: { monto: true, mes: true, año: true, estado: true },
-    }),
-
-    // 11. Usuarios para tabla
-    prisma.usuario.findMany({
-      where: { administradorId },
-      select: {
-        id: true,
-        nombre: true,
-        apellido: true,
-        documento: true,
-        telefono: true,
-        email: true,
-        estado: true,
-        fechaCreacion: true,
-
-        pagos: {
-          select: {
-            id: true,
-            mes: true,
-            año: true,
-            estado: true,
-            monto: true,
-            metodo: true,
-          },
-          orderBy: [{ año: "desc" }, { mes: "desc" }],
-          take: 3, // últimos 3 meses
-        },
-      },
-      orderBy: { fechaCreacion: "desc" },
-    }),
-
-    // --- NUEVOS: Detalles para modales ---
-
-    // 12. Detalles Pagados (Mes Actual)
-    prisma.pago.findMany({
-      where: {
-        usuario: { administradorId },
-        mes: mesActual,
-        año: añoActual,
-        estado: "PAGADO",
-      },
-      select: {
-        id: true,
-        monto: true,
-        fecha: true,
-        usuario: {
-          select: {
-            nombre: true,
-            apellido: true,
-            telefono: true,
-            documento: true,
-          },
-        },
-      },
-      orderBy: { fecha: "desc" },
-    }),
-
-    // 13. Detalles Pendientes (Mes Actual)
-    prisma.pago.findMany({
-      where: {
-        usuario: { administradorId },
-        mes: mesActual,
-        año: añoActual,
-        estado: "PENDIENTE",
-      },
-      select: {
-        id: true,
-        monto: true,
-        fechaVencimiento: true,
-        usuario: {
-          select: {
-            nombre: true,
-            apellido: true,
-            documento: true,
-            telefono: true,
-          },
-        },
-      },
-      orderBy: { fechaVencimiento: "asc" },
-    }),
-
-    // 14. Detalles Vencidos (Mes Actual)
-    prisma.pago.findMany({
-      where: {
-        usuario: { administradorId },
-        mes: mesActual,
-        año: añoActual,
-        estado: "VENCIDO",
-      },
-      select: {
-        id: true,
-        monto: true,
-        fechaVencimiento: true,
-        usuario: {
-          select: {
-            nombre: true,
-            apellido: true,
-            documento: true,
-            telefono: true,
-          },
-        },
-      },
-      orderBy: { fechaVencimiento: "asc" },
-    }),
-  ]);
-
-  // NUEVA QUERY: Obtener lista de usuarios sin teléfono
-  const usuariosSinTelefonoData = await prisma.usuario.findMany({
-    where: {
-      administradorId,
-      OR: [{ telefono: null }, { telefono: "" }],
-    },
-    select: {
-      id: true,
-      nombre: true,
-      apellido: true,
-      documento: true,
-    },
-  });
+  const [pagosRecientes, notificaciones, proximosVencimientos, pagosPorMetodo, pagosUltimos6Meses, usersDataRaw, usuariosSinTelefonoData] =
+    await Promise.all([
+      fetchRecentPayments(administradorId),
+      fetchNotifications(administradorId),
+      fetchUpcomingDeadlines(administradorId, now),
+      fetchPaymentMethodsByMonth(administradorId, mesActual, añoActual),
+      fetchPaymentsLast6Months(administradorId, mesActual, añoActual),
+      fetchUsersForTable(administradorId),
+      fetchUsuariosSinTelefono(administradorId),
+    ]);
 
   // ---- Compute KPIs ----
-  const totalRecaudado = pagosPagadosMes.reduce((sum, p) => sum + p.monto, 0);
+  const totalRecaudado = pagosPagados.reduce((sum, p) => sum + p.monto, 0);
 
   const kpis: KpiData = {
-    totalUsuarios,
-    usuariosActivos,
-    usuariosSinTelefono,
+    totalUsuarios: kpiCounts.totalUsuarios,
+    usuariosActivos: kpiCounts.usuariosActivos,
+    usuariosSinTelefono: kpiCounts.usuariosSinTelefono,
     totalRecaudado,
-    pagosPendientes: pagosPendientesMes,
-    pagosVencidos: pagosVencidosMes, // Ahora correctamente filtrado
+    pagosPendientes: kpiCounts.pagosPendientesMes,
+    pagosVencidos: kpiCounts.pagosVencidosMes,
   };
 
-  // ---- Build monthly chart data (last 6 months) ----
-  const monthlyMap = new Map<
-    string,
-    { pagados: number; pendientes: number; vencidos: number }
-  >();
-  for (let i = 5; i >= 0; i--) {
-    let m = mesActual - i;
-    let y = añoActual;
-    if (m <= 0) {
-      m += 12;
-      y -= 1;
-    }
-    monthlyMap.set(`${y}-${m}`, { pagados: 0, pendientes: 0, vencidos: 0 });
-  }
-
-  for (const pago of pagosUltimos6Meses) {
-    const key = `${pago.año}-${pago.mes}`;
-    const entry = monthlyMap.get(key);
-    if (entry) {
-      if (pago.estado === "PAGADO") entry.pagados += pago.monto;
-      else if (pago.estado === "PENDIENTE") entry.pendientes += pago.monto;
-      else if (pago.estado === "VENCIDO") entry.vencidos += pago.monto;
-    }
-  }
-
-  const monthlyChart: MonthlyChartData[] = [];
-  for (const [key, data] of monthlyMap) {
-    const [, mesStr] = key.split("-");
-    const mesIndex = parseInt(mesStr, 10) - 1;
-    monthlyChart.push({ mes: MESES_CORTOS[mesIndex], ...data });
-  }
-
-  // ---- Payment methods ----
-  const paymentMethods: PaymentMethodData[] = pagosPorMetodo.map((entry) => ({
-    name: METHOD_LABELS[entry.metodo] || entry.metodo,
-    value: entry._count,
-    color: METHOD_COLORS[entry.metodo] || "#6b7280",
-  }));
-
-  // ---- Recent payments ----
-  const recentPaymentsData: RecentPaymentRow[] = pagosRecientes.map((p) => ({
-    id: p.id,
-    usuarioId: p.usuario?.id,
-    usuarioNombre: p.usuario.nombre,
-    usuarioApellido: p.usuario.apellido,
-    monto: p.monto,
-    estado: p.estado,
-    metodo: p.metodo,
-    periodo: p.periodo,
-    fecha: p.fecha.toISOString(),
-  }));
-
-  // ---- Notifications ----
-  const notificationsData: NotificationRow[] = notificaciones.map((n) => ({
-    id: n.id,
-    tipo: n.tipo,
-    titulo: n.titulo,
-    mensaje: n.mensaje,
-    leida: n.leida,
-    fechaCreacion: n.fechaCreacion.toISOString(),
-  }));
-
-  // ---- Upcoming deadlines ----
-  const upcomingDeadlinesData: UpcomingDeadlineRow[] = proximosVencimientos.map(
-    (p) => {
-      const venc = p.fechaVencimiento
-        ? new Date(p.fechaVencimiento)
-        : new Date();
-      const diffMs = venc.getTime() - now.getTime();
-      const diasRestantes = Math.max(
-        0,
-        Math.ceil(diffMs / (1000 * 60 * 60 * 24)),
-      );
-      return {
-        usuarioId: p.usuario?.id,
-        id: p.id,
-        usuarioNombre: p.usuario.nombre,
-        usuarioApellido: p.usuario.apellido,
-        monto: p.monto,
-        fechaVencimiento: venc.toISOString(),
-        diasRestantes,
-      };
-    },
-  );
-
   // ---- Users overview ----
-  const usuariosInactivos = totalUsuarios - usuariosActivos;
-  const pagaronEsteMes = pagosPagadosMes.length;
+  const pagaronEsteMes = pagosPagados.length;
   const sinGenerar = Math.max(
     0,
-    usuariosActivos - pagaronEsteMes - pagosPendientesMes,
+    kpiCounts.usuariosActivos - pagaronEsteMes - kpiCounts.pagosPendientesMes,
   );
 
   const usersOverview: UsersOverviewData = {
-    activos: usuariosActivos,
-    inactivos: usuariosInactivos,
-    total: totalUsuarios,
+    activos: kpiCounts.usuariosActivos,
+    inactivos: kpiCounts.totalUsuarios - kpiCounts.usuariosActivos,
+    total: kpiCounts.totalUsuarios,
     pagaronEsteMes,
-    pendientesEsteMes: pagosPendientesMes,
-    vencidosEsteMes: pagosVencidosMes,
+    pendientesEsteMes: kpiCounts.pagosPendientesMes,
+    vencidosEsteMes: kpiCounts.pagosVencidosMes,
     sinGenerar,
-    totalActivosParaPago: usuariosActivos,
+    totalActivosParaPago: kpiCounts.usuariosActivos,
   };
-
-  // ---- Users for table ----
-  const usersData: UserRow[] = usersDataRaw.map((user) => ({
-    id: user.id,
-    nombre: user.nombre,
-    apellido: user.apellido,
-    documento: user.documento,
-    telefono: user.telefono,
-    email: user.email,
-    estado: user.estado,
-    fechaCreacion: user.fechaCreacion.toISOString(),
-
-    pagos: user.pagos.map((p) => ({
-      id: p.id,
-      mes: MESES_CORTOS[p.mes - 1],
-      monto: p.monto,
-      estado: p.estado,
-      metodo: p.metodo,
-    })),
-  }));
-
-  // ---- NUEVOS: Map details for modals ----
-  const pagosPagadosDetalles: PaymentDetailRow[] = detallesPagados.map((p) => ({
-    id: p.id,
-    usuarioNombre: p.usuario.nombre,
-    usuarioApellido: p.usuario.apellido,
-    monto: p.monto,
-    fechaVencimiento: null,
-    fechaPago: p.fecha ? p.fecha.toISOString() : null,
-    estado: "PAGADO",
-    telefono: p.usuario.telefono,
-    documento: p.usuario.documento,
-  }));
-
-  const pagosPendientesDetalles: PaymentDetailRow[] = detallesPendientes.map(
-    (p) => ({
-      id: p.id,
-      usuarioNombre: p.usuario.nombre,
-      usuarioApellido: p.usuario.apellido,
-      monto: p.monto,
-      fechaVencimiento: p.fechaVencimiento
-        ? p.fechaVencimiento.toISOString()
-        : null,
-      fechaPago: null,
-      estado: "PENDIENTE",
-      telefono: p.usuario.telefono,
-      documento: p.usuario.documento,
-    }),
-  );
-
-  const pagosVencidosDetalles: PaymentDetailRow[] = detallesVencidos.map(
-    (p) => ({
-      id: p.id,
-      usuarioNombre: p.usuario.nombre,
-      usuarioApellido: p.usuario.apellido,
-      monto: p.monto,
-      fechaVencimiento: p.fechaVencimiento
-        ? p.fechaVencimiento.toISOString()
-        : null,
-      fechaPago: null,
-      estado: "VENCIDO",
-      telefono: p.usuario.telefono,
-      documento: p.usuario.documento,
-    }),
-  );
 
   return {
     adminNombre: admin?.nombre ?? "Profesor",
     kpis,
-    monthlyChart,
-    paymentMethods,
-    recentPayments: recentPaymentsData,
-    notifications: notificationsData,
-    upcomingDeadlines: upcomingDeadlinesData,
+    monthlyChart: mapMonthlyChart(pagosUltimos6Meses, mesActual, añoActual),
+    paymentMethods: mapPaymentMethods(pagosPorMetodo),
+    recentPayments: mapRecentPayments(pagosRecientes),
+    notifications: mapNotifications(notificaciones),
+    upcomingDeadlines: mapUpcomingDeadlines(proximosVencimientos, now),
     usersOverview,
-    users: usersData,
-    // Retornar nuevos datos
-    pagosPagadosDetalles,
-    pagosPendientesDetalles,
-    pagosVencidosDetalles,
-    // NUEVO: Preparar datos para retornar
+    users: mapUsersForTable(usersDataRaw),
+    pagosPagadosDetalles: mapPagosPagadosDetalles(pagosPagados),
+    pagosPendientesDetalles: mapPagosPendientesDetalles(detallesPendientes),
+    pagosVencidosDetalles: mapPagosVencidosDetalles(detallesVencidos),
     usuariosSinTelefonoList: usuariosSinTelefonoData,
   };
 }

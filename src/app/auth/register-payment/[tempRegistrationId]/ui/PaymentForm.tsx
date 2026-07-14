@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
 import { useState, useTransition } from "react";
 import { useRouter } from "next/navigation";
-import { handleSuscriber } from "@/01-actions/payment/suscripcion-payment";
+import { handleSuscriber } from "@/actions/payment/suscripcion-payment";
 
 interface PaymentFormProps {
   transactionAmount: number;
@@ -53,6 +53,10 @@ export function PaymentForm({
       // Guardar tempRegistrationId en sessionStorage antes de redirigir
       sessionStorage.setItem("tempRegistrationId", tempRegistration.id);
 
+      // Nota: empresaId es el ID del TempRegistration, no de la Empresa.
+      // La empresa aún no existe — se creará después del pago vía
+      // createCompanyAndAdmin(). handleSuscriber usa "temp:{id}" como
+      // external_reference para que el webhook CASE 1 lo procese.
       const suscriberResponse = await handleSuscriber({
         empresaId: tempRegistration.id,
         adminEmail: tempRegistration.email,

@@ -1,9 +1,9 @@
 // Archivo: app/admin/notificaciones/[id]/page.tsx
-import { obtenerNotificacionPorId } from "@/01-actions/admin/notificaciones/notificaciones";
+import { obtenerNotificacionPorId } from "@/actions/admin/notificaciones/notificaciones";
 import {
   marcarNotificacionComoLeida,
   eliminarNotificacion,
-} from "@/01-actions/admin/notificaciones/notificaciones";
+} from "@/actions/admin/notificaciones/notificaciones";
 import { revalidatePath } from "next/cache";
 import { notFound } from "next/navigation";
 import { FaTrash, FaCheckCircle, FaExclamationCircle } from "react-icons/fa";

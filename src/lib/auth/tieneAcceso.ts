@@ -21,6 +21,7 @@ export function tieneAccesoSuperAdmin(): ResultadoAcceso {
 export function tieneAccesoEmpresa(
   suscripcion: {
     estadoSuscripcion: string;
+    estadoPagoMercadoPago?: string | null;
     fechaFinPeriodoActual: Date | string | null;
     manualOverrideEstado: string | null;
     manualOverrideHasta: Date | string | null;
@@ -64,6 +65,15 @@ export function tieneAccesoEmpresa(
       return { tieneAcceso: true, motivo: "CANCELADA_CON_ACCESO" };
     }
     return { tieneAcceso: false, motivo: "VENCIDA" };
+  }
+
+  // Fallback: si MP procesó un pago autorizado pero el webhook aún no actualizó
+  // el estado/fecha de la suscripción, evitar bloquear al usuario.
+  if (
+    suscripcion.estadoPagoMercadoPago === "AUTHORIZED" ||
+    suscripcion.estadoPagoMercadoPago === "PAID"
+  ) {
+    return { tieneAcceso: true, motivo: "ACTIVA" };
   }
 
   return { tieneAcceso: false, motivo: "VENCIDA" };

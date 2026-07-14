@@ -11,6 +11,7 @@ datasource db {
 model Empresa {
   id                 String          @id @default(uuid())
   nombre             String          @unique
+  contactEmail       String?
   fechaCreacion      DateTime        @default(now())
   fechaActualizacion DateTime        @updatedAt
   planTipo           TipoPlanEmpresa @default(BASICO)
@@ -54,37 +55,39 @@ model SuscripcionEmpresa {
 }
 
 model Administrador {
-  id                               String                 @id @default(uuid())
+  id                               String                          @id @default(uuid())
   nombre                           String
-  documento                        String                 @unique
-  email                            String                 @unique
+  documento                        String                          @unique
+  email                            String                          @unique
   password                         String
   telefono                         String
-  rol                              Rol                    @default(PROFESOR)
-  estaActivo                       Boolean                @default(true)
-  fechaCreacion                    DateTime               @default(now())
-  fechaActualizacion               DateTime               @updatedAt
+  rol                              Rol                             @default(PROFESOR)
+  estaActivo                       Boolean                         @default(true)
+  fechaCreacion                    DateTime                        @default(now())
+  fechaActualizacion               DateTime                        @updatedAt
   empresaId                        String
   claveMercadoPago                 String?
   tokenMercadoPagoExpiresAt        DateTime?
   mercadoPagoRefreshToken          String?
   configuracionTarifaId            String?
-  modeloDeCobro                    ModeloDeCobro          @default(COMPROBANTE)
-  recibirNotificacionesPago        Boolean                @default(true)
-  recibirNotificacionesComprobante Boolean                @default(true)
-  emailNotificaciones              Boolean                @default(true)
-  permitirModificarTarifa          Boolean                @default(true)
-  permitirModificarCobro           Boolean                @default(true)
+  modeloDeCobro                    ModeloDeCobro                   @default(COMPROBANTE)
+  recibirNotificacionesPago        Boolean                         @default(true)
+  recibirNotificacionesComprobante Boolean                         @default(true)
+  emailNotificaciones              Boolean                         @default(true)
+  permitirModificarTarifa          Boolean                         @default(true)
+  permitirModificarCobro           Boolean                         @default(true)
   resetPasswordTokenHash           String?
   resetPasswordExpires             DateTime?
-  configuracionTarifa              ConfiguracionTarifa?   @relation(fields: [configuracionTarifaId], references: [id])
-  empresa                          Empresa                @relation(fields: [empresaId], references: [id])
+  configuracionTarifa              ConfiguracionTarifa?            @relation(fields: [configuracionTarifaId], references: [id])
+  empresa                          Empresa                         @relation(fields: [empresaId], references: [id])
   logs                             AuditLog[]
-  notificacionesRecibidas          Notificacion[]         @relation("NotificacionDestinatario")
-  notificacionesEnviadas           Notificacion[]         @relation("NotificacionRemitente")
+  notificacionesRecibidas          Notificacion[]                  @relation("NotificacionDestinatario")
+  notificacionesEnviadas           Notificacion[]                  @relation("NotificacionRemitente")
   usuarios                         Usuario[]
   passwordResetTokens              PasswordResetToken[]
   passwordResetSessions            PasswordResetSession[]
+  whatsappTemplateUpdates          ConfiguracionWhatsApp[]         @relation("ConfiguracionWhatsAppUpdatedBy")
+  whatsappNotificationsManual      LogNotificacionWhatsAppManual[]
 
   @@index([empresaId])
   @@index([configuracionTarifaId])
@@ -150,28 +153,29 @@ model AuditLog {
 }
 
 model Usuario {
-  id                   String                       @id @default(uuid())
+  id                   String                          @id @default(uuid())
   nombre               String
   apellido             String
   documento            String
   telefono             String?
   email                String?
   edad                 Int?
-  estado               Estado                       @default(ACTIVO)
+  estado               Estado                          @default(ACTIVO)
   administradorId      String
-  estaActivo           Boolean                      @default(true)
-  fechaCreacion        DateTime                     @default(now())
+  estaActivo           Boolean                         @default(true)
+  fechaCreacion        DateTime                        @default(now())
   fechaInicioMembresia DateTime?
   rangoTarifaId        String?
   dinamicaTarifaId     String?
   nombreTarifaAsignada String?
-  notificaciones       Notificacion[]               @relation("NotificacionUsuario")
+  notificaciones       Notificacion[]                  @relation("NotificacionUsuario")
   pushSubscriptions    PushSubscription[]
   pagos                Pago[]
-  administrador        Administrador                @relation(fields: [administradorId], references: [id])
-  dinamicaTarifa       ConfiguracionDinamicaTarifa? @relation(fields: [dinamicaTarifaId], references: [id])
-  rangoTarifa          RangoTarifa?                 @relation(fields: [rangoTarifaId], references: [id])
+  administrador        Administrador                   @relation(fields: [administradorId], references: [id])
+  dinamicaTarifa       ConfiguracionDinamicaTarifa?    @relation(fields: [dinamicaTarifaId], references: [id])
+  rangoTarifa          RangoTarifa?                    @relation(fields: [rangoTarifaId], references: [id])
   fcmTokens            FcmToken[]
+  whatsappLogsManual   LogNotificacionWhatsAppManual[]
 
   @@index([documento])
   @@index([administradorId])
@@ -180,22 +184,23 @@ model Usuario {
 }
 
 model Pago {
-  id               String         @id @default(uuid())
-  monto            Float
-  fecha            DateTime       @default(now())
-  mes              Int
-  año             Int
-  comprobante      String?
-  usuarioId        String
-  estaVencido      Boolean        @default(false)
-  estado           EstadoPago     @default(PENDIENTE)
-  metodo           MetodoPago     @default(EFECTIVO)
-  periodo          String
-  fechaVencimiento DateTime?
-  motivo           String?
-  usuario          Usuario        @relation(fields: [usuarioId], references: [id])
-  notificacions    Notificacion[]
-  updatedAt        DateTime       @default(now()) @updatedAt
+  id                 String                          @id @default(uuid())
+  monto              Float
+  fecha              DateTime                        @default(now())
+  mes                Int
+  año               Int
+  comprobante        String?
+  usuarioId          String
+  estaVencido        Boolean                         @default(false)
+  estado             EstadoPago                      @default(PENDIENTE)
+  metodo             MetodoPago                      @default(EFECTIVO)
+  periodo            String
+  fechaVencimiento   DateTime?
+  motivo             String?
+  usuario            Usuario                         @relation(fields: [usuarioId], references: [id])
+  notificacions      Notificacion[]
+  whatsappLogsManual LogNotificacionWhatsAppManual[]
+  updatedAt          DateTime                        @default(now()) @updatedAt
 
   notificado Boolean @default(false)
 
@@ -203,6 +208,50 @@ model Pago {
   @@index([fecha])
   @@index([periodo])
   @@index([fechaVencimiento])
+  @@index([estado, fechaVencimiento])
+  @@index([estado, usuarioId, fechaVencimiento])
+}
+
+model ConfiguracionWhatsApp {
+  id              String         @id @default("global")
+  mensajeTemplate String         @db.Text
+  createdAt       DateTime       @default(now())
+  updatedAt       DateTime       @updatedAt
+  updatedById     String?
+  updatedBy       Administrador? @relation("ConfiguracionWhatsAppUpdatedBy", fields: [updatedById], references: [id])
+}
+
+model LogNotificacionWhatsAppManual {
+  id                  String   @id @default(cuid())
+  usuarioId           String
+  pagoId              String
+  administradorId     String
+  status              EstadoNotificacionWhatsAppManual @default(PENDING)
+  telefonoNormalizado String
+  mensajeRenderizado  String   @db.Text
+  waUrl               String   @db.Text
+  openedAt            DateTime?
+  sentAt              DateTime?
+  updatedAt           DateTime @updatedAt
+  createdAt           DateTime @default(now())
+
+  usuario       Usuario       @relation(fields: [usuarioId], references: [id])
+  pago          Pago          @relation(fields: [pagoId], references: [id])
+  administrador Administrador @relation(fields: [administradorId], references: [id])
+
+  @@index([usuarioId])
+  @@index([pagoId])
+  @@index([administradorId])
+  @@index([status])
+  @@index([openedAt])
+  @@index([sentAt])
+  @@index([usuarioId, pagoId, sentAt])
+}
+
+enum EstadoNotificacionWhatsAppManual {
+  PENDING
+  OPENED
+  SENT
 }
 
 model ConfiguracionTarifa {

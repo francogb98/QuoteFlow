@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
-import { createCompanyAndAdmin } from "@/01-actions/auth/registration/03-createCompanyAndAdmin";
+import { createCompanyAndAdmin } from "@/actions/auth/registration/03-createCompanyAndAdmin";
 import { MercadoPagoConfig, PreApproval } from "mercadopago";
 
 const config = new MercadoPagoConfig({
@@ -82,8 +82,9 @@ export async function GET(
           );
 
           // Buscar el preapproval que corresponde a este tempRegistration
+          // El external_reference tiene formato "temp:{tempRegistration.id}"
           const matchingPreapproval = searchResponse?.results?.find(
-            (p: any) => p.external_reference === tempRegistration.id,
+            (p: any) => p.external_reference === `temp:${tempRegistration.id}`,
           );
 
           if (matchingPreapproval) {

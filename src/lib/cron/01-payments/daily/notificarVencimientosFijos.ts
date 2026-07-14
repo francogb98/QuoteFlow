@@ -1,6 +1,6 @@
-"use server";
+﻿"use server";
 
-import { sendReminderEmail } from "@/01-actions/admin/emails/sendReminderEmail";
+import { sendReminderEmail } from "@/actions/admin/emails/sendReminderEmail";
 import prisma from "@/lib/prisma";
 import { TipoNotificacion } from "@prisma/client"; // Importamos el Enum
 
@@ -9,7 +9,7 @@ export async function notificarVencimientosFijos(fechaActual: Date) {
 
   const adminsFijos = await prisma.administrador.findMany({
     where: {
-      // Exclude SUPER_ADMIN — not subject to billing or payment notifications
+      // Exclude SUPER_ADMIN ’” not subject to billing or payment notifications
       rol: { not: "SUPER_ADMIN" },
       configuracionTarifa: {
         tipoConfiguracion: "FIJA_MENSUAL",
@@ -83,7 +83,7 @@ export async function notificarVencimientosFijos(fechaActual: Date) {
         }
       }
 
-      // --- ENVÍO Y REGISTRO ---
+      // --- ENVÑO Y REGISTRO ---
       if (debeNotificar && tipoNotificacion) {
         // 1. Enviar Email
         await sendReminderEmail({

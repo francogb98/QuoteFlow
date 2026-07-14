@@ -1,10 +1,34 @@
 "use server";
 import prisma from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
+import type { TipoConfiguracionTarifa } from "@prisma/client";
+
+interface RangoData {
+  id?: string;
+  nombre: string;
+  diaInicio: number;
+  diaFin: number;
+  monto: number;
+}
+
+interface DinamicaData {
+  id?: string;
+  nombre: string;
+  montoBase: number;
+  diasGracia: number;
+  montoRecargo: number;
+}
+
+interface ActualizarTarifaData {
+  id: string;
+  tipoConfiguracion: TipoConfiguracionTarifa;
+  rangos?: RangoData[];
+  dinamicas?: DinamicaData[];
+}
 
 // Función para actualizar, crear o eliminar rangos
-async function upsertRangos(configuracionTarifaId: string, rangos: any[]) {
-  const idsEnviados = rangos.filter((r) => r.id).map((r) => r.id);
+async function upsertRangos(configuracionTarifaId: string, rangos: RangoData[]) {
+  const idsEnviados = rangos.filter((r): r is RangoData & { id: string } => !!r.id).map((r) => r.id);
 
   // Elimina los rangos que no están en la lista enviada
   await prisma.rangoTarifa.deleteMany({
@@ -43,9 +67,9 @@ async function upsertRangos(configuracionTarifaId: string, rangos: any[]) {
 // Función para actualizar, crear o eliminar dinámicas
 async function upsertDinamicas(
   configuracionTarifaId: string,
-  dinamicas: any[]
+  dinamicas: DinamicaData[]
 ) {
-  const idsEnviados = dinamicas.filter((d) => d.id).map((d) => d.id);
+  const idsEnviados = dinamicas.filter((d): d is DinamicaData & { id: string } => !!d.id).map((d) => d.id);
 
   // Elimina las dinámicas que no están en la lista enviada
   await prisma.configuracionDinamicaTarifa.deleteMany({
@@ -82,7 +106,7 @@ async function upsertDinamicas(
 }
 
 // Controlador principal para actualizar la configuración de tarifa
-export async function actualizarConfiguracionTarifa(data: any) {
+export async function actualizarConfiguracionTarifa(data: ActualizarTarifaData) {
   try {
     const { id, tipoConfiguracion, rangos, dinamicas } = data;
 
@@ -118,13 +142,15 @@ export async function actualizarConfiguracionTarifa(data: any) {
           { dinamicaTarifa: { configuracionTarifaId: id } },
         ],
       },
-      include: {
-        rangoTarifa: true,
-        dinamicaTarifa: true,
+      select: {
+        id: true,
+        rangoTarifa: { select: { monto: true } },
+        dinamicaTarifa: { select: { montoBase: true } },
       },
     });
 
-    // 5. Procesar usuarios → calcular monto correcto → actualizar pagos pendientes
+    // 5. Calcular montos y actualizar en batch (una sola query en lugar de N)
+    const updates: Promise<unknown>[] = [];
     for (const usuario of usuarios) {
       let nuevoMonto = 0;
 
@@ -135,19 +161,17 @@ export async function actualizarConfiguracionTarifa(data: any) {
 
       if (tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO") {
         if (!usuario.dinamicaTarifa) continue;
-        const d = usuario.dinamicaTarifa;
-        nuevoMonto = d.montoBase;
+        nuevoMonto = usuario.dinamicaTarifa.montoBase;
       }
 
-      // 6. Actualizar TODOS los pagos pendientes del usuario
-      await prisma.pago.updateMany({
-        where: {
-          usuarioId: usuario.id,
-          estado: "PENDIENTE",
-        },
-        data: { monto: nuevoMonto },
-      });
+      updates.push(
+        prisma.pago.updateMany({
+          where: { usuarioId: usuario.id, estado: "PENDIENTE" },
+          data: { monto: nuevoMonto },
+        })
+      );
     }
+    await Promise.all(updates);
 
     revalidatePath(`/admin/settings`);
     revalidatePath(`/admin/users`);

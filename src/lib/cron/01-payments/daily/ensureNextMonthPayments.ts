@@ -82,7 +82,7 @@ export async function ensureNextMonthPaymentsForPaidUsers(
       const fechaProximoPago = new Date(proximoAño, proximoMes - 1, 1);
       const nuevo = await generarProximoPago(
         usuario,
-        configuracion,
+        configuracion as import("../lib/generarProximoPago").GenerarProximoPagoConfiguracion | null,
         ultimoPago,
         fechaProximoPago,
       );

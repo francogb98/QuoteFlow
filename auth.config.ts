@@ -4,6 +4,28 @@ import { z } from "zod";
 import prisma from "@/lib/prisma";
 import bcryptjs from "bcryptjs";
 import { getAdminForAuth } from "@/lib/auth/get-admin";
+import { isSuperAdminRole } from "@/lib/auth/isSuperAdmin";
+import { tieneAccesoEmpresa } from "@/lib/auth/tieneAcceso";
+
+type SessionTokenData = {
+  id: string;
+  name: string;
+  email: string;
+  documento: string;
+  empresaId?: string;
+  rol?: string;
+  suscripcion?: {
+    estadoSuscripcion: string;
+    estadoPagoMercadoPago: string | null;
+    fechaFinPeriodoActual: Date | string | null;
+    manualOverrideEstado: string | null;
+    manualOverrideHasta: Date | string | null;
+    planTipo?: string;
+    frecuenciaPago?: string;
+  } | null;
+};
+
+const IS_DEV = process.env.NODE_ENV === "development";
 
 export const { auth, handlers, signIn, signOut } = NextAuth({
   pages: {
@@ -11,39 +33,27 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
     newUser: "/auth/new-account",
     signOut: "https://cuotafacil.com.ar",
   },
-  events: {
-    createUser: async ({ user }) => {},
-    signIn: async ({ user }) => {
-      // Verificar si necesita configuración inicial
-      if (user?.id) {
-        const admin = await getAdminForAuth(user.id);
-        if (admin) {
-          // Podrías agregar lógica adicional aquí si es necesario
-          console.log("Usuario necesita completar configuración inicial");
-        }
-      }
-    },
-    signOut: async ({}) => {},
-  },
   callbacks: {
     async session({ session, token }) {
-      // Casteamos token.data para evitar errores de TypeScript
-      const tokenData = token.data as any;
+      const tokenData = token.data as SessionTokenData | undefined;
 
       // Asignamos los datos básicos del token primero
       if (tokenData) {
         session.user = {
           ...session.user,
-          ...tokenData,
+          id: tokenData.id,
+          name: tokenData.name,
+          email: tokenData.email,
+          documento: tokenData.documento,
+          empresaId: tokenData.empresaId ?? session.user.empresaId,
         };
       }
 
       // Si tenemos ID de usuario, obtenemos los datos completos del admin
       if (session.user?.id) {
-        const admin = (await getAdminForAuth(session.user.id)) as any;
+        const admin = await getAdminForAuth(session.user.id);
         if (admin) {
           // Verificar si la configuración está completa
-          //@ts-ignore
           const configuracionCompleta = !!admin.configuracionTarifa;
 
           session.user = {
@@ -55,7 +65,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
             email: admin.email,
             claveMercadoPago: admin.claveMercadoPago || null,
             empresa: admin.empresa,
-            empresaId: admin.empresaId || tokenData?.empresaId, // Usar empresaId del token como fallback
+            empresaId: admin.empresaId || tokenData?.empresaId || session.user.empresaId,
             configuracionTarifa: admin.configuracionTarifa,
             // NUEVO: Campos para configuración inicial
             configuracionCompleta,
@@ -73,10 +83,12 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
       if (user) {
         token.data = {
           id: user.id,
-          name: (user as any).nombre,
-          email: (user as any).email,
-          documento: (user as any).documento,
-          empresaId: (user as any).empresaId,
+          name: user.nombre,
+          email: user.email,
+          documento: user.documento,
+          empresaId: user.empresaId,
+          rol: user.rol,
+          suscripcion: (user as any).empresa?.suscripcion ?? null,
         };
       }
       return token;
@@ -112,8 +124,11 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         const user = await prisma.administrador.findUnique({
           where: { documento: String(documento) },
           include: {
-            empresa: true,
-            usuarios: true,
+            empresa: {
+              include: {
+                suscripcion: true,
+              },
+            },
             configuracionTarifa: {
               include: {
                 rangos: true,
@@ -127,7 +142,7 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           return null;
         }
 
-        const passwordMatch = bcryptjs.compareSync(
+        const passwordMatch = await bcryptjs.compare(
           String(password),
           user.password,
         );
@@ -135,6 +150,16 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
         if (!passwordMatch) {
           console.error("Contraseña incorrecta para el usuario:", documento);
           return null;
+        }
+
+        // En desarrollo saltamos también el chequeo de suscripción
+        if (!IS_DEV && !isSuperAdminRole(user.rol)) {
+          const suscripcion = (user as any).empresa?.suscripcion ?? null;
+          const resultado = tieneAccesoEmpresa(suscripcion);
+          if (!resultado.tieneAcceso) {
+            console.error(`Acceso denegado a ${documento}: ${resultado.motivo}`);
+            return null;
+          }
         }
 
         // Regresar el usuario sin la contraseña pero con las relaciones

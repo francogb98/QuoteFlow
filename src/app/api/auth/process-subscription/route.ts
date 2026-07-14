@@ -1,6 +1,6 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import { auth } from "@/auth.config";
-import { successSuscriber } from "@/01-actions/auth/registration/02-successSuscriber";
+import { successSuscriber } from "@/actions/auth/registration/02-successSuscriber";
 
 export async function POST(request: NextRequest) {
   try {

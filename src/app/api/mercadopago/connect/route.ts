@@ -1,8 +1,8 @@
-import { NextRequest, NextResponse } from "next/server";
+﻿import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import { auth } from "@/*";
 
-import api from "@/01-actions/payment/marketPlace.connect";
+import api from "@/actions/payment/marketPlace.connect";
 import { validateMercadoPagoToken } from "@/lib";
 import { encrypt } from "@/lib";
 

@@ -1,11 +1,11 @@
-"use client";
+﻿"use client";
 
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AlertCircle, CheckCircle, Loader2 } from "lucide-react";
-import { validatePromoCode } from "@/01-actions/auth/registration/04-validatePromoCode";
+import { validatePromoCode } from "@/actions/auth/registration/04-validatePromoCode";
 
 interface PromoCodeFieldProps {
   onValidCode: (codigo: string) => void;

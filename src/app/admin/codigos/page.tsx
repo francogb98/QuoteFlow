@@ -1,4 +1,4 @@
-import { CodigosGrid } from "@/01-components/admin/codigos/CodigosGrid";
+import { CodigosGrid } from "@/components/admin/codigos/CodigosGrid";
 
 export default function NamePage() {
   return (

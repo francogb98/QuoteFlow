@@ -1,37 +1,103 @@
 "use client";
 
-export const Header = () => {
+import { useState } from "react";
+import { Search, Menu, Plus } from "lucide-react";
+import Link from "next/link";
+import { Button } from "@/components/ui/button";
+import { UserSearchModal } from "./ui/user-search-modal";
+import { useSidebarStore } from "@/lib/store/useSideBarStore";
+import { useAdminPanelStore } from "@/lib/store/useAdminPanelStore";
+import { NotificationsDropdown } from "./notificaciones-dropdown";
+import { SubscriptionStatusBanner } from "../nuevo/subscription-status-banner";
+import { NewUserDialog } from "../nuevo/new-user-dialog";
+
+export function Header({ user, onNotificationsUpdate }: any) {
+  const [isSearchModalOpen, setIsSearchModalOpen] = useState(false);
+  const [isNewUserOpen, setIsNewUserOpen] = useState(false);
+
+  const openUser = useAdminPanelStore((s) => s.openUser);
+  const toggleSidebar = useSidebarStore((state) => state.toggle);
+
+  const companyName = user?.empresa?.nombre || "Mi Empresa";
+  const notificaciones = user?.notificacionesRecibidas || [];
+  const users = user?.usuarios || [];
+  const suscripcion = user?.empresa?.suscripcion;
+
   return (
-    <header className="bg-white shadow-sm">
-      <div className="max-w-7xl mx-auto px-6 py-4 flex justify-between items-center">
-        <div className="flex items-center space-x-4">
-          <span className="text-sm text-gray-500">Admin Panel</span>
-        </div>
-        <div className="flex items-center space-x-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Buscar..."
-              className="pl-10 pr-4 py-2 border rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-            <span className="absolute left-3 top-2.5 text-gray-400">
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
+    <>
+      <header
+        className="border-b h-14 flex items-center bg-background border-border sticky top-0 z-40"
+        data-tour="header"
+      >
+        <div className="container mx-auto px-2 sm:px-14 py-4">
+          <div className="flex items-center justify-between">
+            {/* BOTÓN HAMBURGUESA */}
+            <button
+              className="md:hidden p-2 rounded-lg hover:bg-muted transition"
+              onClick={toggleSidebar}
+              aria-label="Abrir menú lateral"
+            >
+              <Menu className="w-6 h-6 text-foreground" />
+            </button>
+
+            <div className="flex items-center gap-4">
+              <Link href={`/admin/home`}>
+                <h1 className="text-xl font-semibold capitalize text-primary hover:opacity-80 transition-opacity">
+                  {companyName}
+                </h1>
+              </Link>
+            </div>
+
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setIsSearchModalOpen(true)}
+                className="gap-2"
+                data-tour="search"
               >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth="2"
-                  d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"
-                />
-              </svg>
-            </span>
+                <Search className="w-4 h-4" />
+                <span className="hidden sm:inline">Buscar usuario</span>
+              </Button>
+
+              <NotificationsDropdown
+                notificaciones={notificaciones}
+                onUpdate={onNotificationsUpdate || (() => {})}
+              />
+
+              <Button
+                size="sm"
+                className="h-8 gap-1.5 text-xs"
+                onClick={() => setIsNewUserOpen(true)}
+              >
+                <Plus className="size-3.5" />
+                <span className="hidden sm:inline">Nuevo Usuario</span>
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
-    </header>
+
+        <NewUserDialog
+          open={isNewUserOpen}
+          onOpenChange={setIsNewUserOpen}
+          empresaId={user?.empresa?.id}
+          configuracionTarifa={user?.configuracionTarifa}
+        />
+      </header>
+
+      {user?.rol !== "SUPER_ADMIN" && (
+        <SubscriptionStatusBanner suscripcion={suscripcion} />
+      )}
+
+      <UserSearchModal
+        isOpen={isSearchModalOpen}
+        onClose={() => setIsSearchModalOpen(false)}
+        users={users}
+        onUserSelect={(id) => {
+          setIsSearchModalOpen(false);
+          openUser(id);
+        }}
+      />
+    </>
   );
-};
+}

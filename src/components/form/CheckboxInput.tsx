@@ -1,8 +1,9 @@
-// components/CheckboxInput.tsx
 "use client";
 
 import React from "react";
 import { FieldConfig } from "./Formulario";
+import { Label } from "@/components/ui/label";
+import { Checkbox } from "@/components/ui/checkbox";
 
 interface CheckboxInputProps {
   field: FieldConfig;
@@ -15,26 +16,28 @@ export const CheckboxInput = ({
   register,
   errors,
 }: CheckboxInputProps) => {
-  const checkboxClasses = `h-4 w-4 text-emerald-600 border-gray-300 rounded focus:ring-emerald-500`;
-
   return (
     <div className="flex items-center space-x-2">
-      <input
+      <Checkbox
         id={field.name}
-        type="checkbox"
-        className={checkboxClasses}
-        // Para checkboxes, use register con valueAsBoolean
+        onCheckedChange={(checked) => {
+          const nativeInputValueSetter = Object.getOwnPropertyDescriptor(
+            window.HTMLInputElement.prototype,
+            "checked"
+          )?.set;
+          const input = document.getElementById(field.name) as HTMLInputElement;
+          if (input && nativeInputValueSetter) {
+            nativeInputValueSetter.call(input, checked === true);
+            input.dispatchEvent(new Event("change", { bubbles: true }));
+          }
+        }}
         {...register(field.name, { ...field.validation, valueAsBoolean: true })}
-        readOnly={field.readOnly}
       />
-      <label
-        htmlFor={field.name}
-        className="text-sm font-medium text-gray-700 cursor-pointer"
-      >
+      <Label htmlFor={field.name} className="cursor-pointer">
         {field.label}
-      </label>
+      </Label>
       {errors[field.name] && (
-        <p className="ml-2 text-sm text-red-600">
+        <p className="ml-2 text-sm text-destructive">
           {errors[field.name]?.message?.toString()}
         </p>
       )}
