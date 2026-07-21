@@ -4,15 +4,9 @@ import {
 } from "@/lib/images/cloudinary-utils";
 import prisma from "@/lib/prisma";
 import { type NextRequest, NextResponse } from "next/server";
-import { auth } from "@/auth.config";
 
 export async function POST(request: NextRequest) {
   try {
-    const session = await auth();
-    if (!session?.user?.id) {
-      return NextResponse.json({ error: "No autorizado" }, { status: 401 });
-    }
-
     const body = await request.json();
     const {
       pagoId,
