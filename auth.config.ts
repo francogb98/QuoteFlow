@@ -151,6 +151,15 @@ export const { auth, handlers, signIn, signOut } = NextAuth({
           console.error("Contraseña incorrecta para el usuario:", documento);
           return null;
         }
+        // const passwordMatch = await bcryptjs.compare(
+        //   String(password),
+        //   user.password,
+        // );
+        //
+        // if (!passwordMatch) {
+        //   console.error("Contraseña incorrecta para el usuario:", documento);
+        //   return null;
+        // }
 
         // En desarrollo saltamos también el chequeo de suscripción
         if (!IS_DEV && !isSuperAdminRole(user.rol)) {

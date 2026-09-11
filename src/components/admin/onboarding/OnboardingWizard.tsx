@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   CheckCircle,
   UserPlus,
@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import Link from "next/link";
+import { completeOnboarding } from "@/actions/admin/account/completeOnboarding";
 
 interface OnboardingStep {
   id: string;
@@ -28,8 +29,7 @@ const steps: OnboardingStep[] = [
   {
     id: "tarifa",
     title: "Configura tu tarifa",
-    description:
-      "Define el monto que cobrarás a tus alumnos por mes.",
+    description: "Define el monto que cobrarás a tus alumnos por mes.",
     icon: <CreditCard className="w-5 h-5" />,
     href: "/admin/settings",
     buttonText: "Configurar tarifa",
@@ -37,8 +37,7 @@ const steps: OnboardingStep[] = [
   {
     id: "usuario",
     title: "Agrega tu primer usuario",
-    description:
-      "Registra un alumno para comenzar a gestionar pagos.",
+    description: "Registra un alumno para comenzar a gestionar pagos.",
     icon: <UserPlus className="w-5 h-5" />,
     href: "/admin/users",
     buttonText: "Agregar usuario",
@@ -54,24 +53,40 @@ const steps: OnboardingStep[] = [
   },
 ];
 
-const STORAGE_KEY = "onboarding_completed";
+interface OnboardingWizardProps {
+  user: {
+    onboardingCompletado: boolean;
+  };
+}
 
-export function OnboardingWizard() {
+export function OnboardingWizard({ user }: OnboardingWizardProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [currentStep, setCurrentStep] = useState(0);
   const [completedSteps, setCompletedSteps] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    const completed = localStorage.getItem(STORAGE_KEY);
-    if (!completed) {
+    if (!user.onboardingCompletado) {
       setIsOpen(true);
     }
+  }, [user.onboardingCompletado]);
+
+  const handleClose = useCallback(async () => {
+    setIsOpen(false);
+    await completeOnboarding();
   }, []);
 
-  const handleClose = () => {
-    setIsOpen(false);
-    localStorage.setItem(STORAGE_KEY, "true");
-  };
+  useEffect(() => {
+    if (!isOpen) return;
+
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === "Escape") {
+        handleClose();
+      }
+    };
+
+    document.addEventListener("keydown", handleEscape);
+    return () => document.removeEventListener("keydown", handleEscape);
+  }, [isOpen, handleClose]);
 
   const handleNext = () => {
     if (currentStep < steps.length - 1) {
@@ -94,8 +109,14 @@ export function OnboardingWizard() {
   const allCompleted = completedSteps.size === steps.length;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200">
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 p-4"
+      onClick={handleClose}
+    >
+      <div
+        className="bg-white rounded-2xl shadow-2xl max-w-lg w-full overflow-hidden animate-in fade-in zoom-in-95 duration-200"
+        onClick={(e) => e.stopPropagation()}
+      >
         {/* Header */}
         <div className="relative bg-gradient-to-r from-purple-600 to-emerald-600 p-6 text-white">
           <button

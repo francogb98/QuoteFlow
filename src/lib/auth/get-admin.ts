@@ -27,9 +27,45 @@ export async function getAdminForAuth(id: string): Promise<AdminResult> {
   try {
     const admin = await prisma.administrador.findUnique({
       where: { id },
-      include: {
+      select: {
+        id: true,
+        nombre: true,
+        documento: true,
+        email: true,
+        telefono: true,
+        rol: true,
+        estaActivo: true,
+        fechaCreacion: true,
+        fechaActualizacion: true,
+        empresaId: true,
+        claveMercadoPago: true,
+        tokenMercadoPagoExpiresAt: true,
+        mercadoPagoRefreshToken: true,
+        configuracionTarifaId: true,
+        modeloDeCobro: true,
+        recibirNotificacionesPago: true,
+        recibirNotificacionesComprobante: true,
+        emailNotificaciones: true,
+        permitirModificarTarifa: true,
+        permitirModificarCobro: true,
+        onboardingCompletado: true,
         empresa: {
-          include: {
+          select: {
+            id: true,
+            nombre: true,
+            contactEmail: true,
+            fechaCreacion: true,
+            fechaActualizacion: true,
+            planTipo: true,
+            mercadoPagoPreApprovalId: true,
+            estadoPago: true,
+            frecuenciaPago: true,
+            fechaUltimoPago: true,
+            fechaProximoVencimiento: true,
+            estaActiva: true,
+            esCuentaPrueba: true,
+            codigoPromocionalId: true,
+            fechaFinPrueba: true,
             suscripcion: {
               select: {
                 estadoSuscripcion: true,
@@ -54,7 +90,11 @@ export async function getAdminForAuth(id: string): Promise<AdminResult> {
           },
         },
         configuracionTarifa: {
-          include: {
+          select: {
+            id: true,
+            tipoConfiguracion: true,
+            fechaCreacion: true,
+            estaActiva: true,
             rangos: true,
             dinamicas: true,
           },

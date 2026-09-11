@@ -76,6 +76,7 @@ model Administrador {
   emailNotificaciones              Boolean                         @default(true)
   permitirModificarTarifa          Boolean                         @default(true)
   permitirModificarCobro           Boolean                         @default(true)
+  onboardingCompletado             Boolean                         @default(false)
   resetPasswordTokenHash           String?
   resetPasswordExpires             DateTime?
   configuracionTarifa              ConfiguracionTarifa?            @relation(fields: [configuracionTarifaId], references: [id])

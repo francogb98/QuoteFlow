@@ -35,7 +35,7 @@ export default function AdminClientLayout({ children, user }: Props) {
       <AdminPanelManager user={user} />
 
       {/* Onboarding wizard for new users */}
-      <OnboardingWizard />
+      <OnboardingWizard user={user} />
 
       <Toaster position="top-right" richColors />
     </div>
