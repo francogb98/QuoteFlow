@@ -111,11 +111,8 @@ export async function getAdminForAuth(id: string): Promise<AdminResult> {
       return null;
     }
 
-    // No retornar la contraseña
-    const { password, ...adminSinPassword } = admin;
-
-    cache.set(id, { data: adminSinPassword, expiresAt: now + CACHE_TTL_MS });
-    return adminSinPassword;
+    cache.set(id, { data: admin, expiresAt: now + CACHE_TTL_MS });
+    return admin;
   } catch (error) {
     console.error("Error al obtener administrador:", error);
     return null;
