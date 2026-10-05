@@ -1,7 +1,6 @@
 import { Metadata } from "next";
 import { LoginForm } from "./ui/LoginForm";
-import { LogIn } from "lucide-react"; // Importa el ícono LogIn de lucide-react
-import ForgotPasswordPage from "../forgot-password/page";
+import { LogIn } from "lucide-react";
 import ForgotPasswordButton from "@/components/auth/ForgotPasswordButton";
 
 export const metadata: Metadata = {

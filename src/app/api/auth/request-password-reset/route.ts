@@ -1,48 +1,57 @@
-﻿import { sendPasswordResetEmail } from "@/actions/admin/emails/sendPasswordResetEmail";
-import prisma from "@/lib/prisma";
+﻿import prisma from "@/lib/prisma";
 import crypto from "crypto";
+import { NextResponse } from "next/server";
 
 export async function POST(req: Request) {
-  const { documento } = await req.json();
+  try {
+    const { documento } = await req.json();
 
-  const admin = await prisma.administrador.findUnique({
-    where: { documento },
-  });
+    if (!documento) {
+      return NextResponse.json(
+        { error: "Falta el documento." },
+        { status: 400 }
+      );
+    }
 
-  // Always return the same message to prevent user enumeration
-  if (!admin) {
-    return Response.json({
-      message:
-        "Si existe una cuenta con ese DNI, recibirás un email con instrucciones.",
+    const admin = await prisma.administrador.findUnique({
+      where: { documento },
     });
+
+    if (!admin) {
+      return NextResponse.json(
+        { error: "No se encontró una cuenta con ese DNI." },
+        { status: 404 }
+      );
+    }
+
+    const rawSession = crypto.randomBytes(32).toString("hex");
+    const sessionHash = crypto
+      .createHash("sha256")
+      .update(rawSession)
+      .digest("hex");
+
+    const expiresAt = new Date(Date.now() + 1000 * 60 * 10);
+
+    await prisma.passwordResetSession.deleteMany({
+      where: { adminId: admin.id },
+    });
+
+    await prisma.passwordResetSession.create({
+      data: {
+        sessionHash,
+        adminId: admin.id,
+        expiresAt,
+      },
+    });
+
+    return NextResponse.json({
+      redirect: `/auth/reset-password?session=${rawSession}`,
+    });
+  } catch (error) {
+    console.error("Error en request-password-reset:", error);
+    return NextResponse.json(
+      { error: "Error interno del servidor." },
+      { status: 500 }
+    );
   }
-
-  const rawToken = crypto.randomBytes(32).toString("hex");
-  const tokenHash = crypto.createHash("sha256").update(rawToken).digest("hex");
-
-  // 15-minute expiration
-  const expiresAt = new Date(Date.now() + 1000 * 60 * 15);
-
-  // Delete any existing tokens for this admin before creating a new one
-  await prisma.passwordResetToken.deleteMany({
-    where: { adminId: admin.id },
-  });
-
-  await prisma.passwordResetToken.create({
-    data: {
-      tokenHash,
-      adminId: admin.id,
-      expiresAt,
-    },
-  });
-
-  await sendPasswordResetEmail({
-    to: admin.email,
-    nombre: admin.nombre,
-    rawToken,
-  });
-
-  return Response.json({
-    message: "Se ha enviado un correo con instrucciones.",
-  });
 }

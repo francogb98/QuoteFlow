@@ -12,11 +12,23 @@ export async function getUser(userId: string) {
 
     const administradorId = session.user.id;
 
-    // Obtener el usuario con sus pagos
+    // Obtener el empresaId del administrador actual
+    const admin = await prisma.administrador.findUnique({
+      where: { id: administradorId },
+      select: { empresaId: true },
+    });
+
+    if (!admin?.empresaId) {
+      throw new Error("Administrador sin empresa asignada");
+    }
+
+    // Obtener el usuario - permite acceso a usuarios de cualquier admin de la misma empresa
     const user = await prisma.usuario.findFirst({
       where: {
         id: userId,
-        administradorId,
+        administrador: {
+          empresaId: admin.empresaId,
+        },
       },
       include: {
         pagos: {

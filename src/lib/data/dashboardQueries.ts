@@ -13,6 +13,8 @@ export interface KpiData {
   totalRecaudado: number;
   pagosPendientes: number;
   pagosVencidos: number;
+  totalPendienteMonto: number;
+  totalVencidoMonto: number;
 }
 export interface MonthlyChartData {
   mes: string;
@@ -90,6 +92,17 @@ export interface UserRow {
   email: string | null;
   estado: string;
   fechaCreacion: string;
+  tarifaNombre?: string | null;
+  tarifaMonto?: number | null;
+  tarifaId?: string | null;
+  pagos?: {
+    id: string;
+    mes: number;
+    año: number;
+    monto: number;
+    estado: string;
+    metodo: string;
+  }[];
 }
 
 export interface UsuarioSinTelefono {
@@ -97,6 +110,12 @@ export interface UsuarioSinTelefono {
   nombre: string;
   apellido: string;
   documento?: string | null;
+}
+
+export interface TarifaOption {
+  id: string;
+  nombre: string;
+  monto: number;
 }
 
 export interface DashboardData {
@@ -113,6 +132,9 @@ export interface DashboardData {
   pagosPendientesDetalles: PaymentDetailRow[];
   pagosVencidosDetalles: PaymentDetailRow[];
   usuariosSinTelefonoList: UsuarioSinTelefono[];
+  tarifas: TarifaOption[];
+  mesNombre: string;
+  isFilteredMonth: boolean;
 }
 
 // ============================
@@ -122,6 +144,11 @@ export interface DashboardData {
 const MESES_CORTOS = [
   "Ene", "Feb", "Mar", "Abr", "May", "Jun",
   "Jul", "Ago", "Sep", "Oct", "Nov", "Dic",
+];
+
+const MESES_LARGOS = [
+  "enero", "febrero", "marzo", "abril", "mayo", "junio",
+  "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
 ];
 
 const METHOD_COLORS: Record<string, string> = {
@@ -311,6 +338,21 @@ async function fetchUsersForTable(administradorId: string) {
       email: true,
       estado: true,
       fechaCreacion: true,
+      nombreTarifaAsignada: true,
+      rangoTarifaId: true,
+      dinamicaTarifaId: true,
+      rangoTarifa: {
+        select: {
+          nombre: true,
+          monto: true,
+        },
+      },
+      dinamicaTarifa: {
+        select: {
+          nombre: true,
+          montoBase: true,
+        },
+      },
       pagos: {
         select: {
           id: true,
@@ -337,6 +379,48 @@ async function fetchUsuariosSinTelefono(administradorId: string) {
     },
     select: { id: true, nombre: true, apellido: true, documento: true },
   });
+}
+
+async function fetchTarifas(administradorId: string): Promise<TarifaOption[]> {
+  const admin = await prisma.administrador.findUnique({
+    where: { id: administradorId },
+    select: {
+      configuracionTarifaId: true,
+      configuracionTarifa: {
+        select: {
+          tipoConfiguracion: true,
+        },
+      },
+    },
+  });
+
+  if (!admin?.configuracionTarifaId) {
+    return [];
+  }
+
+  const configId = admin.configuracionTarifaId;
+  const isDynamic =
+    admin.configuracionTarifa?.tipoConfiguracion === "DINAMICA_POR_FECHA_INGRESO";
+
+  if (isDynamic) {
+    const dinamicas = await prisma.configuracionDinamicaTarifa.findMany({
+      where: { configuracionTarifaId: configId },
+      select: { id: true, nombre: true, montoBase: true },
+      orderBy: { montoBase: "asc" },
+    });
+    return dinamicas.map((d) => ({
+      id: d.id,
+      nombre: d.nombre,
+      monto: d.montoBase,
+    }));
+  }
+
+  const rangos = await prisma.rangoTarifa.findMany({
+    where: { configuracionTarifaId: configId },
+    select: { id: true, nombre: true, monto: true },
+    orderBy: { monto: "asc" },
+  });
+  return rangos;
 }
 
 // ============================
@@ -481,25 +565,52 @@ function mapUpcomingDeadlines(
 }
 
 function mapUsersForTable(
-  usersDataRaw: Awaited<ReturnType<typeof fetchUsersForTable>>
+  usersDataRaw: Awaited<ReturnType<typeof fetchUsersForTable>>,
+  mesFiltro?: number,
+  añoFiltro?: number,
 ): UserRow[] {
-  return usersDataRaw.map((user) => ({
-    id: user.id,
-    nombre: user.nombre,
-    apellido: user.apellido,
-    documento: user.documento,
-    telefono: user.telefono,
-    email: user.email,
-    estado: user.estado,
-    fechaCreacion: user.fechaCreacion.toISOString(),
-    pagos: user.pagos.map((p) => ({
+  return usersDataRaw.map((user) => {
+    const tarifaNombre = user.rangoTarifa?.nombre
+      ?? user.dinamicaTarifa?.nombre
+      ?? user.nombreTarifaAsignada
+      ?? null;
+    const tarifaMonto = user.rangoTarifa?.monto
+      ?? user.dinamicaTarifa?.montoBase
+      ?? null;
+    const tarifaId = user.rangoTarifaId ?? user.dinamicaTarifaId ?? null;
+
+    const allPagos = user.pagos.map((p) => ({
       id: p.id,
-      mes: MESES_CORTOS[p.mes - 1],
+      mes: p.mes,
+      año: p.año,
       monto: p.monto,
       estado: p.estado,
       metodo: p.metodo,
-    })),
-  }));
+    }));
+
+    let pagos = allPagos;
+    if (mesFiltro && añoFiltro) {
+      const pagoDelMes = allPagos.find(
+        (p) => p.mes === mesFiltro && p.año === añoFiltro,
+      );
+      pagos = pagoDelMes ? [pagoDelMes, ...allPagos.filter((p) => p !== pagoDelMes)] : allPagos;
+    }
+
+    return {
+      id: user.id,
+      nombre: user.nombre,
+      apellido: user.apellido,
+      documento: user.documento,
+      telefono: user.telefono,
+      email: user.email,
+      estado: user.estado,
+      fechaCreacion: user.fechaCreacion.toISOString(),
+      tarifaNombre,
+      tarifaMonto,
+      tarifaId,
+      pagos,
+    };
+  });
 }
 
 // ============================
@@ -508,10 +619,14 @@ function mapUsersForTable(
 
 export async function getDashboardData(
   administradorId: string,
+  mesOverride?: number,
+  añoOverride?: number,
 ): Promise<DashboardData> {
   const now = new Date();
-  const mesActual = now.getMonth() + 1;
-  const añoActual = now.getFullYear();
+  const mesActual = mesOverride ?? now.getMonth() + 1;
+  const añoActual = añoOverride ?? now.getFullYear();
+  const isFilteredMonth =
+    mesOverride !== undefined && (mesOverride !== now.getMonth() + 1 || añoOverride !== now.getFullYear());
 
   const admin = await prisma.administrador.findUnique({
     where: { id: administradorId },
@@ -527,7 +642,7 @@ export async function getDashboardData(
       fetchPagosVencidosDetalles(administradorId, mesActual, añoActual),
     ]);
 
-  const [pagosRecientes, notificaciones, proximosVencimientos, pagosPorMetodo, pagosUltimos6Meses, usersDataRaw, usuariosSinTelefonoData] =
+  const [pagosRecientes, notificaciones, proximosVencimientos, pagosPorMetodo, pagosUltimos6Meses, usersDataRaw, usuariosSinTelefonoData, tarifasData] =
     await Promise.all([
       fetchRecentPayments(administradorId),
       fetchNotifications(administradorId),
@@ -536,10 +651,13 @@ export async function getDashboardData(
       fetchPaymentsLast6Months(administradorId, mesActual, añoActual),
       fetchUsersForTable(administradorId),
       fetchUsuariosSinTelefono(administradorId),
+      fetchTarifas(administradorId),
     ]);
 
   // ---- Compute KPIs ----
   const totalRecaudado = pagosPagados.reduce((sum, p) => sum + p.monto, 0);
+  const totalPendienteMonto = detallesPendientes.reduce((sum, p) => sum + p.monto, 0);
+  const totalVencidoMonto = detallesVencidos.reduce((sum, p) => sum + p.monto, 0);
 
   const kpis: KpiData = {
     totalUsuarios: kpiCounts.totalUsuarios,
@@ -548,6 +666,8 @@ export async function getDashboardData(
     totalRecaudado,
     pagosPendientes: kpiCounts.pagosPendientesMes,
     pagosVencidos: kpiCounts.pagosVencidosMes,
+    totalPendienteMonto,
+    totalVencidoMonto,
   };
 
   // ---- Users overview ----
@@ -577,10 +697,13 @@ export async function getDashboardData(
     notifications: mapNotifications(notificaciones),
     upcomingDeadlines: mapUpcomingDeadlines(proximosVencimientos, now),
     usersOverview,
-    users: mapUsersForTable(usersDataRaw),
+    users: mapUsersForTable(usersDataRaw, mesActual, añoActual),
     pagosPagadosDetalles: mapPagosPagadosDetalles(pagosPagados),
     pagosPendientesDetalles: mapPagosPendientesDetalles(detallesPendientes),
     pagosVencidosDetalles: mapPagosVencidosDetalles(detallesVencidos),
     usuariosSinTelefonoList: usuariosSinTelefonoData,
+    tarifas: tarifasData,
+    mesNombre: MESES_LARGOS[mesActual - 1],
+    isFilteredMonth,
   };
 }

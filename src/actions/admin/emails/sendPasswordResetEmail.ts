@@ -20,13 +20,25 @@ export async function sendPasswordResetEmail({
   // The server will exchange it for a secure httpOnly cookie and redirect to /auth/reset-password.
   const resetLink = `${baseUrl}/api/auth/verify-reset-token?token=${rawToken}`;
 
-  await resend.emails.send({
-    from: "CuotaFacil <no-reply@cuotafacil.com.ar>",
-    to: [to],
-    subject: "Restablecer contraseña",
-    react: PasswordResetEmailTemplate({
-      nombre,
-      resetLink,
-    }),
-  });
+  try {
+    const { data, error } = await resend.emails.send({
+      from: "CuotaFacil <no-reply@cuotafacil.com.ar>",
+      to: [to],
+      subject: "Restablecer contraseña",
+      react: PasswordResetEmailTemplate({
+        nombre,
+        resetLink,
+      }),
+    });
+
+    if (error) {
+      console.error("[sendPasswordResetEmail] Resend error:", error);
+      throw new Error(`Error enviando email: ${error.message}`);
+    }
+
+    return data;
+  } catch (err) {
+    console.error("[sendPasswordResetEmail] Failed to send:", err);
+    throw err;
+  }
 }

@@ -24,6 +24,7 @@ import {
   PaymentStatusBadge,
   SubscriptionStatusBadge,
 } from "../../ui/super-admin-badges";
+import { ChangePasswordDialog } from "../../ui/change-password-dialog";
 
 function formatDateTime(value: Date | null) {
   if (!value) {
@@ -298,6 +299,7 @@ export default async function SuperAdminCompanyDetailPage({
                   <TableHead>Email</TableHead>
                   <TableHead>Rol</TableHead>
                   <TableHead>Estado</TableHead>
+                  <TableHead className="w-[160px]">Acciones</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -308,6 +310,12 @@ export default async function SuperAdminCompanyDetailPage({
                     <TableCell>{admin.rol}</TableCell>
                     <TableCell>
                       {admin.estaActivo ? "Activo" : "Inactivo"}
+                    </TableCell>
+                    <TableCell>
+                      <ChangePasswordDialog
+                        adminId={admin.id}
+                        adminName={admin.nombre}
+                      />
                     </TableCell>
                   </TableRow>
                 ))}

@@ -2,15 +2,15 @@
 
 import React, { useState } from "react";
 import Link from "next/link";
-import { Loader2, AlertCircle, CheckCircle } from "lucide-react";
+import { useRouter } from "next/navigation";
+import { Loader2, AlertCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
 
 export default function ForgotPasswordPage() {
+  const router = useRouter();
   const [documento, setDocumento] = useState("");
-  const [sent, setSent] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [serverMessage, setServerMessage] = useState<string | null>(null);
 
   const inputClasses =
     "w-full px-4 py-3 border border-purple-200 rounded-xl focus:ring-2 focus:ring-purple-500 focus:border-transparent transition-all duration-200 bg-white/50 backdrop-blur-sm";
@@ -18,9 +18,7 @@ export default function ForgotPasswordPage() {
   async function onSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
-    setServerMessage(null);
 
-    // Validación básica DNI (8 dígitos)
     if (!/^\d{8,10}$/.test(documento)) {
       setError("Ingrese un DNI válido (8-10 dígitos)");
       return;
@@ -44,15 +42,13 @@ export default function ForgotPasswordPage() {
         return;
       }
 
-      // Mostrar mensaje tal como lo devuelve el servidor (incluye correo / soporte)
-      setServerMessage(
-        body?.message || "Se ha enviado un correo con instrucciones."
-      );
-      setSent(true);
+      if (body?.redirect) {
+        router.push(body.redirect);
+        return;
+      }
     } catch (err) {
       console.error(err);
       setError("Ocurrió un error. Intenta nuevamente más tarde.");
-    } finally {
       setLoading(false);
     }
   }
@@ -65,8 +61,7 @@ export default function ForgotPasswordPage() {
             Recuperar contraseña
           </h1>
           <p className="text-sm text-gray-500 mt-2">
-            Ingresa tu DNI y te enviaremos un enlace para restablecer tu
-            contraseña.
+            Ingresa tu DNI para restablecer tu contraseña.
           </p>
         </div>
 
@@ -77,65 +72,44 @@ export default function ForgotPasswordPage() {
           </div>
         )}
 
-        {sent ? (
-          <div className="p-4 bg-green-50 border border-green-200 text-green-700 rounded-xl flex flex-col gap-3">
-            <div className="flex items-center">
-              <CheckCircle className="w-5 h-5 mr-3 flex-shrink-0" />
-              <div className="font-medium text-sm">Correo enviado</div>
-            </div>
-            <div className="text-sm text-gray-700">
-              {serverMessage ? (
-                // serverMessage already contains info about email and soporte
-                <span>{serverMessage}</span>
-              ) : (
-                <span>
-                  Si existe una cuenta con ese DNI, recibirás un email con
-                  instrucciones. Si no puedes acceder al correo, contacta a
-                  soporte.
-                </span>
-              )}
-            </div>
-          </div>
-        ) : (
-          <form className="space-y-4" onSubmit={onSubmit} noValidate>
-            <div>
-              <label
-                htmlFor="documento"
-                className="block text-sm font-medium text-gray-700 mb-2"
-              >
-                DNI
-              </label>
-              <input
-                id="documento"
-                type="text"
-                required
-                value={documento}
-                onChange={(e) =>
-                  setDocumento(e.target.value.replace(/\D/g, ""))
-                }
-                className={inputClasses}
-                placeholder="Ej: 12345678"
-                disabled={loading}
-                maxLength={10}
-              />
-            </div>
-
-            <Button
-              type="submit"
-              disabled={loading}
-              className="w-full py-3 rounded-xl font-medium shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-500 to-green-600 text-white"
+        <form className="space-y-4" onSubmit={onSubmit} noValidate>
+          <div>
+            <label
+              htmlFor="documento"
+              className="block text-sm font-medium text-gray-700 mb-2"
             >
-              {loading ? (
-                <>
-                  <Loader2 className="w-5 h-5 mr-2 animate-spin" />
-                  Enviando...
-                </>
-              ) : (
-                "Enviar enlace"
-              )}
-            </Button>
-          </form>
-        )}
+              DNI
+            </label>
+            <input
+              id="documento"
+              type="text"
+              required
+              value={documento}
+              onChange={(e) =>
+                setDocumento(e.target.value.replace(/\D/g, ""))
+              }
+              className={inputClasses}
+              placeholder="Ej: 12345678"
+              disabled={loading}
+              maxLength={10}
+            />
+          </div>
+
+          <Button
+            type="submit"
+            disabled={loading}
+            className="w-full py-3 rounded-xl font-medium shadow-lg transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed bg-gradient-to-r from-emerald-500 to-green-600 text-white"
+          >
+            {loading ? (
+              <>
+                <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                Verificando...
+              </>
+            ) : (
+              "Restablecer contraseña"
+            )}
+          </Button>
+        </form>
 
         <div className="mt-6 text-center text-sm text-gray-600">
           <Link href="/auth/login" className="text-purple-600 hover:underline">

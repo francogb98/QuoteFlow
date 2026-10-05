@@ -180,10 +180,10 @@ export function NotificationsDropdown({
         </button>
 
         {isOpen && (
-          <div className="absolute right-0 mt-2 w-[420px] max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border z-50 overflow-hidden">
-            <div className="bg-gradient-to-r from-emerald-600 to-purple-600 p-4 text-white">
+          <div className="fixed inset-x-4 top-16 sm:absolute sm:inset-x-auto sm:right-0 sm:top-auto sm:mt-2 w-auto sm:w-[420px] max-w-[calc(100vw-2rem)] bg-white rounded-xl shadow-2xl border z-50 flex flex-col max-h-[70vh] sm:max-h-[80vh]">
+            <div className="sticky top-0 z-10 bg-gradient-to-r from-emerald-600 to-purple-600 p-3 sm:p-4 text-white shrink-0">
               <div className="flex justify-between items-center">
-                <h3 className="font-semibold flex items-center gap-2">
+                <h3 className="font-semibold flex items-center gap-2 text-sm sm:text-base">
                   <Bell className="w-4 h-4" /> Notificaciones
                 </h3>
 
@@ -204,7 +204,7 @@ export function NotificationsDropdown({
 
             <div
               ref={listRef}
-              className="max-h-[360px] overflow-y-auto overscroll-contain divide-y"
+              className="flex-1 overflow-y-auto overscroll-contain divide-y"
             >
               {notificacionesFiltradas.length === 0 ? (
                 <div className="p-8 text-center text-gray-400 text-sm">
@@ -230,21 +230,21 @@ export function NotificationsDropdown({
                       key={notificacion.id}
                       //@ts-ignore
                       ref={(el) => (itemRefs.current[notificacion.id] = el)}
-                      className={`p-4 hover:bg-gray-50 transition ${
+                      className={`p-3 hover:bg-gray-50 transition ${
                         !notificacion.leida ? "bg-blue-50/50" : ""
                       }`}
                     >
                       <div className="flex gap-3">
-                        <div className={`p-2 h-fit rounded-lg ${config.bg}`}>
-                          <Icon className={`w-4 h-4 ${config.color}`} />
+                        <div className={`p-1.5 sm:p-2 h-fit rounded-lg ${config.bg}`}>
+                          <Icon className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${config.color}`} />
                         </div>
 
                         <div className="flex-1">
-                          <h4 className="text-sm font-semibold">
+                          <h4 className="text-xs sm:text-sm font-semibold capitalize">
                             {notificacion.titulo}
                           </h4>
 
-                          <p className="text-xs text-gray-600 mt-1">
+                          <p className="text-xs text-gray-600 mt-1 break-words whitespace-normal leading-relaxed">
                             {notificacion.mensaje}
                           </p>
 
@@ -298,11 +298,11 @@ export function NotificationsDropdown({
               )}
             </div>
 
-            <div className="border-t p-3 text-center bg-gray-50">
+            <div className="sticky bottom-0 z-10 border-t p-2.5 sm:p-3 text-center bg-gray-50 shrink-0">
               <Link
                 href="/admin/notificaciones"
                 onClick={() => setIsOpen(false)}
-                className="text-sm text-emerald-600 font-medium hover:underline block w-full h-full"
+                className="text-xs sm:text-sm text-emerald-600 font-medium hover:underline block w-full h-full"
               >
                 Ver todas las notificaciones
               </Link>

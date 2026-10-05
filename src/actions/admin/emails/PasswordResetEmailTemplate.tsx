@@ -54,7 +54,7 @@ export function PasswordResetEmailTemplate({
         </div>
 
         <p style={{ fontSize: "14px", color: "#555" }}>
-          Este enlace expirará en 1 hora.
+          Este enlace expirará en 15 minutos.
         </p>
 
         <p style={{ fontSize: "14px", color: "#555" }}>

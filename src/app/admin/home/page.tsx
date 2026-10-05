@@ -1,11 +1,25 @@
 import { redirect } from "next/navigation";
 import { auth } from "@/auth";
-import { KpiCards } from "@/components/admin/home/nuevo/kpis-cards";
 import { getDashboardData } from "@/lib/data/dashboardQueries";
-import { UsersTable } from "./ui/users-table";
+import { DashboardWrapper } from "@/components/admin/home/nuevo/dashboard-wrapper";
 import { ShareCompanyLink } from "./ui/SharedCompanyLink";
 
-export default async function AdminHomePage() {
+const MESES_MAP: Record<string, number> = {
+  enero: 1, febrero: 2, marzo: 3, abril: 4, mayo: 5, junio: 6,
+  julio: 7, agosto: 8, septiembre: 9, octubre: 10, noviembre: 11, diciembre: 12,
+};
+
+function parseMesParam(mes: string | undefined): number | undefined {
+  if (!mes) return undefined;
+  const num = MESES_MAP[mes.toLowerCase()];
+  return num ?? undefined;
+}
+
+export default async function AdminHomePage({
+  searchParams,
+}: {
+  searchParams: Promise<{ mes?: string }>;
+}) {
   const session = await auth();
 
   if (!session?.user?.id) {
@@ -13,57 +27,35 @@ export default async function AdminHomePage() {
   }
 
   const empresaNombre = session.user.empresa?.nombre;
-  //el link tiene que ser el frontend url / nomre de la empresa
   const empresaLink = `${process.env.FRONTEND_URL}`;
 
-  const data = await getDashboardData(session.user.id);
+  const params = await searchParams;
+  const mesNumero = parseMesParam(params.mes);
 
-  // Saludo dinamico segun la hora
+  const data = await getDashboardData(session.user.id, mesNumero);
+
   const hora = new Date().getHours();
   let saludo = "¡Buen dia!";
   if (hora >= 12 && hora < 19) saludo = "¡Buenas tardes!";
   if (hora >= 19) saludo = "¡Buenas noches!";
 
-  // Fecha actual formateada
-  const fechaHoy = new Date().toLocaleDateString("es-AR", {
-    day: "numeric",
-    month: "long",
-    year: "numeric",
-  });
+  const añoActual = new Date().getFullYear();
 
   return (
-    <main className="min-h-screen bg-background">
+    <main className="flex h-full flex-col bg-background">
       <ShareCompanyLink companyName={empresaNombre} link={empresaLink} />
-      <div className="mx-auto max-w-7xl px-4 py-6 sm:px-6 lg:px-8">
-        {/* Header */}
-        <div className="mb-6">
-          <h1 className="text-2xl font-bold text-foreground">
-            {saludo}{" "}
-            <span className="bg-gradient-to-r from-emerald-600 to-purple-600 bg-clip-text text-transparent">
-              {data.adminNombre}
-            </span>
-          </h1>
-          <p className="mt-1 text-sm text-muted-foreground">
-            Resumen de tu negocio al {fechaHoy}
-          </p>
-        </div>
-
-        {/* KPI Cards */}
-        <KpiCards
-          data={data.kpis}
-          pagosPagados={data.pagosPagadosDetalles}
-          pagosPendientes={data.pagosPendientesDetalles}
-          pagosVencidos={data.pagosVencidosDetalles}
-          usuariosSinTelefonoList={data.usuariosSinTelefonoList}
-          dominioLink={empresaLink}
-          empresaSlug={session.user.empresa?.nombre}
+      <div className="mx-auto flex w-full max-w-7xl flex-1 flex-col px-4 py-2 sm:px-6 lg:px-8">
+        <DashboardWrapper
+          adminNombre={data.adminNombre}
+          saludo={saludo}
+          mesNombre={data.mesNombre}
+          año={añoActual}
+          isFilteredMonth={data.isFilteredMonth}
+          kpis={data.kpis}
+          users={data.users}
+          recentPayments={data.recentPayments}
+          usersOverview={data.usersOverview}
         />
-
-        <div className="mt-6">
-          {/* CORREGIDO: Pasar 'usuarios' y 'onOpenUser' */}
-          {/* @ts-ignore */}
-          <UsersTable usuarios={data.users} />
-        </div>
       </div>
     </main>
   );

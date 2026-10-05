@@ -145,9 +145,9 @@ export function BulkUserForm({
       );
 
   return (
-    <Card className="max-w-7xl mx-auto">
-      <CardHeader>
-        <CardTitle>Cargar múltiples usuarios</CardTitle>
+    <Card className="max-w-7xl mx-auto max-h-[90vh] sm:max-h-none overflow-y-auto sm:overflow-visible">
+      <CardHeader className="sticky top-0 z-10 bg-card border-b sm:border-b-0 sm:static">
+        <CardTitle className="text-base sm:text-lg">Cargar múltiples usuarios</CardTitle>
       </CardHeader>
 
       <CardContent>
@@ -158,9 +158,10 @@ export function BulkUserForm({
               type="button"
               onClick={addUser}
               variant="outline"
-              className="flex gap-2"
+              size="sm"
+              className="flex gap-1.5 text-xs"
             >
-              <PlusCircle className="w-4 h-4" />
+              <PlusCircle className="w-3.5 h-3.5" />
               Agregar fila
             </Button>
 
@@ -168,13 +169,15 @@ export function BulkUserForm({
               type="button"
               onClick={() => addManyUsers(10)}
               variant="outline"
+              size="sm"
+              className="text-xs"
             >
               +10 filas
             </Button>
           </div>
 
-          {/* TABLA */}
-          <div className="overflow-x-auto border rounded-lg">
+          {/* TABLA - Desktop */}
+          <div className="hidden sm:block overflow-x-auto border rounded-lg">
             <table className="min-w-full text-sm">
               <thead className="bg-gray-50">
                 <tr>
@@ -287,8 +290,126 @@ export function BulkUserForm({
             </table>
           </div>
 
+          {/* CARDS - Mobile */}
+          <div className="space-y-3 sm:hidden">
+            {fields.map((field, index) => (
+              <div
+                key={field.id}
+                className="relative rounded-xl border bg-gray-50 p-3.5 shadow-sm"
+              >
+                <div className="mb-2 flex items-center justify-between border-b border-gray-200 pb-2">
+                  <span className="text-xs font-bold text-gray-700">
+                    Usuario #{index + 1}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => remove(index)}
+                    className="text-red-500 hover:text-red-700 transition-colors"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2 text-xs">
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-600">
+                      Nombre
+                    </label>
+                    <input
+                      {...register(`users.${index}.nombre`, {
+                        required: true,
+                      })}
+                      className="w-full rounded-md border px-2 py-1.5 mt-0.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-600">
+                      Apellido
+                    </label>
+                    <input
+                      {...register(`users.${index}.apellido`, {
+                        required: true,
+                      })}
+                      className="w-full rounded-md border px-2 py-1.5 mt-0.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-600">
+                      Documento
+                    </label>
+                    <input
+                      {...register(`users.${index}.documento`, {
+                        required: true,
+                      })}
+                      className="w-full rounded-md border px-2 py-1.5 mt-0.5"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[11px] font-medium text-gray-600">
+                      Tarifa
+                    </label>
+                    <select
+                      {...register(
+                        isDynamicTariff
+                          ? `users.${index}.dinamicaTarifaId`
+                          : `users.${index}.rangoTarifaId`,
+                        { required: true },
+                      )}
+                      className="w-full rounded-md border px-2 py-1.5 mt-0.5"
+                    >
+                      <option value="">Seleccionar</option>
+                      {uniqueTarifas.map((tarifa: any) => (
+                        <option key={tarifa.id} value={tarifa.id}>
+                          {tarifa.nombre}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="col-span-2 flex items-end gap-2 pt-1">
+                    <div className="flex-1">
+                      <label className="text-[11px] font-medium text-gray-600">
+                        Fecha inicio
+                      </label>
+                      <input
+                        type="date"
+                        {...register(`users.${index}.fechaInicioMembresia`, {
+                          required: true,
+                        })}
+                        className="w-full rounded-md border px-2 py-1.5 mt-0.5"
+                      />
+                    </div>
+                    <div className="flex items-center gap-1.5 pb-0.5">
+                      <input
+                        type="checkbox"
+                        id={`mes-sig-${index}`}
+                        {...register(`users.${index}.primerPagoMesSiguiente`)}
+                        className="h-3.5 w-3.5"
+                      />
+                      <label
+                        htmlFor={`mes-sig-${index}`}
+                        className="text-[11px] font-medium text-gray-600 whitespace-nowrap"
+                      >
+                        Mes sig.
+                      </label>
+                      <TooltipProvider>
+                        <Tooltip>
+                          <TooltipTrigger asChild>
+                            <HelpCircle className="w-3 h-3 text-gray-400 cursor-pointer" />
+                          </TooltipTrigger>
+                          <TooltipContent className="max-w-xs text-center">
+                            Primer pago correspondiente al mes siguiente.
+                          </TooltipContent>
+                        </Tooltip>
+                      </TooltipProvider>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+
           {/* BOTON FINAL */}
-          <div className="flex justify-end mt-6">
+          <div className="sticky bottom-0 bg-card pt-4 pb-2 flex justify-end mt-6 border-t sm:border-t-0 sm:static">
             <Button type="submit" disabled={mutation.isPending || isSubmitting}>
               {mutation.isPending ? (
                 <>

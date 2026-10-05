@@ -16,7 +16,7 @@ import { UserForm } from "../user/UserForm";
 import { UserHeader } from "../user/UserHeader";
 import { getNameTarifas } from "@/actions/admin/tarifas/get-name-tarifas";
 
-export const FormEditUser = ({ id }: any) => {
+export const FormEditUser = ({ id, onCreatePayment, onEditPayment }: any) => {
   const [formData, setFormData] = useState<any>({});
   const [activeTab, setActiveTab] = useState("personal");
   const queryClient = useQueryClient();
@@ -154,7 +154,7 @@ export const FormEditUser = ({ id }: any) => {
       : configuracion?.dinamicas || [];
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-3">
       <UserHeader
         data={data}
         isDynamicTariff={isDynamicTariff}
@@ -162,22 +162,22 @@ export const FormEditUser = ({ id }: any) => {
       />
 
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
-        <TabsList className="grid w-full grid-cols-2 bg-gradient-to-r from-emerald-50 to-purple-50 border border-emerald-200">
+        <TabsList className="grid w-full grid-cols-2 bg-gray-50 border border-gray-200 h-8">
           <TabsTrigger
             value="personal"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-emerald-600 data-[state=active]:text-white"
+            className="text-xs data-[state=active]:bg-emerald-500 data-[state=active]:text-white"
           >
-            Información Personal
+            Personal
           </TabsTrigger>
           <TabsTrigger
             value="pagos"
-            className="data-[state=active]:bg-gradient-to-r data-[state=active]:from-emerald-500 data-[state=active]:to-purple-600 data-[state=active]:text-white"
+            className="text-xs data-[state=active]:bg-emerald-500 data-[state=active]:text-white"
           >
-            Información de Pagos
+            Pagos
           </TabsTrigger>
         </TabsList>
 
-        <TabsContent value="personal" className="mt-6">
+        <TabsContent value="personal" className="mt-3">
           <UserForm
             formData={formData}
             originalData={data}
@@ -189,7 +189,7 @@ export const FormEditUser = ({ id }: any) => {
           />
         </TabsContent>
 
-        <TabsContent value="pagos" className="mt-6">
+        <TabsContent value="pagos" className="mt-3">
           <PagosGrid
             //@ts-ignore
             pagos={data.pagos}
@@ -198,6 +198,8 @@ export const FormEditUser = ({ id }: any) => {
             configuracionTarifa={data.configuracionTarifa}
             //@ts-ignore
             fechaInicioMembresia={data.fechaInicioMembresia}
+            onCreatePayment={onCreatePayment}
+            onEditPayment={onEditPayment}
           />
         </TabsContent>
       </Tabs>

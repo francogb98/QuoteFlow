@@ -8,6 +8,7 @@ import Link from "next/link";
 function ResetPasswordForm() {
   const params = useSearchParams();
   const linkError = params.get("error"); // "invalid" | "expired" — set by verify-reset-token
+  const sessionToken = params.get("session"); // set by request-password-reset
 
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -35,6 +36,11 @@ function ResetPasswordForm() {
       return;
     }
 
+    if (!sessionToken) {
+      setError("Enlace inválido. Solicita un nuevo enlace de restablecimiento.");
+      return;
+    }
+
     setLoading(true);
 
     try {
@@ -43,8 +49,7 @@ function ResetPasswordForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        // Token is NOT sent in the body — the server reads it from the httpOnly cookie
-        body: JSON.stringify({ password }),
+        body: JSON.stringify({ password, session: sessionToken }),
       });
 
       const body = await res.json();

@@ -23,7 +23,7 @@ export async function sendEmail(content: EmailContent) {
     const { data, error } = await resend.emails.send({
       from: "CuotaFacil <no-reply@cuotafacil.com.ar>",
       to: [to],
-      subject: "Hello world",
+      subject: `Recordatorio de pago - ${empresa}`,
       react: EmailTemplate({
         firstName: `${nombre} ${apellido}`,
         dueDate: dueDate,

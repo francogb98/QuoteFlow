@@ -41,40 +41,35 @@ export function ShareCompanyLink({ companyName, link }: Props) {
   };
 
   return (
-    <div className="w-full md:w-auto flex flex-col">
-      <div className="flex items-center justify-between gap-2 p-3 border border-emerald-200 rounded-lg bg-gradient-to-r from-emerald-50 to-purple-50 shadow-sm hover:border-purple-300 transition-all max-w-full">
-        <div className="flex items-center gap-2 min-w-0">
-          <Share2 className="w-4 h-4 text-emerald-600 flex-shrink-0" />
-
-          <span className="text-sm font-medium text-emerald-800 break-all">
+    <div className="w-full shrink-0 md:w-auto">
+      <div className="flex items-center justify-between gap-2 rounded-md border border-emerald-200 bg-gradient-to-r from-emerald-50 to-purple-50 px-2.5 py-1 shadow-sm transition-all hover:border-purple-300">
+        <div className="flex min-w-0 items-center gap-1.5">
+          <Share2 className="h-3.5 w-3.5 shrink-0 text-emerald-600" />
+          <span className="truncate text-xs font-medium text-emerald-800">
             {fullLink}
           </span>
         </div>
 
-        <div className="flex-shrink-0 flex gap-1.5">
+        <div className="flex shrink-0 gap-1">
           <button
             onClick={handleCopy}
-            className="p-1.5 rounded-md text-emerald-600 hover:bg-purple-100 transition-colors"
+            className="rounded p-1 text-emerald-600 transition-colors hover:bg-purple-100"
           >
             {copied ? (
-              <Check className="h-4 w-4 text-emerald-500" />
+              <Check className="h-3.5 w-3.5 text-emerald-500" />
             ) : (
-              <Copy className="h-4 w-4 cursor-pointer" />
+              <Copy className="h-3.5 w-3.5 cursor-pointer" />
             )}
           </button>
 
           <button
             onClick={handleShare}
-            className="p-1.5 rounded-md text-emerald-600 hover:bg-purple-100 transition-colors"
+            className="rounded p-1 text-emerald-600 transition-colors hover:bg-purple-100"
           >
-            <Share2 className="h-4 w-4 cursor-pointer" />
+            <Share2 className="h-3.5 w-3.5 cursor-pointer" />
           </button>
         </div>
       </div>
-
-      <small className="mt-1 text-xs text-muted-foreground text-wrap text-center">
-        Comparte este link para que tus usuarios puedan acceder a sus pagos.
-      </small>
     </div>
   );
 }

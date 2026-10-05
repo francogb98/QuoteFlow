@@ -56,8 +56,25 @@ export async function GET(request: Request, { params }: Segments) {
       );
     }
 
-    // Verificar que el usuario pertenece al admin autenticado
-    if (user.administradorId !== session.user.id) {
+    // Verificar que el usuario pertenece a la misma empresa del admin autenticado
+    const admin = await prisma.administrador.findUnique({
+      where: { id: session.user.id },
+      select: { empresaId: true },
+    });
+
+    if (!admin?.empresaId) {
+      return NextResponse.json({ error: "Admin sin empresa" }, { status: 403 });
+    }
+
+    const userBelongsToCompany = await prisma.usuario.findFirst({
+      where: {
+        id: user.id,
+        administrador: { empresaId: admin.empresaId },
+      },
+      select: { id: true },
+    });
+
+    if (!userBelongsToCompany) {
       return NextResponse.json({ error: "No autorizado" }, { status: 403 });
     }
 
