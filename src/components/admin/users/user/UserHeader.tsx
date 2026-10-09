@@ -3,6 +3,9 @@ import { format } from "date-fns";
 import { es } from "date-fns/locale";
 
 export const UserHeader = ({ data, isDynamicTariff, tarifaActual }: any) => {
+  // Ambos campos representan el estado real: filas con datos viejos pueden
+  // tener "estado" y "estaActivo" desincronizados.
+  const usuarioActivo = data.estaActivo !== false && data.estado === "ACTIVO";
   return (
     <div className="rounded-xl bg-white border border-gray-100 shadow-sm overflow-hidden">
       <div className="p-3 flex items-center gap-3">
@@ -26,9 +29,9 @@ export const UserHeader = ({ data, isDynamicTariff, tarifaActual }: any) => {
             </h1>
             <span
               className={`shrink-0 inline-flex items-center px-1.5 py-0.5 rounded-full text-[9px] font-medium border
-              ${data.estaActivo ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-100"}`}
+              ${usuarioActivo ? "bg-emerald-50 text-emerald-700 border-emerald-100" : "bg-red-50 text-red-700 border-red-200"}`}
             >
-              {data.estaActivo ? "Activo" : "Inactivo"}
+              {usuarioActivo ? "Activo" : "Inactivo"}
             </span>
           </div>
           <div className="flex items-center gap-3 mt-0.5 text-[11px] text-gray-500">

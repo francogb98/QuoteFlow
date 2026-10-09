@@ -20,7 +20,7 @@ const editUserSchema = z.object({
     z.string().min(1, "El documento es obligatorio").max(20)
   ),
   telefono: z.string().optional().nullable(),
-  estaActivo: z.boolean(),
+  estaActivo: z.boolean().optional().nullable(),
   estado: z.string().min(1, "El estado es obligatorio"),
   email: z.email("Correo inválido").optional().nullable(),
   edad: z
@@ -71,6 +71,17 @@ export const editUser = async (
 
     const { id } = session.user;
 
+    // El alcance de lectura/edición es la EMPRESA (igual que getUser): un admin
+    // puede editar usuarios de otros admins de su misma empresa.
+    const admin = await prisma.administrador.findUnique({
+      where: { id },
+      select: { empresaId: true },
+    });
+
+    if (!admin?.empresaId) {
+      throw new Error("Administrador sin empresa asignada");
+    }
+
     const validatedContent = editUserSchema.parse(content);
 
     // Lógica para manejar la fecha en horario de Argentina
@@ -93,20 +104,20 @@ export const editUser = async (
       apellido: validatedContent.apellido.toLowerCase(),
       documento: validatedContent.documento,
       telefono: validatedContent.telefono,
-      estaActivo: validatedContent.estaActivo,
+      // "estado" es la única fuente de verdad para habilitar/inhabilitar:
+      // se deriva "estaActivo" para que ambos campos no se desincronicen.
+      estaActivo: validatedContent.estado === "ACTIVO",
       estado: validatedContent.estado as Estado,
       email: validatedContent.email,
       edad: validatedContent.edad,
       fechaInicioMembresia: fechaInicioMembresia ?? null,
     };
-    console.log({ validatedContent });
-    console.log({ dataToEdit });
 
-    // Verificar documento único (excluyendo al usuario actual)
+    // Verificar documento único dentro de la empresa (excluyendo al usuario actual)
     const existingUser = await prisma.usuario.findFirst({
       where: {
         documento: dataToEdit.documento,
-        administradorId: id,
+        administrador: { empresaId: admin.empresaId },
         NOT: {
           id: validatedContent.id,
         },
@@ -154,6 +165,7 @@ export const editUser = async (
         tariffUpdateData = {
           dinamicaTarifaId: validatedContent.tarifa,
           rangoTarifaId: null, // Clear the other tariff type
+          nombreTarifaAsignada: dinamicaExists.nombre,
         };
       } else {
         // Validate range tariff exists
@@ -167,14 +179,26 @@ export const editUser = async (
         tariffUpdateData = {
           rangoTarifaId: validatedContent.tarifa,
           dinamicaTarifaId: null, // Clear the other tariff type
+          nombreTarifaAsignada: rangoExists.nombre,
         };
       }
+    }
+
+    const userToUpdate = await prisma.usuario.findFirst({
+      where: {
+        id: validatedContent.id,
+        administrador: { empresaId: admin.empresaId },
+      },
+      select: { id: true },
+    });
+
+    if (!userToUpdate) {
+      throw new Error("Usuario no encontrado");
     }
 
     const user = await prisma.usuario.update({
       where: {
         id: validatedContent.id,
-        administradorId: id,
       },
       data: {
         ...dataToEdit,
@@ -191,6 +215,12 @@ export const editUser = async (
       message: "Usuario actualizado exitosamente.",
     };
   } catch (error) {
-    return handleActionError(error, "Error al editar usuario");
+    if (error instanceof z.ZodError) {
+      throw new Error(error.issues[0]?.message ?? "Datos inválidos");
+    }
+    const response = handleActionError(error, "Error al editar usuario");
+    // Relanzar para que el cliente (React Query) trate el caso como error
+    // real y no muestre un falso "Usuario actualizado correctamente".
+    throw new Error(response.error || "Error al editar usuario");
   }
 };

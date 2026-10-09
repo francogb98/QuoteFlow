@@ -76,8 +76,13 @@ export const ModalEditPayment = ({
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: (data: any) => updatePayment(data),
-    onSuccess: () => {
-      toast.success("Pago registrado correctamente");
+    onSuccess: (data: any) => {
+      // updatePayment responde { ok: false, message } sin lanzar errores
+      if (!data?.ok) {
+        toast.error(data?.message || "Error al cobrar");
+        return;
+      }
+      toast.success(data?.message || "Pago registrado correctamente");
       queryClient.invalidateQueries({ queryKey: ["usuarios"] });
       onClose();
     },

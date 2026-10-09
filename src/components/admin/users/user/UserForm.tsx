@@ -148,7 +148,7 @@ export function UserForm({
             value={formData?.estado || "ACTIVO"}
             onValueChange={(value) => handleChange({ target: { name: "estado", value } })}
           >
-            <SelectTrigger id="estado" className="h-9 text-xs">
+            <SelectTrigger id="estado" className="h-9 w-full text-xs">
               <SelectValue />
             </SelectTrigger>
             <SelectContent>
@@ -182,7 +182,7 @@ export function UserForm({
             value={formData?.tarifa ?? tarifaActual ?? ""}
             onValueChange={(value) => handleChange({ target: { name: "tarifa", value } })}
           >
-            <SelectTrigger id="tarifa" className="h-9 text-xs">
+            <SelectTrigger id="tarifa" className="h-9 w-full text-xs">
               <SelectValue placeholder="Seleccionar tarifa" />
             </SelectTrigger>
             <SelectContent>

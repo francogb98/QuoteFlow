@@ -101,11 +101,14 @@ export const updateUserPayment = async (payment: MercadoPagoPayment) => {
       });
     }
 
-    // 7. Actualizar estado general del usuario si es necesario
-    await prisma.usuario.update({
-      where: { id: user.id },
-      data: { estado: "ACTIVO" },
-    });
+    // 7. Actualizar estado general del usuario si está habilitado.
+    // No reactivar usuarios inhabilitados (estaActivo=false) desde un pago.
+    if (user.estaActivo) {
+      await prisma.usuario.update({
+        where: { id: user.id },
+        data: { estado: "ACTIVO" },
+      });
+    }
 
     return "Actualización de pago exitosa";
   } catch (error) {

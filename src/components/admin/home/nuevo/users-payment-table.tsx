@@ -19,6 +19,12 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { UserRow } from "@/lib/data/dashboardQueries";
+import {
+  Tooltip,
+  TooltipContent,
+  TooltipProvider,
+  TooltipTrigger,
+} from "@/components/ui/tooltip";
 import { PaymentEstadoBadge } from "./payment-estado-badge";
 
 const ITEMS_PER_PAGE = 12;
@@ -38,12 +44,28 @@ interface UsersPaymentTableProps {
   onCobrar: (user: UserRow) => void;
 }
 
-function UserAvatar({ nombre, apellido }: { nombre: string; apellido: string }) {
-  const initials = `${nombre.charAt(0)}${apellido.charAt(0)}`.toUpperCase();
+function UserStatusDot({ estado }: { estado: string }) {
+  const activo = estado === "ACTIVO";
+  const label = activo ? "Usuario activo" : "Usuario inactivo";
   return (
-    <div className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full bg-primary/10 text-[10px] font-semibold text-primary">
-      {initials}
-    </div>
+    <TooltipProvider>
+      <Tooltip>
+        <TooltipTrigger asChild>
+          <button
+            type="button"
+            aria-label={label}
+            className="flex h-6 w-6 shrink-0 items-center justify-center rounded-full hover:bg-muted"
+          >
+            <span
+              className={`h-2.5 w-2.5 rounded-full ${activo ? "bg-emerald-500" : "bg-gray-400"}`}
+            />
+          </button>
+        </TooltipTrigger>
+        <TooltipContent side="top" className="text-[11px]">
+          {label}
+        </TooltipContent>
+      </Tooltip>
+    </TooltipProvider>
   );
 }
 
@@ -161,10 +183,7 @@ export function UsersPaymentTable({
                     <TableRow key={user.id} className="border-border">
                       <TableCell className="py-1.5">
                         <div className="flex items-center gap-2">
-                          <UserAvatar
-                            nombre={user.nombre}
-                            apellido={user.apellido}
-                          />
+                          <UserStatusDot estado={user.estado} />
                           <span className="text-xs font-medium capitalize text-foreground">
                             {user.nombre} {user.apellido}
                           </span>
@@ -271,9 +290,12 @@ export function UsersPaymentTable({
                   return (
                     <TableRow key={user.id} className="border-border">
                       <TableCell className="px-1.5 py-1">
-                        <span className="block max-w-[90px] truncate text-[11px] font-medium capitalize text-foreground">
-                          {user.nombre} {user.apellido}
-                        </span>
+                        <div className="flex items-center gap-1.5">
+                          <UserStatusDot estado={user.estado} />
+                          <span className="block max-w-[90px] truncate text-[11px] font-medium capitalize text-foreground">
+                            {user.nombre} {user.apellido}
+                          </span>
+                        </div>
                       </TableCell>
 
                       <TableCell className="px-1.5 py-1">

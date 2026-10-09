@@ -80,8 +80,14 @@ export function InlineEditPayment({
   const queryClient = useQueryClient();
   const updateMutation = useMutation({
     mutationFn: (data: any) => updatePayment(data),
-    onSuccess: () => {
-      toast.success("Pago registrado correctamente");
+    onSuccess: (data: any) => {
+      // updatePayment responde { ok: false, message } en validaciones/fallos
+      // sin lanzar: hay que verificarlo para no mostrar un falso éxito.
+      if (!data?.ok) {
+        toast.error(data?.message || "Error al cobrar");
+        return;
+      }
+      toast.success(data?.message || "Pago registrado correctamente");
       queryClient.invalidateQueries({ queryKey: ["usuarios"] });
       queryClient.invalidateQueries({ queryKey: ["user", userId] });
       onSuccess();

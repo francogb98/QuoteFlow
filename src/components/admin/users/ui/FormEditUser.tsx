@@ -56,9 +56,15 @@ export const FormEditUser = ({ id, onCreatePayment, onEditPayment }: any) => {
 
   const userMutation = useMutation({
     mutationFn: editUser,
-    onSuccess: () => {
+    onSuccess: (result: any) => {
+      // Defensa extra: si la action devolviera un fallo sin lanzar, no mostrar éxito
+      if (result?.ok === false || result?.success === false) {
+        toast.error(result?.error || result?.message || "Error al actualizar usuario");
+        return;
+      }
       toast.success("Usuario actualizado correctamente");
       queryClient.invalidateQueries({ queryKey: ["user", id] });
+      queryClient.invalidateQueries({ queryKey: ["usuarios"] });
     },
     onError: (error: any) => {
       toast.error(error?.message || "Error al actualizar usuario");
